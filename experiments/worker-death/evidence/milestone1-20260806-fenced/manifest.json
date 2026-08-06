@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "experiment": "worker-death-surviving-agent",
+  "run_id": "milestone1-20260806-fenced",
+  "mode": "fenced",
+  "started_at": "2026-08-06T21:21:25.859609631Z",
+  "completed_at": "2026-08-06T21:21:34.952713199Z",
+  "temporal_cli": "temporal version 1.8.0 (Server 1.31.2, UI 2.50.1)",
+  "temporal_sdk": "v1.47.0",
+  "go_version": "go1.25.8",
+  "agent_protocol_build": "worker-death-v1",
+  "failure_boundary": "Worker SIGKILL after child progress and before the first Activity heartbeat",
+  "invariant": "retry does not create an unauthorized competing writer and only one fenced outcome is accepted",
+  "falsifier": "safe mode launches a second session without explicit replacement, loses the child, accepts a stale write/outcome, or changes the accepted outcome"
+}
