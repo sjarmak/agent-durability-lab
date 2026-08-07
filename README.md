@@ -95,6 +95,22 @@ the same durable state can describe two different external realities.
 See [the experiment](experiments/worker-death/post-exec-registration-gap.md) and
 [finding 0005](docs/findings/0005-launch-pending-does-not-identify-process-reality.md).
 
+## Sixth result: cancellation is not detached-process revocation
+
+Across six Temporal-only controls, the Workflow closed as canceled under both
+Activity wait policies, yet its detached agent subsequently committed an effect
+and outcome. Eighteen safe runs added an application-store terminal revocation
+before exact process control; no post-cancel effect or outcome was accepted.
+
+The safe matrix covered a healthy Worker, Worker 1 `SIGKILL` followed by Worker
+2 cleanup, and a frozen leader/tool-child process group. Every safe run recorded
+revocation, delivery, acknowledgement, and both process dispositions
+separately. `WaitForCancellation=true` changed the Event History acknowledgement
+shape, not the application authority result.
+
+See [the cancellation experiment](experiments/cancellation/README.md) and
+[finding 0006](docs/findings/0006-cancellation-requires-application-revocation.md).
+
 ## Run it
 
 Prerequisites are Go 1.25.12 or newer and Temporal CLI 1.8.0 or newer (bundling
@@ -107,6 +123,7 @@ make build
 ./bin/worker-death-experiment --scenario post-exec-gap --arm all --trials 3 --run-id post-exec-local
 ./bin/activity-completion-identity-experiment --arm all --trials 3 --run-id completion-local
 ./bin/external-effect-experiment --destination all --mode all --trials 3 --run-id effects-local
+./bin/cancellation-experiment --scenario all --wait-policy both --trials 3 --run-id cancellation-local
 ```
 
 Each run creates a new directory in its experiment's `evidence/` directory.
@@ -131,6 +148,11 @@ and Workflow tests remain portable.
 
 - `docs/`: questions, architecture hypotheses, methodology, guarantee ledger,
   decisions, and supported findings.
+- [Gas City field lessons and research plan](docs/briefings/gas-city-field-lessons-and-research-plan.md):
+  shareable synthesis of the field evidence, controlled lab findings, product
+  implications, inherited benchmark method, book framework, and remaining work.
+- `benchmarks/agent-durability/`: the machine-checked, mechanism-neutral contract
+  for the planned Temporal/Restate/DBOS/PostgreSQL comparison.
 - `experiments/worker-death/`: the first experiment, offline oracle, live harness,
   and preserved evidence.
 - `experiments/activity-completion-identity/`: task-token versus logical-ID
@@ -138,6 +160,8 @@ and Workflow tests remain portable.
 - `experiments/external-effects/`: six destination classes at the
   effect-success/completion-loss boundary, with unsafe controls and preserved
   repeated evidence.
+- `experiments/cancellation/`: Temporal-only controls and application-revoked
+  cancellation across Worker death, wait policies, and frozen process trees.
 - `internal/workstore/`: atomic session, generation, effect, outcome, and event
   state used at the application correctness boundary.
 - `internal/failureinject/`: named HTTP barriers; timeouts guard deadlocks but do

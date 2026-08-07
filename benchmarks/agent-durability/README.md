@@ -1,0 +1,187 @@
+# Cross-system agent durability benchmark
+
+This benchmark asks which parts of reliable external-agent execution come from
+a durability system and which still require application or destination
+mechanisms. It is not a feature checklist or a throughput leaderboard.
+
+The initial comparison is Temporal, Restate, DBOS Go, and a deliberately small
+PostgreSQL queue/lease/outbox implementation. Temporal has related evidence in
+this repository, but none of the four implementations is yet declared conformant
+with this contract. Durable Task and AWS Step Functions are deferred until this
+first wave exposes where an additional architecture would change a decision.
+
+The machine-checked case list and evidence requirements are in
+[`contract-v1.json`](contract-v1.json).
+
+## Comparison unit
+
+The unit is a complete run of the same external application under one exact
+fault schedule—not a framework function or marketing guarantee. Every adapter
+must use the same:
+
+- deterministic agent binary and session protocol;
+- application authority-store protocol;
+- external effect destination and physical-attempt journal;
+- named barrier service and process controller;
+- case input, seed, fault boundary, and timeout ceiling;
+- evidence envelope and independent oracle; and
+- host resource envelope.
+
+Adapters may use their system idiomatically for durable procedure. Temporal may
+choose Workflow plus Activities or a declared Standalone Activity variant;
+Restate may use a service, Workflow, durable `Run`, state, and promises; DBOS may
+use workflows, steps, queues, and declared datasource transactions; PostgreSQL
+may use transactions, `FOR UPDATE SKIP LOCKED`, leases, and an outbox. An adapter
+may not replace the common agent, destination, failure controller, or oracle.
+
+## Three tracks prevent category errors
+
+Each system starts with two required tracks and may add a third:
+
+1. `native-minimum` uses only the durability primitive and the minimum glue
+   needed to call the common workload. It is expected to expose boundaries such
+   as effect-success/completion-loss. This is a control, not a recommended
+   production design.
+2. `portable-safety` adds the same stable identity, application fence,
+   idempotency/reconciliation, and cancellation protocol for every system. This
+   asks whether the common application mechanisms compose with recovery.
+3. `native-optimized` is optional and separately labeled. It may use a unique
+   co-transactional primitive—for example a DBOS datasource transaction or a
+   PostgreSQL transaction that atomically changes application and outbox state.
+
+Results never compare a native optimized arm against another system's native
+minimum arm as if the durability products alone differed. Every guarantee is
+tagged `system`, `application`, `destination`, `operating-system`, or a named
+combination.
+
+## Cases and exact oracles
+
+The first four cases come directly from failures already reproduced in this lab:
+
+| Case | Injected boundary | Primary oracle |
+| --- | --- | --- |
+| `surviving-executor` | Kill the system executor after the external agent registers and blocks before effect | Competitor count, stable session identity, accepted outcome count |
+| `ambiguous-effect` | Destination confirms an effect; kill before durable step completion | Destination physical attempts versus logical effects and durable completions |
+| `stale-generation` | Replace generation 1, then deliver its delayed effect, completion, and stop | Every obsolete authoritative action rejected; generation 2 remains alive |
+| `cancellation-unreachable` | Freeze the exact process tree, cancel, then resume it | Revocation precedes acknowledgement; no post-revocation mutation or replacement |
+
+The oracle runs outside the adapter and reads the common authority store,
+destination journal, process observations, fault record, and native history
+export. Adapter logs can explain a verdict but cannot determine it. A run is
+invalid, not failed, if the barrier was missed, the wrong PID/start identity was
+targeted, required evidence is absent, or the fault did not occur between the
+two declared events.
+
+## Case and oracle admission
+
+The benchmark tests its apparatus before it compares systems. Each case must
+pass four admission probes:
+
+1. An unfaulted calibration run reaches the expected output under every adapter.
+2. A deliberately unsafe common control, separate from system scoring, violates
+   the named invariant at the dangerous boundary. A false pass may mean the
+   fault missed, the oracle leaked recovery information, or the case cannot
+   distinguish the mechanism. A system's `native-minimum` arm is still allowed
+   to satisfy the invariant through a genuine native guarantee.
+3. The common `portable-safety` reference satisfies the invariant without using
+   adapter logs as its oracle.
+4. Missed-boundary, wrong-identity, incomplete, and deliberately altered
+   evidence fixtures are rejected as invalid rather than scored as passes or
+   failures.
+
+The case manifest, common protocol, oracle, fixtures, and expected unsafe
+failure are versioned together. A maintained case may change after a defect is
+found, but published results continue naming the frozen contract that produced
+their run population.
+
+Every adapter exports an effective-input inventory before launch. It includes
+system and SDK versions, binary and container hashes, retry and timeout policy,
+credentials and permissions, host limits, fault-controller version, destination
+identity, agent binary, and oracle visibility. Controls that the adapter cannot
+enforce cause preflight refusal. Similar configuration names are not accepted as
+evidence of parity.
+
+## Trial and statistical policy
+
+Development uses three trials per arm to catch deterministic contract errors.
+A publishable cross-system result requires at least 30 fresh trials per arm,
+randomized system/arm execution order with a recorded seed, identical host
+limits, and all raw trials retained. Report counts and empirical distributions;
+do not hide invalid or failed trials and do not report only successful reruns.
+
+Every trial receives one of three primary verdict classes: `valid-pass`,
+`valid-fail`, or `invalid`, plus a mechanical reason code. Infrastructure and
+apparatus failures do not silently become zero-quality results. They remain in
+the structural run counts and make the run set non-quotable until handled by the
+rerun or exclusion policy declared before results were inspected.
+
+Correctness is evaluated per run before aggregation. Recovery latency, durable
+bytes, external calls, or operational footprint are compared only among arms
+that reach output parity. This avoids declaring a system cheaper or faster
+because it silently lost work. Confidence intervals are required for failure
+rates and latency quantiles once the sample size supports them; three-trial
+development results are not percentages.
+
+## Measurements tied to decisions
+
+- Invariant pass/fail, physical effect count, stale accepts, terminal outcomes,
+  and cancellation stages decide whether an architecture is safe enough to
+  consider.
+- Fault-to-revocation and fault-to-outcome latency decide whether recovery meets
+  an operator's service objective after correctness parity.
+- Durable records/bytes and external calls identify history or journal pressure
+  and destination amplification.
+- Operator interventions and unrecoverable/wedged runs decide whether automated
+  recovery is operationally sufficient.
+- Adapter code/configuration surface, required services, schema migrations, and
+  upgrade constraints expose complexity. They remain separate observations,
+  not a subjective composite score.
+
+CPU microbenchmarks and synthetic no-op throughput are excluded from v1 because
+they do not answer the reliability decision and would be dominated by the
+single-host harness.
+
+## Current product hypotheses, not results
+
+Primary documentation defines what each first adapter should attempt; it is not
+benchmark evidence:
+
+- Temporal documents durable Workflow procedure, Activity retry, and
+  heartbeat-mediated cancellation. The adapter must still reproduce the
+  external effect and process boundaries rather than infer them from Event
+  History. See [Temporal Activity failure detection](https://docs.temporal.io/develop/go/failure-detection)
+  and the pinned [Go SDK Activity options](https://pkg.go.dev/go.temporal.io/sdk/workflow#ActivityOptions).
+- Restate records context actions and durable `Run` results in an execution
+  journal. The benchmark hypothesis is that a crash after an external effect but
+  before the corresponding journal entry can still expose ambiguity. See
+  [Restate durable steps](https://docs.restate.dev/develop/go/durable-steps) and
+  [architecture](https://docs.restate.dev/references/architecture).
+- DBOS Go documents at-least-once steps and atomic application/durability commits
+  for supported datasource transactions. Those belong in separate minimum and
+  native-optimized arms. See [DBOS steps](https://docs.dbos.dev/golang/tutorials/step-tutorial),
+  [transactions](https://docs.dbos.dev/golang/tutorials/transaction-tutorial),
+  and [workflow recovery](https://docs.dbos.dev/production/workflow-recovery).
+- PostgreSQL provides transactional rows and `SKIP LOCKED`, explicitly noting
+  that the latter presents an inconsistent view suitable for queue-like access.
+  Every lease, recovery, fence, timer, and outbox guarantee is therefore our
+  implementation responsibility. See [PostgreSQL `SELECT` locking](https://www.postgresql.org/docs/current/sql-select.html).
+
+No cross-system winner or unimplemented system guarantee is claimed here.
+
+## Adapter conformance gate
+
+Before measurements count, an adapter must:
+
+1. pass protocol validation against the common simulator and destination;
+2. execute all four faults at the named boundaries without sleeps choosing the
+   outcome;
+3. export the native durable record plus every common evidence file;
+4. pass the independent oracle in an unfaulted calibration run;
+5. preserve failed and invalid evidence;
+6. pin system, SDK, database, adapter commit, OS, and binary hashes; and
+7. document every non-default retry, timeout, retention, recovery, and
+   deployment setting.
+
+Only after all four adapters pass this gate should the project publish a result
+table. The next implementation work is tracked in Beads rather than implied by
+this document.

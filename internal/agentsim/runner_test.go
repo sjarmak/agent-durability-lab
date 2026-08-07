@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/temporalio-labs/agent-durability-lab/internal/failureinject"
-	"github.com/temporalio-labs/agent-durability-lab/internal/workstore"
+	"github.com/sjarmak/temporal_projects/internal/failureinject"
+	"github.com/sjarmak/temporal_projects/internal/workstore"
 )
 
 func TestRunProducesProgressEffectAndOutcomeAtNamedBoundaries(t *testing.T) {
@@ -20,7 +20,7 @@ func TestRunProducesProgressEffectAndOutcomeAtNamedBoundaries(t *testing.T) {
 	result := make(chan runResponse, 1)
 	go func() {
 		got, err := runner.Run(context.Background(), Config{
-			Lease: decision.Lease, ActorID: "agent-1", PID: 123, ProcessStart: "boot:123",
+			Lease: decision.Lease, ActorID: "agent-1", PID: 123, ProcessStart: "boot:123", ProcessGroupID: 123,
 			Effect: workstore.Effect{ID: "effect-1", Value: "changed"}, Outcome: workstore.Outcome{Value: "done"},
 		})
 		result <- runResponse{result: got, err: err}
@@ -50,6 +50,10 @@ func TestRunProducesProgressEffectAndOutcomeAtNamedBoundaries(t *testing.T) {
 	}
 	if !response.result.EffectAccepted || !response.result.CompletionAccepted {
 		t.Fatalf("result = %+v; want both accepted", response.result)
+	}
+	snapshot = mustSnapshot(t, store, "session-1")
+	if snapshot.Executors[0].ProcessGroupID != 123 {
+		t.Fatalf("registered process group = %d; want 123", snapshot.Executors[0].ProcessGroupID)
 	}
 }
 
@@ -132,6 +136,42 @@ func TestReplacementRejectsDelayedStaleAgent(t *testing.T) {
 	}
 	assertEvent(t, snapshot.Events, "effect_rejected_stale")
 	assertEvent(t, snapshot.Events, "completion_rejected_stale")
+}
+
+func TestCancellationRejectsDelayedAgentEffectAndCompletion(t *testing.T) {
+	store, barrierURL, coordinator := newTestDependencies(t)
+	decision := mustDecision(t, store, workstore.StartRequest{
+		SessionID: "session-1", Mode: workstore.ModeFenced, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
+	})
+	runner := New(store, failureinject.NewClient(barrierURL))
+	result := runAsync(runner, Config{
+		Lease: decision.Lease, ActorID: "agent-1", PID: 123, ProcessStart: "boot:123", ProcessGroupID: 123,
+		Effect: workstore.Effect{ID: "effect-1", Value: "changed"}, Outcome: workstore.Outcome{Value: "done"},
+	})
+	waitBarrier(t, coordinator, "before-effect/1")
+	if _, err := store.CancelSession(context.Background(), workstore.CancelRequest{
+		SessionID: "session-1", RequestID: "cancel-1",
+	}); err != nil {
+		t.Fatalf("cancel session: %v", err)
+	}
+	releaseBarrier(t, coordinator, "before-effect/1")
+	waitBarrier(t, coordinator, "before-completion/1")
+	releaseBarrier(t, coordinator, "before-completion/1")
+
+	response := <-result
+	if response.err != nil {
+		t.Fatalf("run after cancellation: %v", response.err)
+	}
+	if response.result.EffectAccepted || response.result.EffectRejection != "session_canceled" ||
+		response.result.CompletionAccepted || response.result.CompletionRejection != "session_canceled" {
+		t.Fatalf("canceled result = %+v; want both mutations rejected", response.result)
+	}
+	snapshot := mustSnapshot(t, store, "session-1")
+	if len(snapshot.Effects) != 0 || snapshot.Outcome != nil {
+		t.Fatalf("canceled agent mutated state: effects=%+v outcome=%+v", snapshot.Effects, snapshot.Outcome)
+	}
+	assertEvent(t, snapshot.Events, "effect_rejected_canceled")
+	assertEvent(t, snapshot.Events, "completion_rejected_canceled")
 }
 
 func TestPendingLaunchReplacementRejectsObsoleteProcessBeforeProgress(t *testing.T) {

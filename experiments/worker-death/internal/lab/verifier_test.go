@@ -3,7 +3,7 @@ package lab
 import (
 	"testing"
 
-	"github.com/temporalio-labs/agent-durability-lab/internal/workstore"
+	"github.com/sjarmak/temporal_projects/internal/workstore"
 )
 
 func TestVerifierUnsafeControlRequiresObservedDuplication(t *testing.T) {

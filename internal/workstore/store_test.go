@@ -415,6 +415,221 @@ func TestTerminalRejectionClosesCompetingExecutorState(t *testing.T) {
 	}
 }
 
+func TestCancellationCommitsTerminalRevocation(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+	decision := mustStart(t, store, StartRequest{
+		SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
+	})
+	mustRegisterTestProcess(t, store, decision.Lease, 101)
+
+	cancelDecision, err := store.CancelSession(ctx, CancelRequest{SessionID: "session-1", RequestID: "cancel-1"})
+	if err != nil {
+		t.Fatalf("cancel session: %v", err)
+	}
+	if cancelDecision.Action != CancelActionCommitted {
+		t.Fatalf("cancel action = %q; want %q", cancelDecision.Action, CancelActionCommitted)
+	}
+	if cancelDecision.Cancellation == nil {
+		t.Fatal("committed cancellation is nil")
+	}
+	if cancelDecision.Cancellation.RequestID != "cancel-1" ||
+		cancelDecision.Cancellation.Generation != decision.Lease.Generation ||
+		cancelDecision.Cancellation.OwnerTokenHash != HashToken(decision.Lease.OwnerToken) {
+		t.Fatalf("cancellation = %+v; want active lease identity", cancelDecision.Cancellation)
+	}
+
+	mutations := []struct {
+		name string
+		run  func() error
+	}{
+		{name: "register", run: func() error {
+			return store.RegisterProcess(ctx, decision.Lease, Process{PID: 102, StartIdentity: "boot:102"})
+		}},
+		{name: "progress", run: func() error { return store.RecordProgress(ctx, decision.Lease, "late") }},
+		{name: "effect", run: func() error {
+			return store.CommitEffect(ctx, decision.Lease, Effect{ID: "late", Value: "late"})
+		}},
+		{name: "completion", run: func() error {
+			return store.Complete(ctx, decision.Lease, Outcome{Value: "late"})
+		}},
+	}
+	for _, mutation := range mutations {
+		t.Run(mutation.name, func(t *testing.T) {
+			if err := mutation.run(); !errors.Is(err, ErrSessionCanceled) {
+				t.Fatalf("post-cancel mutation = %v; want ErrSessionCanceled", err)
+			}
+		})
+	}
+	if _, err := store.StartOrAttach(ctx, StartRequest{
+		SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-2", WorkerID: "worker-2", Attempt: 2,
+		ReplaceOwner: true,
+	}); !errors.Is(err, ErrSessionCanceled) {
+		t.Fatalf("post-cancel replacement = %v; want ErrSessionCanceled", err)
+	}
+
+	snapshot, err := store.Snapshot(ctx, "session-1")
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+	if snapshot.Cancellation == nil || snapshot.Cancellation.RequestID != "cancel-1" {
+		t.Fatalf("snapshot cancellation = %+v", snapshot.Cancellation)
+	}
+	if snapshot.Executors[0].Status != ExecutorStatusCanceled {
+		t.Fatalf("executor status = %q; want %q", snapshot.Executors[0].Status, ExecutorStatusCanceled)
+	}
+	if len(snapshot.Effects) != 0 || snapshot.Outcome != nil {
+		t.Fatalf("post-cancel state changed: effects=%+v outcome=%+v", snapshot.Effects, snapshot.Outcome)
+	}
+	assertEventKinds(t, snapshot.Events, "cancellation_committed", "process_registration_rejected_canceled",
+		"progress_rejected_canceled", "effect_rejected_canceled", "completion_rejected_canceled",
+		"start_rejected_canceled")
+}
+
+func TestCancellationAndCompletionUseFirstCommittedTerminalTransition(t *testing.T) {
+	t.Run("completion first", func(t *testing.T) {
+		store := openTestStore(t)
+		decision := mustStart(t, store, StartRequest{
+			SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
+		})
+		mustRegisterTestProcess(t, store, decision.Lease, 101)
+		want := Outcome{Value: "accepted"}
+		if err := store.Complete(context.Background(), decision.Lease, want); err != nil {
+			t.Fatalf("complete: %v", err)
+		}
+
+		cancelDecision, err := store.CancelSession(context.Background(), CancelRequest{SessionID: "session-1", RequestID: "cancel-1"})
+		if err != nil {
+			t.Fatalf("cancel after completion: %v", err)
+		}
+		if cancelDecision.Action != CancelActionAlreadyCompleted || cancelDecision.Outcome == nil || *cancelDecision.Outcome != want {
+			t.Fatalf("cancel decision = %+v; want existing outcome", cancelDecision)
+		}
+		snapshot, err := store.Snapshot(context.Background(), "session-1")
+		if err != nil {
+			t.Fatalf("snapshot: %v", err)
+		}
+		if snapshot.Cancellation != nil || snapshot.Outcome == nil || *snapshot.Outcome != want {
+			t.Fatalf("terminal state = cancellation %+v outcome %+v", snapshot.Cancellation, snapshot.Outcome)
+		}
+		assertEventKinds(t, snapshot.Events, "cancellation_observed_completed")
+	})
+
+	t.Run("cancellation first", func(t *testing.T) {
+		store := openTestStore(t)
+		decision := mustStart(t, store, StartRequest{
+			SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
+		})
+		mustRegisterTestProcess(t, store, decision.Lease, 101)
+		if _, err := store.CancelSession(context.Background(), CancelRequest{SessionID: "session-1", RequestID: "cancel-1"}); err != nil {
+			t.Fatalf("cancel session: %v", err)
+		}
+		if err := store.Complete(context.Background(), decision.Lease, Outcome{Value: "late"}); !errors.Is(err, ErrSessionCanceled) {
+			t.Fatalf("completion after cancel = %v; want ErrSessionCanceled", err)
+		}
+		snapshot, err := store.Snapshot(context.Background(), "session-1")
+		if err != nil {
+			t.Fatalf("snapshot: %v", err)
+		}
+		if snapshot.Cancellation == nil || snapshot.Outcome != nil {
+			t.Fatalf("terminal state = cancellation %+v outcome %+v", snapshot.Cancellation, snapshot.Outcome)
+		}
+	})
+}
+
+func TestCancellationIsIdempotent(t *testing.T) {
+	store := openTestStore(t)
+	decision := mustStart(t, store, StartRequest{
+		SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
+	})
+	mustRegisterTestProcess(t, store, decision.Lease, 101)
+	first, err := store.CancelSession(context.Background(), CancelRequest{SessionID: "session-1", RequestID: "cancel-1"})
+	if err != nil {
+		t.Fatalf("first cancel: %v", err)
+	}
+	for _, requestID := range []string{"cancel-1", "cancel-2"} {
+		repeated, err := store.CancelSession(context.Background(), CancelRequest{SessionID: "session-1", RequestID: requestID})
+		if err != nil {
+			t.Fatalf("repeat cancel %q: %v", requestID, err)
+		}
+		if repeated.Action != CancelActionAlreadyCanceled || repeated.Cancellation == nil ||
+			*repeated.Cancellation != *first.Cancellation {
+			t.Fatalf("repeat decision = %+v; want original cancellation %+v", repeated, first.Cancellation)
+		}
+	}
+	snapshot, err := store.Snapshot(context.Background(), "session-1")
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+	assertEventKinds(t, snapshot.Events, "cancellation_committed", "cancellation_observed_already_canceled")
+}
+
+func TestCancellationAcknowledgementRequiresExactExecutorIdentity(t *testing.T) {
+	store := openTestStore(t)
+	decision := mustStart(t, store, StartRequest{
+		SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
+	})
+	process := Process{PID: 101, StartIdentity: "boot:101", ProcessGroupID: 101}
+	if err := store.RegisterProcess(context.Background(), decision.Lease, process); err != nil {
+		t.Fatalf("register process: %v", err)
+	}
+	cancelDecision, err := store.CancelSession(context.Background(), CancelRequest{SessionID: "session-1", RequestID: "cancel-1"})
+	if err != nil {
+		t.Fatalf("cancel session: %v", err)
+	}
+	if cancelDecision.Cancellation == nil || cancelDecision.Cancellation.Target.Process != process {
+		t.Fatalf("cancel target = %+v; want process %+v", cancelDecision.Cancellation, process)
+	}
+
+	staleRequests := []CancellationAcknowledgementRequest{
+		{RequestID: "cancel-1", Lease: Lease{SessionID: "session-1", Generation: 2, OwnerToken: "owner-2"}, Process: process},
+		{RequestID: "cancel-1", Lease: decision.Lease, Process: Process{PID: 101, StartIdentity: "boot:reused", ProcessGroupID: 101}},
+		{RequestID: "different-request", Lease: decision.Lease, Process: process},
+	}
+	for _, request := range staleRequests {
+		if err := store.AcknowledgeCancellation(context.Background(), request); !errors.Is(err, ErrStaleOwner) {
+			t.Errorf("stale acknowledgement %+v = %v; want ErrStaleOwner", request, err)
+		}
+	}
+	request := CancellationAcknowledgementRequest{RequestID: "cancel-1", Lease: decision.Lease, Process: process}
+	if err := store.AcknowledgeCancellation(context.Background(), request); err != nil {
+		t.Fatalf("acknowledge cancellation: %v", err)
+	}
+	if err := store.AcknowledgeCancellation(context.Background(), request); err != nil {
+		t.Fatalf("duplicate acknowledgement: %v", err)
+	}
+
+	snapshot, err := store.Snapshot(context.Background(), "session-1")
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+	if snapshot.Cancellation == nil || snapshot.Cancellation.Acknowledgement == nil {
+		t.Fatal("cancellation acknowledgement was not persisted")
+	}
+	ack := snapshot.Cancellation.Acknowledgement
+	if ack.Generation != decision.Lease.Generation || ack.Process != process || ack.AcknowledgedAt.IsZero() {
+		t.Fatalf("acknowledgement = %+v; want exact executor identity and timestamp", ack)
+	}
+	assertEventKinds(t, snapshot.Events, "cancellation_ack_rejected_stale", "cancellation_acknowledged", "cancellation_acknowledgement_duplicate")
+}
+
+func TestCancellationAcknowledgementRequiresCanceledSession(t *testing.T) {
+	store := openTestStore(t)
+	decision := mustStart(t, store, StartRequest{
+		SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
+	})
+	process := Process{PID: 101, StartIdentity: "boot:101", ProcessGroupID: 101}
+	if err := store.RegisterProcess(context.Background(), decision.Lease, process); err != nil {
+		t.Fatalf("register process: %v", err)
+	}
+	err := store.AcknowledgeCancellation(context.Background(), CancellationAcknowledgementRequest{
+		RequestID: "cancel-1", Lease: decision.Lease, Process: process,
+	})
+	if !errors.Is(err, ErrSessionNotCanceled) {
+		t.Fatalf("acknowledge active session = %v; want ErrSessionNotCanceled", err)
+	}
+}
+
 func TestStoreRejectsInvalidAndUnknownOperations(t *testing.T) {
 	if _, err := Open(""); !errors.Is(err, ErrInvalidRequest) {
 		t.Fatalf("Open empty path = %v; want ErrInvalidRequest", err)

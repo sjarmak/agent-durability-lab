@@ -20,8 +20,12 @@ not proof of an application-level guarantee.
 4. **Observed:** `CompleteActivityByID` after retry: attempt-scoped task-token
    completion rejects the stale token, logical-ID completion accepts the stale
    result, and an application capability fence rejects the obsolete owner.
-5. Cancellation across Worker death, unreachable agents, ownership changes, and
-   completion races.
+5. **Observed on one Linux host:** Temporal-only cancellation leaves detached
+   authority intact; application revocation plus exact process-tree delivery
+   survives Worker death and a frozen executor under both wait policies.
+   Completion/cancellation ordering and delayed stale-stop isolation are covered
+   by deterministic store/process tests. Cross-host and hostile containment
+   remain open.
 6. Workflow and Activity evolution across deployments: replay compatibility,
    Worker Versioning, and agent-session compatibility contracts.
 7. Partial streamed output: consumer-observed prefixes, retry duplication,
@@ -50,6 +54,20 @@ evidence; it is P1 alongside external-effect ambiguity.
 - What compact state belongs in Event History, and what belongs behind a durable
   external reference?
 - What observation would prove that a proposed guarantee is weaker than claimed?
+
+## Cross-system comparison
+
+The first comparison wave is Temporal, Restate, DBOS Go, and a minimal
+PostgreSQL queue/lease/outbox. The [v1 benchmark contract](../benchmarks/agent-durability/README.md)
+holds the external agent, authority protocol, effect destination, failure
+schedule, evidence, and oracle fixed while allowing idiomatic durable-procedure
+adapters. Native-minimum, portable-safety, and optional native-optimized arms
+are reported separately so a co-transactional product feature is not mistaken
+for an intrinsic advantage on an unmatched workload.
+
+This is currently a benchmark design, not comparison evidence. Durable Task and
+AWS Step Functions are deferred until the first wave identifies a decision that
+their architecture could change.
 
 The ordering changes when evidence exposes a higher-risk boundary. Changes and
 their rationale are recorded in a decision or finding, not silently applied.

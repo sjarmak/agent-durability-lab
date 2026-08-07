@@ -1,0 +1,103 @@
+{
+  "contract_version": "adl.cross-system.v1",
+  "question": "After durable execution recovers, is the complete agent application correct, and which layer supplied each required mechanism?",
+  "tracks": [
+    {
+      "id": "native-minimum",
+      "purpose": "Expose the durability system's native behavior without silently adding application fencing or destination deduplication."
+    },
+    {
+      "id": "portable-safety",
+      "purpose": "Use the same application identity, fencing, idempotency, cancellation, and reconciliation mechanisms with every adapter."
+    },
+    {
+      "id": "native-optimized",
+      "purpose": "Optional co-designed arm using a system-specific transaction or primitive; report separately from portability results."
+    }
+  ],
+  "fixed_components": {
+    "agent_protocol": "agent-durability-simulator-v1",
+    "authority_protocol": "logical-session-generation-capability-v1",
+    "destination_protocol": "effect-id-physical-attempt-journal-v1",
+    "failure_protocol": "named-barrier-controller-v1",
+    "oracle_protocol": "independent-black-box-oracle-v1"
+  },
+  "cases": [
+    {
+      "id": "surviving-executor",
+      "invariant": "Recovery does not create an unauthorized competing executor, and one logical session yields one accepted outcome.",
+      "failure_boundary": "Kill the durability-system executor after the external agent registers and blocks before its first effect; leave the agent alive.",
+      "falsifier": "A retry starts an undeclared competitor, loses the live session, or accepts more than one outcome."
+    },
+    {
+      "id": "ambiguous-effect",
+      "invariant": "The destination records no more physical effects than the arm's declared mechanism permits, and the report never infers exactly-once from one durable completion.",
+      "failure_boundary": "The destination confirms the effect, then kill the executor before the durability system records step completion.",
+      "falsifier": "The oracle misses a physical duplicate, attributes destination deduplication to the durability system, or cannot reconstruct the gap."
+    },
+    {
+      "id": "stale-generation",
+      "invariant": "After replacement commits, the obsolete generation cannot register, mutate, complete, acknowledge, or stop the replacement.",
+      "failure_boundary": "Keep generation 1 alive across recovery, commit generation 2, then deliver generation 1's delayed effect, completion, and stop request.",
+      "falsifier": "Any generation-1 authoritative action is accepted or its delayed stop reaches generation 2."
+    },
+    {
+      "id": "cancellation-unreachable",
+      "invariant": "After logical cancellation commits, no later mutation or replacement is accepted even while the exact external process is unreachable.",
+      "failure_boundary": "Freeze the registered agent process tree, request cancellation, observe durable revocation and absent acknowledgement, then resume the tree.",
+      "falsifier": "Safety depends on stop acknowledgement, a frozen executor mutates after revocation, or process disposition is inferred from request delivery."
+    }
+  ],
+  "trial_policy": {
+    "development_trials_per_arm": 3,
+    "publication_trials_per_arm": 30,
+    "timing": "Fault selection is barrier-driven; deadlines only bound a wedged run.",
+    "ordering": "Randomize system/arm run order with a recorded seed after all adapters pass conformance."
+  },
+  "systems": [
+    {
+      "id": "temporal",
+      "status": "existing-evidence-not-yet-contract-conformant"
+    },
+    {
+      "id": "restate",
+      "status": "planned"
+    },
+    {
+      "id": "dbos-go",
+      "status": "planned"
+    },
+    {
+      "id": "postgresql-queue",
+      "status": "planned"
+    }
+  ],
+  "required_evidence": [
+    "manifest.json",
+    "common-events.jsonl",
+    "authority-state.json",
+    "destination-state.json",
+    "fault-boundary.json",
+    "native-history-or-journal-export",
+    "process-observations.json",
+    "verdict.json"
+  ],
+  "primary_metrics": [
+    "valid_run",
+    "invariant_satisfied",
+    "accepted_outcome_count",
+    "physical_effect_count",
+    "stale_action_accept_count",
+    "cancellation_stage_completion"
+  ],
+  "parity_gated_metrics": [
+    "recovery_latency_ms",
+    "fault_to_revocation_ms",
+    "fault_to_accepted_outcome_ms",
+    "durable_record_count",
+    "durable_bytes",
+    "external_call_count",
+    "operator_intervention_count",
+    "adapter_code_and_configuration_surface"
+  ]
+}

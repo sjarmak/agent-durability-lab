@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/temporalio-labs/agent-durability-lab/internal/workstore"
+	"github.com/sjarmak/temporal_projects/internal/workstore"
 )
 
 func TestLiveTemporalWorkerDeathArms(t *testing.T) {

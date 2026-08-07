@@ -3,7 +3,7 @@ package lab
 import (
 	"fmt"
 
-	"github.com/temporalio-labs/agent-durability-lab/internal/workstore"
+	"github.com/sjarmak/temporal_projects/internal/workstore"
 )
 
 type PostExecGapArm string

@@ -11,10 +11,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/temporalio-labs/agent-durability-lab/internal/agentprocess"
-	"github.com/temporalio-labs/agent-durability-lab/internal/failureinject"
-	"github.com/temporalio-labs/agent-durability-lab/internal/temporalagent"
-	"github.com/temporalio-labs/agent-durability-lab/internal/workstore"
+	"github.com/sjarmak/temporal_projects/internal/agentprocess"
+	"github.com/sjarmak/temporal_projects/internal/failureinject"
+	"github.com/sjarmak/temporal_projects/internal/temporalagent"
+	"github.com/sjarmak/temporal_projects/internal/workstore"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/testsuite"
 )

@@ -7,24 +7,140 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"time"
 
-	"github.com/temporalio-labs/agent-durability-lab/internal/agentprocess"
-	"github.com/temporalio-labs/agent-durability-lab/internal/agentsim"
-	"github.com/temporalio-labs/agent-durability-lab/internal/failureinject"
-	"github.com/temporalio-labs/agent-durability-lab/internal/workstore"
+	"github.com/sjarmak/temporal_projects/internal/agentprocess"
+	"github.com/sjarmak/temporal_projects/internal/agentsim"
+	"github.com/sjarmak/temporal_projects/internal/failureinject"
+	"github.com/sjarmak/temporal_projects/internal/workstore"
 	"go.temporal.io/sdk/activity"
 )
 
 const activityPollInterval = 100 * time.Millisecond
 
 type Activities struct {
-	StorePath    string
-	AgentBinary  string
-	BarrierURL   string
-	RunDirectory string
-	WorkerID     string
-	AgentBuild   string
+	StorePath     string
+	AgentBinary   string
+	BarrierURL    string
+	RunDirectory  string
+	WorkerID      string
+	AgentBuild    string
+	SignalProcess func(agentprocess.ControlRequest) (agentprocess.ControlResult, error)
+}
+
+func (a Activities) CancelAgent(ctx context.Context, input CancelActivityInput) (CancelActivityResult, error) {
+	if a.StorePath == "" || input.SessionID == "" || input.RequestID == "" {
+		return CancelActivityResult{}, errors.New("cancellation Activity requires store, session, and request identities")
+	}
+	store, err := workstore.Open(a.StorePath)
+	if err != nil {
+		return CancelActivityResult{}, fmt.Errorf("open application work store for cancellation: %w", err)
+	}
+	decision, err := store.CancelSession(ctx, workstore.CancelRequest{
+		SessionID: input.SessionID, RequestID: input.RequestID,
+	})
+	if err != nil {
+		return CancelActivityResult{}, fmt.Errorf("commit logical session cancellation: %w", err)
+	}
+	result := CancelActivityResult{Action: decision.Action, Delivery: CancellationDeliveryNotRequired}
+	if decision.Action == workstore.CancelActionAlreadyCompleted || decision.Cancellation == nil {
+		return result, nil
+	}
+	target := decision.Cancellation.Target
+	if target.Process.PID <= 0 || target.Process.StartIdentity == "" || target.Process.ProcessGroupID <= 0 {
+		return result, nil
+	}
+	controlTarget := agentprocess.ControlTarget{
+		SessionID: target.SessionID, Generation: target.Generation, OwnerTokenHash: target.OwnerTokenHash,
+		Leader: agentprocess.ProcessIdentity{
+			PID: target.Process.PID, StartIdentity: target.Process.StartIdentity,
+			ProcessGroupID: target.Process.ProcessGroupID,
+		},
+	}
+	snapshot, err := store.Snapshot(ctx, input.SessionID)
+	if err != nil {
+		return CancelActivityResult{}, fmt.Errorf("read process-tree evidence: %w", err)
+	}
+	controlTarget.Members, err = processTreeMembers(snapshot, controlTarget)
+	if err != nil {
+		return CancelActivityResult{}, err
+	}
+	controlRequest := agentprocess.ControlRequest{
+		Target: controlTarget, Scope: agentprocess.ScopeProcessTree, Signal: agentprocess.SignalTerminate,
+	}
+	if err := store.RecordObservation(ctx, processControlEvent(
+		"executor_stop_delivery_attempted", input.SessionID, controlRequest, "",
+	)); err != nil {
+		return CancelActivityResult{}, fmt.Errorf("record executor stop attempt: %w", err)
+	}
+	signalProcess := a.SignalProcess
+	if signalProcess == nil {
+		signalProcess = agentprocess.Signal
+	}
+	controlResult, signalErr := signalProcess(controlRequest)
+	if signalErr != nil {
+		result.Delivery = CancellationDeliveryFailed
+		if err := store.RecordObservation(ctx, processControlEvent(
+			"executor_stop_delivery_failed", input.SessionID, controlRequest, signalErr.Error(),
+		)); err != nil {
+			return CancelActivityResult{}, fmt.Errorf("record executor stop failure: %w", err)
+		}
+		return result, nil
+	}
+	result.Delivery = CancellationDeliverySent
+	event := processControlEvent("executor_stop_delivery_sent", input.SessionID, controlRequest, "")
+	event.Details["method"] = string(controlResult.Method)
+	event.Details["requested_at"] = controlResult.RequestedAt.Format(time.RFC3339Nano)
+	if err := store.RecordObservation(ctx, event); err != nil {
+		return CancelActivityResult{}, fmt.Errorf("record executor stop delivery: %w", err)
+	}
+	return result, nil
+}
+
+func processTreeMembers(snapshot workstore.Snapshot, target agentprocess.ControlTarget) ([]agentprocess.ProcessIdentity, error) {
+	members := []agentprocess.ProcessIdentity{target.Leader}
+	seen := map[int]bool{target.Leader.PID: true}
+	for _, event := range snapshot.Events {
+		if event.Kind != "tool_child_registered" || event.Generation != target.Generation ||
+			event.OwnerTokenHash != target.OwnerTokenHash {
+			continue
+		}
+		processGroupID, err := strconv.Atoi(event.Details["process_group_id"])
+		if err != nil || event.PID <= 0 || event.Details["process_start"] == "" {
+			return nil, fmt.Errorf("invalid tool-child process evidence at event %d", event.Sequence)
+		}
+		if processGroupID != target.Leader.ProcessGroupID {
+			return nil, fmt.Errorf(
+				"tool-child event %d process group %d does not match leader group %d",
+				event.Sequence, processGroupID, target.Leader.ProcessGroupID,
+			)
+		}
+		if seen[event.PID] {
+			continue
+		}
+		seen[event.PID] = true
+		members = append(members, agentprocess.ProcessIdentity{
+			PID: event.PID, StartIdentity: event.Details["process_start"], ProcessGroupID: processGroupID,
+		})
+	}
+	return members, nil
+}
+
+func processControlEvent(kind, sessionID string, request agentprocess.ControlRequest, failure string) workstore.Event {
+	event := workstore.Event{
+		Kind: kind, SessionID: sessionID, Generation: request.Target.Generation,
+		OwnerTokenHash: request.Target.OwnerTokenHash, PID: request.Target.Leader.PID,
+		Details: map[string]string{
+			"process_start":    request.Target.Leader.StartIdentity,
+			"process_group_id": fmt.Sprint(request.Target.Leader.ProcessGroupID),
+			"scope":            string(request.Scope), "signal": string(request.Signal),
+		},
+	}
+	if failure != "" {
+		event.Details["error"] = failure
+	}
+	return event
 }
 
 type HeartbeatDetails struct {
@@ -67,6 +183,7 @@ func (a Activities) RunAgent(ctx context.Context, input ActivityInput) (workstor
 		}
 		if err := a.launchAgent(
 			decision.Lease, store.Path(), input.BlockAttempt1BeforeRegistration && info.Attempt == 1,
+			input.SpawnToolChild,
 		); err != nil {
 			return workstore.Outcome{}, err
 		}
@@ -77,10 +194,14 @@ func (a Activities) RunAgent(ctx context.Context, input ActivityInput) (workstor
 			return workstore.Outcome{}, err
 		}
 	}
-	return a.waitForOutcome(ctx, store, decision.Lease)
+	return a.waitForOutcome(ctx, store, decision.Lease, info.Attempt)
 }
 
-func (a Activities) launchAgent(lease workstore.Lease, storePath string, blockBeforeRegistration bool) error {
+func (a Activities) launchAgent(
+	lease workstore.Lease,
+	storePath string,
+	blockBeforeRegistration, spawnToolChild bool,
+) error {
 	tokenHash := workstore.HashToken(lease.OwnerToken)
 	actorID := fmt.Sprintf("agent/%s/g%d/%s", lease.SessionID, lease.Generation, tokenHash[:12])
 	launcher := agentprocess.NewLauncher(a.AgentBinary, filepath.Join(a.RunDirectory, sessionDirectoryName(lease.SessionID)))
@@ -89,6 +210,7 @@ func (a Activities) launchAgent(lease workstore.Lease, storePath string, blockBe
 		Config: agentsim.Config{
 			Lease: lease, ActorID: actorID,
 			BlockBeforeRegistration: blockBeforeRegistration,
+			SpawnToolChild:          spawnToolChild,
 			Effect: workstore.Effect{
 				ID:    fmt.Sprintf("%s/tool-write/g%d", lease.SessionID, lease.Generation),
 				Value: fmt.Sprintf("mutation by generation %d", lease.Generation),
@@ -156,7 +278,12 @@ func (a Activities) blockAtActivityBoundary(
 	return nil
 }
 
-func (a Activities) waitForOutcome(ctx context.Context, store *workstore.Store, lease workstore.Lease) (workstore.Outcome, error) {
+func (a Activities) waitForOutcome(
+	ctx context.Context,
+	store *workstore.Store,
+	lease workstore.Lease,
+	attempt int32,
+) (workstore.Outcome, error) {
 	tokenHash := workstore.HashToken(lease.OwnerToken)
 	ticker := time.NewTicker(activityPollInterval)
 	defer ticker.Stop()
@@ -176,6 +303,13 @@ func (a Activities) waitForOutcome(ctx context.Context, store *workstore.Store, 
 				SessionID: lease.SessionID, Generation: lease.Generation,
 				OwnerTokenHash: tokenHash, Phase: "waiting-for-agent-outcome",
 			})
+			if err := store.RecordObservation(ctx, workstore.Event{
+				Kind: "activity_heartbeat_recorded", SessionID: lease.SessionID,
+				Generation: lease.Generation, OwnerTokenHash: tokenHash,
+				WorkerID: a.WorkerID, Attempt: attempt,
+			}); err != nil {
+				return workstore.Outcome{}, fmt.Errorf("record Activity heartbeat evidence: %w", err)
+			}
 		}
 	}
 }

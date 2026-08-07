@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"runtime/debug"
 
-	"github.com/temporalio-labs/agent-durability-lab/internal/workstore"
+	"github.com/sjarmak/temporal_projects/internal/workstore"
 	enumspb "go.temporal.io/api/enums/v1"
 	historypb "go.temporal.io/api/history/v1"
 	workflowservice "go.temporal.io/api/workflowservice/v1"

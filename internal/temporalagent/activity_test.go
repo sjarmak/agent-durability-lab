@@ -9,9 +9,11 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/temporalio-labs/agent-durability-lab/internal/failureinject"
-	"github.com/temporalio-labs/agent-durability-lab/internal/workstore"
+	"github.com/sjarmak/temporal_projects/internal/agentprocess"
+	"github.com/sjarmak/temporal_projects/internal/failureinject"
+	"github.com/sjarmak/temporal_projects/internal/workstore"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/testsuite"
 )
@@ -140,6 +142,111 @@ func TestActivityReturnsPreviouslyAcceptedOutcomeWithoutLaunching(t *testing.T) 
 	if outcome != want {
 		t.Fatalf("outcome = %+v; want %+v", outcome, want)
 	}
+}
+
+func TestCancelActivityRevokesAuthorityBeforeAttemptingExactProcessTreeStop(t *testing.T) {
+	store, err := workstore.Open(filepath.Join(t.TempDir(), "work.db"))
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	decision, err := store.StartOrAttach(context.Background(), workstore.StartRequest{
+		SessionID: "session-1", Mode: workstore.ModeFenced, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
+	})
+	if err != nil {
+		t.Fatalf("start session: %v", err)
+	}
+	process := workstore.Process{PID: 101, StartIdentity: "boot:101", ProcessGroupID: 101}
+	if err := store.RegisterProcess(context.Background(), decision.Lease, process); err != nil {
+		t.Fatalf("register process: %v", err)
+	}
+	if err := store.RecordObservation(context.Background(), workstore.Event{
+		Kind: "tool_child_registered", SessionID: "session-1", Generation: 1,
+		OwnerTokenHash: workstore.HashToken(decision.Lease.OwnerToken), PID: 202,
+		Details: map[string]string{"process_start": "boot:202", "process_group_id": "101"},
+	}); err != nil {
+		t.Fatalf("record tool child: %v", err)
+	}
+	var captured agentprocess.ControlRequest
+	activities := Activities{
+		StorePath: store.Path(),
+		SignalProcess: func(request agentprocess.ControlRequest) (agentprocess.ControlResult, error) {
+			captured = request
+			snapshot, snapshotErr := store.Snapshot(context.Background(), "session-1")
+			if snapshotErr != nil {
+				return agentprocess.ControlResult{}, snapshotErr
+			}
+			if snapshot.Cancellation == nil || snapshot.Executors[0].Status != workstore.ExecutorStatusCanceled {
+				return agentprocess.ControlResult{}, errors.New("process stop ran before durable revocation")
+			}
+			return agentprocess.ControlResult{
+				Target: request.Target, Scope: request.Scope, Signal: request.Signal,
+				Method: agentprocess.MethodProcessGroupAndPIDFD, RequestedAt: time.Now().UTC(),
+			}, nil
+		},
+	}
+
+	result, err := activities.CancelAgent(context.Background(), CancelActivityInput{
+		SessionID: "session-1", RequestID: "cancel-1",
+	})
+	if err != nil {
+		t.Fatalf("cancel Activity: %v", err)
+	}
+	if result.Action != workstore.CancelActionCommitted || result.Delivery != CancellationDeliverySent {
+		t.Fatalf("cancel result = %+v", result)
+	}
+	if captured.Scope != agentprocess.ScopeProcessTree || captured.Signal != agentprocess.SignalTerminate ||
+		captured.Target.SessionID != "session-1" || captured.Target.Generation != decision.Lease.Generation ||
+		captured.Target.Leader.PID != process.PID || captured.Target.Leader.StartIdentity != process.StartIdentity ||
+		captured.Target.Leader.ProcessGroupID != process.ProcessGroupID || len(captured.Target.Members) != 2 ||
+		captured.Target.Members[1].PID != 202 {
+		t.Fatalf("control request = %+v; want exact session executor tree", captured)
+	}
+	snapshot, err := store.Snapshot(context.Background(), "session-1")
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+	assertActivityEventKinds(t, snapshot.Events, "cancellation_committed", "executor_stop_delivery_attempted", "executor_stop_delivery_sent")
+}
+
+func TestCancelActivitySucceedsLogicallyWhenExecutorIsUnreachable(t *testing.T) {
+	store, err := workstore.Open(filepath.Join(t.TempDir(), "work.db"))
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	decision, err := store.StartOrAttach(context.Background(), workstore.StartRequest{
+		SessionID: "session-1", Mode: workstore.ModeFenced, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
+	})
+	if err != nil {
+		t.Fatalf("start session: %v", err)
+	}
+	if err := store.RegisterProcess(context.Background(), decision.Lease, workstore.Process{
+		PID: 101, StartIdentity: "boot:101", ProcessGroupID: 101,
+	}); err != nil {
+		t.Fatalf("register process: %v", err)
+	}
+	activities := Activities{
+		StorePath: store.Path(),
+		SignalProcess: func(agentprocess.ControlRequest) (agentprocess.ControlResult, error) {
+			return agentprocess.ControlResult{}, agentprocess.ErrProcessGone
+		},
+	}
+	result, err := activities.CancelAgent(context.Background(), CancelActivityInput{
+		SessionID: "session-1", RequestID: "cancel-1",
+	})
+	if err != nil {
+		t.Fatalf("cancel unreachable agent: %v", err)
+	}
+	if result.Action != workstore.CancelActionCommitted || result.Delivery != CancellationDeliveryFailed {
+		t.Fatalf("cancel result = %+v; want committed revocation and failed delivery", result)
+	}
+	snapshot, err := store.Snapshot(context.Background(), "session-1")
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+	if snapshot.Cancellation == nil || snapshot.Outcome != nil {
+		t.Fatalf("logical terminal state = cancellation %+v outcome %+v", snapshot.Cancellation, snapshot.Outcome)
+	}
+	assertActivityEventKinds(t, snapshot.Events, "executor_stop_delivery_failed")
 }
 
 func TestActivityPreHeartbeatBoundaryBlocksUntilRelease(t *testing.T) {
@@ -326,7 +433,7 @@ func TestActivityWaitAndObservationHonorCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	activities := Activities{BarrierURL: "http://unused", WorkerID: "worker"}
-	if _, err := activities.waitForOutcome(ctx, store, decision.Lease); !errors.Is(err, context.Canceled) {
+	if _, err := activities.waitForOutcome(ctx, store, decision.Lease, 1); !errors.Is(err, context.Canceled) {
 		t.Fatalf("waitForOutcome = %v; want context.Canceled", err)
 	}
 	if err := activities.blockBeforeFirstHeartbeat(ctx, store, decision.Lease, 1); !errors.Is(err, context.Canceled) {
@@ -374,5 +481,18 @@ func releaseActivityBarrier(t *testing.T, coordinator *failureinject.Coordinator
 	t.Helper()
 	if err := coordinator.Release(point); err != nil {
 		t.Fatalf("release barrier %q: %v", point, err)
+	}
+}
+
+func assertActivityEventKinds(t *testing.T, events []workstore.Event, want ...string) {
+	t.Helper()
+	found := make(map[string]bool, len(events))
+	for _, event := range events {
+		found[event.Kind] = true
+	}
+	for _, kind := range want {
+		if !found[kind] {
+			t.Errorf("missing event kind %q", kind)
+		}
 	}
 }

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/temporalio-labs/agent-durability-lab/experiments/external-effects/internal/lab"
+	"github.com/sjarmak/temporal_projects/experiments/external-effects/internal/lab"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
 )

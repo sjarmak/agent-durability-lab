@@ -13,6 +13,8 @@ var (
 	ErrStaleOwner             = errors.New("stale owner")
 	ErrExecutorNotRunning     = errors.New("executor not running")
 	ErrOutcomeAlreadyAccepted = errors.New("outcome already accepted")
+	ErrSessionCanceled        = errors.New("session canceled")
+	ErrSessionNotCanceled     = errors.New("session not canceled")
 )
 
 type Mode string
@@ -58,6 +60,54 @@ type Decision struct {
 	Outcome *Outcome `json:"outcome,omitempty"`
 }
 
+type CancelAction string
+
+const (
+	CancelActionCommitted        CancelAction = "committed"
+	CancelActionAlreadyCanceled  CancelAction = "already_canceled"
+	CancelActionAlreadyCompleted CancelAction = "already_completed"
+)
+
+type CancelRequest struct {
+	SessionID string `json:"session_id"`
+	RequestID string `json:"request_id"`
+}
+
+type Cancellation struct {
+	RequestID       string                       `json:"request_id"`
+	Generation      uint64                       `json:"generation"`
+	OwnerTokenHash  string                       `json:"owner_token_hash"`
+	Target          CancellationTarget           `json:"target"`
+	CommittedAt     time.Time                    `json:"committed_at"`
+	Acknowledgement *CancellationAcknowledgement `json:"acknowledgement,omitempty"`
+}
+
+type CancellationTarget struct {
+	SessionID      string  `json:"session_id"`
+	Generation     uint64  `json:"generation"`
+	OwnerTokenHash string  `json:"owner_token_hash"`
+	Process        Process `json:"process"`
+}
+
+type CancellationAcknowledgement struct {
+	Generation     uint64    `json:"generation"`
+	OwnerTokenHash string    `json:"owner_token_hash"`
+	Process        Process   `json:"process"`
+	AcknowledgedAt time.Time `json:"acknowledged_at"`
+}
+
+type CancellationAcknowledgementRequest struct {
+	RequestID string  `json:"request_id"`
+	Lease     Lease   `json:"lease"`
+	Process   Process `json:"process"`
+}
+
+type CancelDecision struct {
+	Action       CancelAction  `json:"action"`
+	Cancellation *Cancellation `json:"cancellation,omitempty"`
+	Outcome      *Outcome      `json:"outcome,omitempty"`
+}
+
 type Outcome struct {
 	Value       string `json:"value"`
 	ArtifactRef string `json:"artifact_ref,omitempty"`
@@ -83,6 +133,7 @@ type Executor struct {
 	Attempt        int32     `json:"attempt"`
 	PID            int       `json:"pid,omitempty"`
 	ProcessStart   string    `json:"process_start,omitempty"`
+	ProcessGroupID int       `json:"process_group_id,omitempty"`
 	Status         string    `json:"status"`
 	StartedAt      time.Time `json:"started_at"`
 }
@@ -94,6 +145,7 @@ const (
 	ExecutorStatusCompleted         = "completed"
 	ExecutorStatusTerminalRejected  = "terminal_rejected"
 	ExecutorStatusTerminalDuplicate = "terminal_duplicate"
+	ExecutorStatusCanceled          = "canceled"
 )
 
 type Event struct {
@@ -117,12 +169,14 @@ type Snapshot struct {
 	Executors            []Executor       `json:"executors"`
 	Effects              []AcceptedEffect `json:"effects"`
 	Outcome              *Outcome         `json:"outcome,omitempty"`
+	Cancellation         *Cancellation    `json:"cancellation,omitempty"`
 	Events               []Event          `json:"events"`
 }
 
 type Process struct {
-	PID           int
-	StartIdentity string
+	PID            int    `json:"pid"`
+	StartIdentity  string `json:"start_identity"`
+	ProcessGroupID int    `json:"process_group_id,omitempty"`
 }
 
 func HashToken(token string) string {
@@ -131,21 +185,23 @@ func HashToken(token string) string {
 }
 
 type sessionRecord struct {
-	SessionID   string           `json:"session_id"`
-	Mode        Mode             `json:"mode"`
-	ActiveLease Lease            `json:"active_lease"`
-	Executors   []executorRecord `json:"executors"`
-	Effects     []AcceptedEffect `json:"effects"`
-	Outcome     *Outcome         `json:"outcome,omitempty"`
+	SessionID    string           `json:"session_id"`
+	Mode         Mode             `json:"mode"`
+	ActiveLease  Lease            `json:"active_lease"`
+	Executors    []executorRecord `json:"executors"`
+	Effects      []AcceptedEffect `json:"effects"`
+	Outcome      *Outcome         `json:"outcome,omitempty"`
+	Cancellation *Cancellation    `json:"cancellation,omitempty"`
 }
 
 type executorRecord struct {
 	Lease
-	WorkerID     string    `json:"worker_id"`
-	AgentBuild   string    `json:"agent_build,omitempty"`
-	Attempt      int32     `json:"attempt"`
-	PID          int       `json:"pid,omitempty"`
-	ProcessStart string    `json:"process_start,omitempty"`
-	Status       string    `json:"status"`
-	StartedAt    time.Time `json:"started_at"`
+	WorkerID       string    `json:"worker_id"`
+	AgentBuild     string    `json:"agent_build,omitempty"`
+	Attempt        int32     `json:"attempt"`
+	PID            int       `json:"pid,omitempty"`
+	ProcessStart   string    `json:"process_start,omitempty"`
+	ProcessGroupID int       `json:"process_group_id,omitempty"`
+	Status         string    `json:"status"`
+	StartedAt      time.Time `json:"started_at"`
 }

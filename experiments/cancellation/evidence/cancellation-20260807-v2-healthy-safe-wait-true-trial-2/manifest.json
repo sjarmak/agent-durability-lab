@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "experiment": "precise-agent-cancellation",
+  "run_id": "cancellation-20260807-v2-healthy-safe-wait-true-trial-2",
+  "scenario": "healthy-safe",
+  "wait_for_cancellation": true,
+  "started_at": "2026-08-07T14:32:09.46390859Z",
+  "completed_at": "2026-08-07T14:32:11.007289597Z",
+  "temporal_cli": "temporal version 1.8.0 (Server 1.31.2, UI 2.50.1)",
+  "temporal_server": "1.31.2",
+  "temporal_sdk": "v1.47.0",
+  "go_version": "go1.25.12",
+  "failure_boundary": "healthy Worker receives Workflow cancellation while leader and tool child are blocked",
+  "invariant": "after logical cancellation commits, no later progress, effect, outcome, or replacement is accepted",
+  "falsifier": "a safe arm accepts a post-cancel mutation, loses exact stop identity, signals a replacement, or claims acknowledgement without evidence"
+}

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/temporalio-labs/agent-durability-lab/internal/temporalagent"
+	"github.com/sjarmak/temporal_projects/internal/temporalagent"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
@@ -49,13 +49,18 @@ func run() error {
 		temporalagent.WorkerDeathWorkflow,
 		workflow.RegisterOptions{Name: temporalagent.WorkflowName},
 	)
+	activities := temporalagent.Activities{
+		StorePath: config.storePath, AgentBinary: config.agentBinary,
+		BarrierURL: config.barrierURL, RunDirectory: config.runDirectory,
+		WorkerID: config.workerID, AgentBuild: config.agentBuild,
+	}
 	temporalWorker.RegisterActivityWithOptions(
-		temporalagent.Activities{
-			StorePath: config.storePath, AgentBinary: config.agentBinary,
-			BarrierURL: config.barrierURL, RunDirectory: config.runDirectory,
-			WorkerID: config.workerID, AgentBuild: config.agentBuild,
-		}.RunAgent,
+		activities.RunAgent,
 		activity.RegisterOptions{Name: temporalagent.ActivityName},
+	)
+	temporalWorker.RegisterActivityWithOptions(
+		activities.CancelAgent,
+		activity.RegisterOptions{Name: temporalagent.CancelActivityName},
 	)
 	if err := temporalWorker.Run(worker.InterruptCh()); err != nil {
 		return fmt.Errorf("run Temporal Worker: %w", err)

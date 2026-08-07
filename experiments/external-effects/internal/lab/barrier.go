@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/temporalio-labs/agent-durability-lab/internal/failureinject"
+	"github.com/sjarmak/temporal_projects/internal/failureinject"
 )
 
 type barrierService struct {

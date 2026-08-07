@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/temporalio-labs/agent-durability-lab/internal/workstore"
+	"github.com/sjarmak/temporal_projects/internal/workstore"
 	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/testsuite"
 	"go.temporal.io/sdk/worker"
@@ -82,6 +82,58 @@ func TestWorkflowConfiguresFailureDetectionAndBoundedRetry(t *testing.T) {
 	}
 	if info.StartToCloseTimeout != AgentStartToCloseTimeout {
 		t.Fatalf("start-to-close timeout = %s; want %s", info.StartToCloseTimeout, AgentStartToCloseTimeout)
+	}
+}
+
+func TestWorkflowCancellationRunsDisconnectedApplicationCleanup(t *testing.T) {
+	for _, waitForCancellation := range []bool{false, true} {
+		t.Run(map[bool]string{false: "do-not-wait", true: "wait"}[waitForCancellation], func(t *testing.T) {
+			var suite testsuite.WorkflowTestSuite
+			environment := suite.NewTestWorkflowEnvironment()
+			cleanupInputs := make(chan CancelActivityInput, 1)
+			environment.RegisterActivityWithOptions(
+				func(ctx context.Context, _ ActivityInput) (workstore.Outcome, error) {
+					<-ctx.Done()
+					return workstore.Outcome{}, context.Cause(ctx)
+				},
+				activity.RegisterOptions{Name: ActivityName},
+			)
+			environment.RegisterActivityWithOptions(
+				func(_ context.Context, input CancelActivityInput) (CancelActivityResult, error) {
+					cleanupInputs <- input
+					return CancelActivityResult{Action: workstore.CancelActionCommitted}, nil
+				},
+				activity.RegisterOptions{Name: CancelActivityName},
+			)
+			environment.RegisterDelayedCallback(environment.CancelWorkflow, time.Second)
+			environment.ExecuteWorkflow(WorkerDeathWorkflow, WorkflowInput{
+				SessionID: "session-1", Mode: workstore.ModeFenced,
+				EnableCancellationCleanup: true, WaitForCancellation: waitForCancellation,
+			})
+			if err := environment.GetWorkflowError(); err == nil {
+				t.Fatal("canceled Workflow returned nil error")
+			}
+			select {
+			case input := <-cleanupInputs:
+				if input.SessionID != "session-1" || input.RequestID == "" {
+					t.Fatalf("cleanup input = %+v", input)
+				}
+			default:
+				t.Fatal("disconnected cancellation cleanup did not run")
+			}
+		})
+	}
+}
+
+func TestAgentActivityOptionsExposeCancellationWaitPolicy(t *testing.T) {
+	for _, wait := range []bool{false, true} {
+		options := agentActivityOptions("session-1", wait)
+		if options.WaitForCancellation != wait {
+			t.Fatalf("WaitForCancellation = %v; want %v", options.WaitForCancellation, wait)
+		}
+		if options.ActivityID != ActivityID("session-1") {
+			t.Fatalf("ActivityID = %q", options.ActivityID)
+		}
 	}
 }
 

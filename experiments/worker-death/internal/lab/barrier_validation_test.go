@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/temporalio-labs/agent-durability-lab/internal/failureinject"
+	"github.com/sjarmak/temporal_projects/internal/failureinject"
 )
 
 func TestArrivalMatchesExpectedIdentity(t *testing.T) {

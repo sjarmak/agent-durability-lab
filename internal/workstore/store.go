@@ -75,6 +75,15 @@ func (s *Store) StartOrAttach(ctx context.Context, request StartRequest) (Decisi
 				WorkerID: request.WorkerID, Attempt: request.Attempt,
 			})
 		}
+		if found && record.Cancellation != nil {
+			domainErr = ErrSessionCanceled
+			return appendEvent(tx, Event{
+				Kind: "start_rejected_canceled", SessionID: request.SessionID,
+				Generation: record.Cancellation.Generation, OwnerTokenHash: record.Cancellation.OwnerTokenHash,
+				WorkerID: request.WorkerID, Attempt: request.Attempt,
+				Details: map[string]string{"request_id": record.Cancellation.RequestID},
+			})
+		}
 
 		var eventKind string
 		switch {
@@ -123,23 +132,36 @@ func (s *Store) RegisterProcess(ctx context.Context, lease Lease, process Proces
 	}
 	return s.changeExecutor(ctx, lease, func(record sessionRecord, index int) (sessionRecord, Event, error) {
 		executor := record.Executors[index]
+		if record.Cancellation != nil {
+			event := canceledEventWithExecutor("process_registration_rejected_canceled", lease, executor, record.Cancellation)
+			event.PID = process.PID
+			event.Details["process_start"] = process.StartIdentity
+			event.Details["process_group_id"] = fmt.Sprint(process.ProcessGroupID)
+			return record, event, ErrSessionCanceled
+		}
 		if record.Mode == ModeFenced && lease != record.ActiveLease {
 			event := staleEventWithExecutor("process_registration_rejected_stale", lease, executor)
 			event.PID = process.PID
-			event.Details = map[string]string{"process_start": process.StartIdentity}
+			event.Details = map[string]string{
+				"process_start": process.StartIdentity, "process_group_id": fmt.Sprint(process.ProcessGroupID),
+			}
 			return record, event, ErrStaleOwner
 		}
 		executors := append([]executorRecord(nil), record.Executors...)
 		executor = executors[index]
 		executor.PID = process.PID
 		executor.ProcessStart = process.StartIdentity
+		executor.ProcessGroupID = process.ProcessGroupID
 		executor.Status = ExecutorStatusRunning
 		executors[index] = executor
 		record.Executors = executors
 		return record, Event{
 			Kind: "process_registered", SessionID: lease.SessionID, Generation: lease.Generation,
 			OwnerTokenHash: HashToken(lease.OwnerToken), WorkerID: executor.WorkerID,
-			Attempt: executor.Attempt, PID: process.PID, Details: map[string]string{"process_start": process.StartIdentity},
+			Attempt: executor.Attempt, PID: process.PID,
+			Details: map[string]string{
+				"process_start": process.StartIdentity, "process_group_id": fmt.Sprint(process.ProcessGroupID),
+			},
 		}, nil
 	})
 }
@@ -150,6 +172,9 @@ func (s *Store) RecordProgress(ctx context.Context, lease Lease, phase string) e
 	}
 	return s.changeExecutor(ctx, lease, func(record sessionRecord, index int) (sessionRecord, Event, error) {
 		executor := record.Executors[index]
+		if record.Cancellation != nil {
+			return record, canceledEventWithExecutor("progress_rejected_canceled", lease, executor, record.Cancellation), ErrSessionCanceled
+		}
 		if record.Mode == ModeFenced && lease != record.ActiveLease {
 			return record, staleEventWithExecutor("progress_rejected_stale", lease, executor), ErrStaleOwner
 		}
@@ -179,6 +204,9 @@ func (s *Store) CommitEffect(ctx context.Context, lease Lease, effect Effect) er
 	}
 	return s.changeExecutor(ctx, lease, func(record sessionRecord, index int) (sessionRecord, Event, error) {
 		executor := record.Executors[index]
+		if record.Cancellation != nil {
+			return record, canceledEventWithExecutor("effect_rejected_canceled", lease, executor, record.Cancellation), ErrSessionCanceled
+		}
 		if record.Mode == ModeFenced && lease != record.ActiveLease {
 			return record, staleEventWithExecutor("effect_rejected_stale", lease, executor), ErrStaleOwner
 		}
@@ -203,6 +231,9 @@ func (s *Store) Complete(ctx context.Context, lease Lease, outcome Outcome) erro
 	}
 	return s.changeExecutor(ctx, lease, func(record sessionRecord, index int) (sessionRecord, Event, error) {
 		executor := record.Executors[index]
+		if record.Cancellation != nil {
+			return record, canceledEventWithExecutor("completion_rejected_canceled", lease, executor, record.Cancellation), ErrSessionCanceled
+		}
 		if record.Mode == ModeFenced && lease != record.ActiveLease {
 			return record, staleEventWithExecutor("completion_rejected_stale", lease, executor), ErrStaleOwner
 		}
@@ -241,6 +272,103 @@ func (s *Store) Complete(ctx context.Context, lease Lease, outcome Outcome) erro
 			OwnerTokenHash: HashToken(lease.OwnerToken), WorkerID: executor.WorkerID,
 			Attempt: executor.Attempt, PID: executor.PID,
 		}, nil
+	})
+}
+
+func (s *Store) CancelSession(ctx context.Context, request CancelRequest) (CancelDecision, error) {
+	if request.SessionID == "" || request.RequestID == "" {
+		return CancelDecision{}, fmt.Errorf("%w: cancellation session and request IDs are required", ErrInvalidRequest)
+	}
+
+	var decision CancelDecision
+	err := s.update(ctx, func(tx *bolt.Tx) error {
+		sessions := tx.Bucket(sessionsBucket)
+		record, found, err := loadSession(sessions, request.SessionID)
+		if err != nil {
+			return err
+		}
+		if !found {
+			return fmt.Errorf("%w: %s", ErrSessionNotFound, request.SessionID)
+		}
+		if record.Outcome != nil {
+			outcome := *record.Outcome
+			decision = CancelDecision{Action: CancelActionAlreadyCompleted, Outcome: &outcome}
+			return appendEvent(tx, terminalCancellationEvent("cancellation_observed_completed", request, record))
+		}
+		if record.Cancellation != nil {
+			cancellation := *record.Cancellation
+			decision = CancelDecision{Action: CancelActionAlreadyCanceled, Cancellation: &cancellation}
+			return appendEvent(tx, terminalCancellationEvent("cancellation_observed_already_canceled", request, record))
+		}
+
+		cancellation := Cancellation{
+			RequestID: request.RequestID, Generation: record.ActiveLease.Generation,
+			OwnerTokenHash: HashToken(record.ActiveLease.OwnerToken), CommittedAt: time.Now().UTC(),
+		}
+		if index := executorIndex(record.Executors, record.ActiveLease); index >= 0 {
+			executor := record.Executors[index]
+			cancellation.Target = CancellationTarget{
+				SessionID: request.SessionID, Generation: executor.Generation,
+				OwnerTokenHash: HashToken(executor.OwnerToken),
+				Process: Process{
+					PID: executor.PID, StartIdentity: executor.ProcessStart, ProcessGroupID: executor.ProcessGroupID,
+				},
+			}
+		}
+		record.Cancellation = &cancellation
+		executors := append([]executorRecord(nil), record.Executors...)
+		for index := range executors {
+			if executors[index].Status == ExecutorStatusRunning || executors[index].Status == ExecutorStatusLaunchPending {
+				executors[index].Status = ExecutorStatusCanceled
+			}
+		}
+		record.Executors = executors
+		if err := saveSession(sessions, record); err != nil {
+			return err
+		}
+		decision = CancelDecision{Action: CancelActionCommitted, Cancellation: &cancellation}
+		return appendEvent(tx, terminalCancellationEvent("cancellation_committed", request, record))
+	})
+	if err != nil {
+		return CancelDecision{}, err
+	}
+	return decision, nil
+}
+
+func (s *Store) AcknowledgeCancellation(ctx context.Context, request CancellationAcknowledgementRequest) error {
+	if request.RequestID == "" || request.Process.PID <= 0 || request.Process.StartIdentity == "" {
+		return fmt.Errorf("%w: cancellation request, PID, and process start identity are required", ErrInvalidRequest)
+	}
+	return s.changeExecutor(ctx, request.Lease, func(record sessionRecord, index int) (sessionRecord, Event, error) {
+		executor := record.Executors[index]
+		if record.Cancellation == nil {
+			return record, staleEventWithExecutor(
+				"cancellation_ack_rejected_not_canceled", request.Lease, executor,
+			), ErrSessionNotCanceled
+		}
+		cancellation := *record.Cancellation
+		target := CancellationTarget{
+			SessionID: request.Lease.SessionID, Generation: request.Lease.Generation,
+			OwnerTokenHash: HashToken(request.Lease.OwnerToken), Process: request.Process,
+		}
+		if request.RequestID != cancellation.RequestID || target != cancellation.Target {
+			return record, canceledEventWithExecutor(
+				"cancellation_ack_rejected_stale", request.Lease, executor, record.Cancellation,
+			), ErrStaleOwner
+		}
+		if cancellation.Acknowledgement != nil {
+			return record, canceledEventWithExecutor(
+				"cancellation_acknowledgement_duplicate", request.Lease, executor, record.Cancellation,
+			), nil
+		}
+		cancellation.Acknowledgement = &CancellationAcknowledgement{
+			Generation: request.Lease.Generation, OwnerTokenHash: HashToken(request.Lease.OwnerToken),
+			Process: request.Process, AcknowledgedAt: time.Now().UTC(),
+		}
+		record.Cancellation = &cancellation
+		return record, canceledEventWithExecutor(
+			"cancellation_acknowledged", request.Lease, executor, record.Cancellation,
+		), nil
 	})
 }
 
@@ -505,7 +633,8 @@ func snapshotFromRecord(record sessionRecord, events []Event) Snapshot {
 		executors = append(executors, Executor{
 			Generation: executor.Generation, OwnerTokenHash: HashToken(executor.OwnerToken),
 			WorkerID: executor.WorkerID, AgentBuild: executor.AgentBuild, Attempt: executor.Attempt,
-			PID: executor.PID, ProcessStart: executor.ProcessStart, Status: executor.Status, StartedAt: executor.StartedAt,
+			PID: executor.PID, ProcessStart: executor.ProcessStart, ProcessGroupID: executor.ProcessGroupID,
+			Status: executor.Status, StartedAt: executor.StartedAt,
 		})
 	}
 	var outcome *Outcome
@@ -513,10 +642,20 @@ func snapshotFromRecord(record sessionRecord, events []Event) Snapshot {
 		copy := *record.Outcome
 		outcome = &copy
 	}
+	var cancellation *Cancellation
+	if record.Cancellation != nil {
+		copy := *record.Cancellation
+		if record.Cancellation.Acknowledgement != nil {
+			acknowledgement := *record.Cancellation.Acknowledgement
+			copy.Acknowledgement = &acknowledgement
+		}
+		cancellation = &copy
+	}
 	return Snapshot{
 		SessionID: record.SessionID, Mode: record.Mode, ActiveGeneration: record.ActiveLease.Generation,
 		ActiveOwnerTokenHash: HashToken(record.ActiveLease.OwnerToken), Executors: executors,
-		Effects: append([]AcceptedEffect(nil), record.Effects...), Outcome: outcome, Events: events,
+		Effects: append([]AcceptedEffect(nil), record.Effects...), Outcome: outcome,
+		Cancellation: cancellation, Events: events,
 	}
 }
 
@@ -529,5 +668,27 @@ func staleEventWithExecutor(kind string, lease Lease, executor executorRecord) E
 	event.WorkerID = executor.WorkerID
 	event.Attempt = executor.Attempt
 	event.PID = executor.PID
+	return event
+}
+
+func canceledEventWithExecutor(kind string, lease Lease, executor executorRecord, cancellation *Cancellation) Event {
+	event := staleEventWithExecutor(kind, lease, executor)
+	event.Details = map[string]string{"cancellation_request_id": cancellation.RequestID}
+	return event
+}
+
+func terminalCancellationEvent(kind string, request CancelRequest, record sessionRecord) Event {
+	event := Event{
+		Kind: kind, SessionID: request.SessionID, Generation: record.ActiveLease.Generation,
+		OwnerTokenHash: HashToken(record.ActiveLease.OwnerToken),
+		Details:        map[string]string{"request_id": request.RequestID},
+	}
+	index := executorIndex(record.Executors, record.ActiveLease)
+	if index >= 0 {
+		executor := record.Executors[index]
+		event.WorkerID = executor.WorkerID
+		event.Attempt = executor.Attempt
+		event.PID = executor.PID
+	}
 	return event
 }

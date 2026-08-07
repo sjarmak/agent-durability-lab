@@ -7,7 +7,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/temporalio-labs/agent-durability-lab/internal/agentsim"
+	"github.com/sjarmak/temporal_projects/internal/agentsim"
 )
 
 type LaunchRequest struct {
@@ -17,10 +17,11 @@ type LaunchRequest struct {
 }
 
 type Process struct {
-	PID           int    `json:"pid"`
-	StartIdentity string `json:"start_identity"`
-	RequestPath   string `json:"request_path"`
-	LogPath       string `json:"log_path"`
+	PID            int    `json:"pid"`
+	StartIdentity  string `json:"start_identity"`
+	ProcessGroupID int    `json:"process_group_id,omitempty"`
+	RequestPath    string `json:"request_path"`
+	LogPath        string `json:"log_path"`
 }
 
 type Launcher struct {
@@ -77,12 +78,13 @@ func (l *Launcher) Launch(request LaunchRequest) (Process, error) {
 	}
 	pid := command.Process.Pid
 	startIdentity, identityErr := ProcessStartIdentity(pid)
+	processGroupID, groupErr := ProcessGroupID(pid)
 	closeErr := logFile.Close()
-	if identityErr != nil || closeErr != nil {
+	if identityErr != nil || groupErr != nil || closeErr != nil {
 		_ = command.Process.Kill()
 		_, _ = command.Process.Wait()
 		requestPublished = false
-		return Process{}, errors.Join(identityErr, closeErr)
+		return Process{}, errors.Join(identityErr, groupErr, closeErr)
 	}
 	if err := command.Process.Release(); err != nil {
 		_ = command.Process.Kill()
@@ -90,7 +92,8 @@ func (l *Launcher) Launch(request LaunchRequest) (Process, error) {
 		return Process{}, fmt.Errorf("release agent process: %w", err)
 	}
 	return Process{
-		PID: pid, StartIdentity: startIdentity, RequestPath: requestPath, LogPath: logPath,
+		PID: pid, StartIdentity: startIdentity, ProcessGroupID: processGroupID,
+		RequestPath: requestPath, LogPath: logPath,
 	}, nil
 }
 

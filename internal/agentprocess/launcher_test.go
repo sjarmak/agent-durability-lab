@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/temporalio-labs/agent-durability-lab/internal/agentsim"
-	"github.com/temporalio-labs/agent-durability-lab/internal/failureinject"
-	"github.com/temporalio-labs/agent-durability-lab/internal/workstore"
+	"github.com/sjarmak/temporal_projects/internal/agentsim"
+	"github.com/sjarmak/temporal_projects/internal/failureinject"
+	"github.com/sjarmak/temporal_projects/internal/workstore"
 )
 
 const (
@@ -148,7 +148,7 @@ func TestLauncherPublishesPrivateRequestAndDetachedProcess(t *testing.T) {
 		t.Fatalf("launch: %v", err)
 	}
 	t.Cleanup(func() { _ = syscall.Kill(process.PID, syscall.SIGKILL) })
-	if process.PID <= 0 || process.StartIdentity == "" {
+	if process.PID <= 0 || process.StartIdentity == "" || process.ProcessGroupID != process.PID {
 		t.Fatalf("process = %+v; want PID and start identity", process)
 	}
 	if err := syscall.Kill(process.PID, 0); err != nil {

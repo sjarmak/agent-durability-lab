@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/temporalio-labs/agent-durability-lab/internal/failureinject"
+	"github.com/sjarmak/temporal_projects/internal/failureinject"
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/testsuite"
 )

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/temporalio-labs/agent-durability-lab/experiments/activity-completion-identity/internal/lab"
+	"github.com/sjarmak/temporal_projects/experiments/activity-completion-identity/internal/lab"
 )
 
 func main() {

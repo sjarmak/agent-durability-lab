@@ -8,6 +8,7 @@ build:
 	go build -o bin/activity-completion-identity-experiment ./experiments/activity-completion-identity/cmd/experiment
 	go build -o bin/external-effect-worker ./experiments/external-effects/cmd/worker
 	go build -o bin/external-effect-experiment ./experiments/external-effects/cmd/experiment
+	go build -o bin/cancellation-experiment ./experiments/cancellation/cmd/experiment
 
 test:
 	go test -race ./...
@@ -16,7 +17,8 @@ test-live:
 	go test -race -v -run TestLiveTemporal -timeout 12m \
 		./experiments/worker-death/internal/lab \
 		./experiments/activity-completion-identity/internal/lab \
-		./experiments/external-effects/internal/lab
+		./experiments/external-effects/internal/lab \
+		./experiments/cancellation/internal/lab
 
 coverage:
 	go test -race -coverprofile=coverage.out ./internal/...
@@ -31,7 +33,11 @@ coverage:
 	go tool cover -func=coverage.external-effects.out
 	@lab_coverage=$$(go tool cover -func=coverage.external-effects.out | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
 	awk -v coverage="$$lab_coverage" 'BEGIN { if (coverage + 0 < 80) { printf "external effects coverage %.1f%% is below 80%%\n", coverage; exit 1 } }'
+	go test -race -coverprofile=coverage.cancellation.out ./experiments/cancellation/internal/lab
+	go tool cover -func=coverage.cancellation.out
+	@lab_coverage=$$(go tool cover -func=coverage.cancellation.out | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
+	awk -v coverage="$$lab_coverage" 'BEGIN { if (coverage + 0 < 80) { printf "cancellation coverage %.1f%% is below 80%%\n", coverage; exit 1 } }'
 
 clean:
 	rm -rf bin
-	rm -f coverage.out coverage.all.out coverage.core.out
+	rm -f coverage.out coverage.completion.out coverage.external-effects.out coverage.cancellation.out

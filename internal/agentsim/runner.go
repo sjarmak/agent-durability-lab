@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/temporalio-labs/agent-durability-lab/internal/failureinject"
-	"github.com/temporalio-labs/agent-durability-lab/internal/workstore"
+	"github.com/sjarmak/temporal_projects/internal/failureinject"
+	"github.com/sjarmak/temporal_projects/internal/workstore"
 )
 
 type Config struct {
@@ -14,9 +14,11 @@ type Config struct {
 	ActorID                 string            `json:"actor_id"`
 	PID                     int               `json:"pid"`
 	ProcessStart            string            `json:"process_start"`
+	ProcessGroupID          int               `json:"process_group_id,omitempty"`
 	Effect                  workstore.Effect  `json:"effect"`
 	Outcome                 workstore.Outcome `json:"outcome"`
 	BlockBeforeRegistration bool              `json:"block_before_registration,omitempty"`
+	SpawnToolChild          bool              `json:"spawn_tool_child,omitempty"`
 }
 
 type Result struct {
@@ -45,7 +47,7 @@ func (r *Runner) Run(ctx context.Context, config Config) (Result, error) {
 		}
 	}
 	if err := r.store.RegisterProcess(ctx, config.Lease, workstore.Process{
-		PID: config.PID, StartIdentity: config.ProcessStart,
+		PID: config.PID, StartIdentity: config.ProcessStart, ProcessGroupID: config.ProcessGroupID,
 	}); err != nil {
 		return Result{}, fmt.Errorf("register agent process: %w", err)
 	}
@@ -58,11 +60,16 @@ func (r *Runner) Run(ctx context.Context, config Config) (Result, error) {
 	}
 	result := Result{EffectAccepted: true}
 	if err := r.store.CommitEffect(ctx, config.Lease, config.Effect); err != nil {
-		if !errors.Is(err, workstore.ErrStaleOwner) {
+		switch {
+		case errors.Is(err, workstore.ErrStaleOwner):
+			result.EffectAccepted = false
+			result.EffectRejection = "stale_owner"
+		case errors.Is(err, workstore.ErrSessionCanceled):
+			result.EffectAccepted = false
+			result.EffectRejection = "session_canceled"
+		default:
 			return Result{}, fmt.Errorf("commit agent effect: %w", err)
 		}
-		result.EffectAccepted = false
-		result.EffectRejection = "stale_owner"
 	}
 
 	if err := r.arrive(ctx, config, "before-completion"); err != nil {
@@ -77,6 +84,9 @@ func (r *Runner) Run(ctx context.Context, config Config) (Result, error) {
 		case errors.Is(err, workstore.ErrOutcomeAlreadyAccepted):
 			result.CompletionAccepted = false
 			result.CompletionRejection = "terminal_outcome_exists"
+		case errors.Is(err, workstore.ErrSessionCanceled):
+			result.CompletionAccepted = false
+			result.CompletionRejection = "session_canceled"
 		default:
 			return Result{}, fmt.Errorf("complete agent session: %w", err)
 		}

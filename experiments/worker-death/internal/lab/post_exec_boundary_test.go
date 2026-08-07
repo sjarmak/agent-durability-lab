@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/temporalio-labs/agent-durability-lab/internal/agentprocess"
-	"github.com/temporalio-labs/agent-durability-lab/internal/workstore"
+	"github.com/sjarmak/temporal_projects/internal/agentprocess"
+	"github.com/sjarmak/temporal_projects/internal/workstore"
 )
 
 func TestCapturePostExecBoundaryPreservesPendingStoreAndLiveChild(t *testing.T) {

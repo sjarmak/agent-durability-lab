@@ -1,4 +1,4 @@
-module github.com/temporalio-labs/agent-durability-lab
+module github.com/sjarmak/temporal_projects
 
 go 1.25.12
 
@@ -6,6 +6,7 @@ require (
 	go.etcd.io/bbolt v1.4.3
 	go.temporal.io/api v1.63.4
 	go.temporal.io/sdk v1.47.0
+	golang.org/x/sys v0.46.0
 	google.golang.org/protobuf v1.36.11
 )
 
@@ -25,7 +26,6 @@ require (
 	github.com/stretchr/testify v1.10.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
 	golang.org/x/text v0.39.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260414002931-afd174a4e478 // indirect

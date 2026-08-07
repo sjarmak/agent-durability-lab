@@ -7,10 +7,23 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 func CurrentProcessStartIdentity() (string, error) {
 	return ProcessStartIdentity(os.Getpid())
+}
+
+func CurrentProcessGroupID() (int, error) {
+	return ProcessGroupID(os.Getpid())
+}
+
+func ProcessGroupID(pid int) (int, error) {
+	processGroupID, err := syscall.Getpgid(pid)
+	if err != nil {
+		return 0, fmt.Errorf("read process %d group: %w", pid, err)
+	}
+	return processGroupID, nil
 }
 
 func ProcessStartIdentity(pid int) (string, error) {

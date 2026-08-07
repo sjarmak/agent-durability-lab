@@ -1,0 +1,14 @@
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+    [[rules.allowlists]]
+    description = "Experiment evidence records SHA-256 identity hashes, not bearer credentials."
+    regexTarget = "match"
+    regexes = [
+      '''(?i)active_owner_token_hash["']?\s*[:=]\s*["']?[0-9a-f]{64}''',
+      '''(?i)owner_token_hash["']?\s*[:=]\s*["']?[0-9a-f]{64}''',
+      '''(?i)task_token_hash["']?\s*[:=]\s*["']?[0-9a-f]{64}''',
+    ]

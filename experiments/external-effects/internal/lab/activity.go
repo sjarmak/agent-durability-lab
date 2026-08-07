@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/temporalio-labs/agent-durability-lab/internal/failureinject"
+	"github.com/sjarmak/temporal_projects/internal/failureinject"
 	"go.temporal.io/sdk/activity"
 )
 

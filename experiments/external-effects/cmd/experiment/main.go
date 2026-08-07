@@ -15,7 +15,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/temporalio-labs/agent-durability-lab/experiments/external-effects/internal/lab"
+	"github.com/sjarmak/temporal_projects/experiments/external-effects/internal/lab"
 )
 
 func main() {
