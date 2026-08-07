@@ -9,6 +9,7 @@ build:
 	go build -o bin/external-effect-worker ./experiments/external-effects/cmd/worker
 	go build -o bin/external-effect-experiment ./experiments/external-effects/cmd/experiment
 	go build -o bin/cancellation-experiment ./experiments/cancellation/cmd/experiment
+	go build -o bin/agent-durability-calibrate ./benchmarks/agent-durability/cmd/calibrate
 
 test:
 	go test -race ./...
@@ -37,7 +38,11 @@ coverage:
 	go tool cover -func=coverage.cancellation.out
 	@lab_coverage=$$(go tool cover -func=coverage.cancellation.out | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
 	awk -v coverage="$$lab_coverage" 'BEGIN { if (coverage + 0 < 80) { printf "cancellation coverage %.1f%% is below 80%%\n", coverage; exit 1 } }'
+	go test -race -coverpkg=./benchmarks/agent-durability/calibration,./benchmarks/agent-durability/oracle,./benchmarks/agent-durability/protocol -coverprofile=coverage.agent-durability.out ./benchmarks/agent-durability/...
+	go tool cover -func=coverage.agent-durability.out
+	@harness_coverage=$$(go tool cover -func=coverage.agent-durability.out | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
+	awk -v coverage="$$harness_coverage" 'BEGIN { if (coverage + 0 < 80) { printf "agent durability harness coverage %.1f%% is below 80%%\n", coverage; exit 1 } }'
 
 clean:
 	rm -rf bin
-	rm -f coverage.out coverage.completion.out coverage.external-effects.out coverage.cancellation.out
+	rm -f coverage.out coverage.completion.out coverage.external-effects.out coverage.cancellation.out coverage.agent-durability.out

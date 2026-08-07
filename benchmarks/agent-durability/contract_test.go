@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
+
+	"github.com/sjarmak/temporal_projects/benchmarks/agent-durability/protocol"
 )
 
 func TestContractV1HasUniqueRequiredCasesSystemsAndEvidence(t *testing.T) {
@@ -52,6 +54,11 @@ func TestContractV1HasUniqueRequiredCasesSystemsAndEvidence(t *testing.T) {
 	if len(contract.RequiredEvidence) < 8 || len(contract.PrimaryMetrics) == 0 || len(contract.ParityGateMetrics) == 0 {
 		t.Fatalf("contract evidence/metrics are incomplete: %+v", contract)
 	}
+	for _, name := range append(protocol.RawEvidenceFiles(), protocol.VerdictFile) {
+		if !hasValue(contract.RequiredEvidence, name) {
+			t.Errorf("contract required_evidence lacks %q", name)
+		}
+	}
 }
 
 func assertUniqueNonempty(t *testing.T, kind string, count int, value func(int) string) {
@@ -67,4 +74,13 @@ func assertUniqueNonempty(t *testing.T, kind string, count int, value func(int) 
 		}
 		seen[item] = true
 	}
+}
+
+func hasValue(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }

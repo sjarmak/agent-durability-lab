@@ -1,6 +1,6 @@
 # Current Temporal surface relevant to the lab
 
-Snapshot date: 2026-08-06. Product documentation is design input, not evidence of
+Snapshot date: 2026-08-07. Product documentation is design input, not evidence of
 application-level correctness.
 
 | Capability | Current status | Research implication |
@@ -10,6 +10,8 @@ application-level correctness.
 | Workflow Streams | Public Preview | The Workflow-hosted log deduplicates a publisher ID/sequence, but Activity retries create fresh publishers and surface output from both attempts. Process-buffered events can be lost. |
 | External Storage | Public Preview | Claim-check payload offload, not an artifact publication/acknowledgement protocol. Object-write/reference-history/orphan windows still need experiments. |
 | Serverless Workers | AWS Lambda Public Preview; GCP Cloud Run Pre-release | Hard invocation lifetimes and ephemeral processes change which external agent-session patterns are viable. Not the first-milestone baseline. |
+| Python OpenAI Agents SDK integration | Public Preview; used by the Temporal-reviewed Durable Agentic Harness sample | Makes model calls and selected tools visible as Activities inside a Workflow. It is a useful native baseline, but its Worker-kill demo does not establish external-process ownership, effect deduplication, client-start idempotency, or durable UI delivery. |
+| Sandbox Orchestration Harness | Community Code Exchange sample; Go source reviewed at `e8a8854` | Provides a child-Workflow lifecycle, stable Update IDs, attachable references, explicit cleanup, suspend/resume, and snapshot/fork provider capabilities. These are useful shapes, but provider create and command Activities still need effect-level idempotency or reconciliation; “no orphans” is an experiment hypothesis. |
 | Nexus | Core Nexus GA; Standalone Nexus Operations remain less mature | Stable Nexus start request IDs can deduplicate starts, not arbitrary downstream effects. |
 | CHASM | Internal server architecture, not a public Go application primitive | Versioned transitions and component references are useful analogies for fencing; the lab must not couple application correctness to CHASM internals. |
 
@@ -20,6 +22,11 @@ Primary references:
 - [Workflow Streams](https://docs.temporal.io/workflow-streams)
 - [External Storage](https://docs.temporal.io/external-storage)
 - [Serverless Workers](https://docs.temporal.io/serverless-workers)
+- [Python SDK OpenAI Agents integration](https://github.com/temporalio/sdk-python)
+- [Durable Agentic Harness](https://temporal.io/code-exchange/durable-agentic-harness)
+- [Durable Agentic Harness source](https://github.com/temporal-sa/durable-agentic-harness/tree/4afef65defcd8e70d6e794936320e4d7513fd365)
+- [Sandbox Orchestration Harness blog](https://temporal.io/blog/temporal-sandbox-orchestration-harness-the-missing-layer-for-running-agents)
+- [Sandbox Orchestration Harness source](https://github.com/temporal-community/sandbox-orchestration-harness/tree/e8a88540d9523a3d9070860913567670194bacc1)
 - [Nexus](https://docs.temporal.io/nexus)
 - [CHASM architecture](https://github.com/temporalio/temporal/blob/v1.31.2/docs/architecture/chasm.md)
 - [Go SDK 1.47.0 release](https://github.com/temporalio/sdk-go/releases/tag/v1.47.0)

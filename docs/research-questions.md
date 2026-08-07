@@ -26,15 +26,19 @@ not proof of an application-level guarantee.
    Completion/cancellation ordering and delayed stale-stop isolation are covered
    by deterministic store/process tests. Cross-host and hostile containment
    remain open.
-6. Workflow and Activity evolution across deployments: replay compatibility,
+6. [Durable Claude Code and Codex sessions](plans/durable-vendor-agent-sessions.md):
+   distinguish transcript resume from turn/process recovery and workspace/effect
+   correctness; compare unsafe CLI retry, vendor resume, and a fenced
+   start-or-attach supervisor.
+7. Workflow and Activity evolution across deployments: replay compatibility,
    Worker Versioning, and agent-session compatibility contracts.
-7. Partial streamed output: consumer-observed prefixes, retry duplication,
+8. Partial streamed output: consumer-observed prefixes, retry duplication,
    ordering, reconstruction, and durable cursor placement.
-8. Large artifacts: write/reference/persist/acknowledge failure windows and orphan
+9. Large artifacts: write/reference/persist/acknowledge failure windows and orphan
    reconciliation.
-9. Workflows versus Standalone Activities and Nexus: when durable execution is
+10. Workflows versus Standalone Activities and Nexus: when durable execution is
    enough and when durable orchestration adds a necessary state machine.
-10. Operator diagnosis: healthy progress, retry loops, surviving or wedged agents,
+11. Operator diagnosis: healthy progress, retry loops, surviving or wedged agents,
    stale executors, ambiguous effects, and legitimate waits.
 
 Milestone 1 changed the order rather than silently repairing the design. Review

@@ -183,5 +183,53 @@ Before measurements count, an adapter must:
    deployment setting.
 
 Only after all four adapters pass this gate should the project publish a result
-table. The next implementation work is tracked in Beads rather than implied by
-this document.
+table.
+
+## Common harness status
+
+The adapter-neutral v1 schema/oracle calibration foundation is implemented in
+three deliberately separate packages:
+
+- `protocol` owns the fixed identities and strict evidence schemas;
+- `calibration` emits append-only raw evidence and has no verdict-writing API;
+- `oracle` verifies file hashes, fault bracketing, stable process identity, and
+  agreement between events, authority state, and the destination journal before
+  evaluating a case invariant.
+
+The deterministic calibration adapter is apparatus testing, not evidence about
+Temporal or another durability system. Its unsafe probe must fail, while its
+unfaulted and portable-safety probes must pass. Generate a fresh append-only
+suite with:
+
+```bash
+go run ./benchmarks/agent-durability/cmd/calibrate \
+  -evidence-dir benchmarks/agent-durability/evidence/<new-suite-id>
+```
+
+The current preserved suite is
+[`calibration-20260807-v4`](evidence/calibration-20260807-v4). Across three
+trials for every case and probe, the independent oracle recorded 24
+`valid-pass`, 12 expected `valid-fail`, and zero invalid runs. Adversarial tests
+also prove that changed hashes, wrong named barriers, malformed boundary times,
+incorrect or empty process identity, changed protocol IDs, omitted accepted
+actions, absent cancellation, unreported competitors, contradictory active
+generations, unknown accepted events, post-cancellation outcomes, unfrozen
+cancellation targets, and
+self-reported authority inconsistent with the event stream are rejected or
+scored as failures as the contract requires.
+
+Suites [`v1`](evidence/calibration-20260807-v1),
+[`v2`](evidence/calibration-20260807-v2), and
+[`v3`](evidence/calibration-20260807-v3) are retained but superseded. Review of
+v1 found fail-open schema and boundary validation. Later adversarial passes
+found that active-generation, competitor, fault-target, unknown-event,
+post-cancellation-outcome, and frozen-process contradictions were not all
+derived independently. No suite was rewritten; v4 was generated after every
+review finding was encoded as a regression test.
+
+Before system adapters count, `temporal_projects-y33.1` still needs to expose the
+append-only writer as a common adapter API and connect the existing live
+simulator, authority store, effect destination, named barrier, and process
+controller to this evidence contract. Vendor coding-agent adapters then reuse
+that boundary, adding transcript, vendor-session, sandbox, worktree, and
+tool-call identities rather than creating another benchmark contract.
