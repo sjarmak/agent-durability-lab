@@ -29,3 +29,10 @@ Normal Activity task-token completion rejected attempt 1 after attempt 2
 started. `CompleteActivityByID` accepted a result attributed to attempt 1 and
 completed the current logical Activity. See
 [finding 0003](findings/0003-activity-id-completion-is-not-attempt-scoped.md).
+
+The documented Activity crash window is also now reproduced directly: a Worker
+was killed after each of six destination classes confirmed an effect and before
+the Activity returned. Temporal retried and recorded one Activity completion,
+while every unsafe destination recorded two effects. See
+[finding 0004](findings/0004-one-temporal-completion-can-hide-two-effects.md) and
+Temporal's [Activity idempotency guidance](https://docs.temporal.io/activity-definition#idempotency).

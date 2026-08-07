@@ -1,0 +1,63 @@
+{
+  "destination": "non-idempotent-api",
+  "mode": "unsafe",
+  "effect_id": "effect-external-effects-20260806-v1-non-idempotent-api-unsafe-trial-2",
+  "attempts": [
+    {
+      "attempt": 1,
+      "worker_id": "worker-1",
+      "pid": 1101623,
+      "started_at": "2026-08-07T02:53:45.707694022Z",
+      "effect_requested_at": "2026-08-07T02:53:45.71105445Z",
+      "effect_responded_at": "2026-08-07T02:53:45.711849334Z",
+      "outcome": "applied",
+      "receipt": "non-idempotent-api:non-idempotent-api-1"
+    },
+    {
+      "attempt": 2,
+      "worker_id": "worker-2",
+      "pid": 1102007,
+      "started_at": "2026-08-07T02:53:51.709020619Z",
+      "effect_requested_at": "2026-08-07T02:53:51.71007807Z",
+      "effect_responded_at": "2026-08-07T02:53:51.710788744Z",
+      "outcome": "applied",
+      "receipt": "non-idempotent-api:non-idempotent-api-2"
+    }
+  ],
+  "kill": {
+    "barrier_observed_at": "2026-08-07T02:53:45.713313434Z",
+    "killed_at": "2026-08-07T02:53:45.716933724Z",
+    "worker_id": "worker-1",
+    "pid": 1101623,
+    "signal": "SIGKILL",
+    "exit_status": "signal: killed"
+  },
+  "destination_state": {
+    "physical_effects": [
+      {
+        "physical_id": "non-idempotent-api-1",
+        "logical_id": "effect-external-effects-20260806-v1-non-idempotent-api-unsafe-trial-2",
+        "receipt": "non-idempotent-api:non-idempotent-api-1",
+        "payload": "agent-output-v1",
+        "applied_at": "2026-08-07T02:53:45.711631451Z",
+        "attempt": 1,
+        "kind": "non-idempotent-api"
+      },
+      {
+        "physical_id": "non-idempotent-api-2",
+        "logical_id": "effect-external-effects-20260806-v1-non-idempotent-api-unsafe-trial-2",
+        "receipt": "non-idempotent-api:non-idempotent-api-2",
+        "payload": "agent-output-v1",
+        "applied_at": "2026-08-07T02:53:51.710597312Z",
+        "attempt": 2,
+        "kind": "non-idempotent-api"
+      }
+    ]
+  },
+  "history": {
+    "retry_timed_out": true,
+    "completed_count": 1,
+    "completed_attempt": 2
+  },
+  "workflow_outcome": "non-idempotent-api:non-idempotent-api-2"
+}

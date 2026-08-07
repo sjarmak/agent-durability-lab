@@ -1,0 +1,54 @@
+{
+  "destination": "idempotent-api",
+  "mode": "protected",
+  "effect_id": "effect-external-effects-20260806-v1-idempotent-api-protected-trial-1",
+  "attempts": [
+    {
+      "attempt": 1,
+      "worker_id": "worker-1",
+      "pid": 1020576,
+      "started_at": "2026-08-07T02:52:50.267471502Z",
+      "effect_requested_at": "2026-08-07T02:52:50.270951957Z",
+      "effect_responded_at": "2026-08-07T02:52:50.271777569Z",
+      "outcome": "applied",
+      "receipt": "idempotent-api:idempotent-api-1"
+    },
+    {
+      "attempt": 2,
+      "worker_id": "worker-2",
+      "pid": 1020796,
+      "started_at": "2026-08-07T02:52:56.270882233Z",
+      "effect_requested_at": "2026-08-07T02:52:56.272039192Z",
+      "effect_responded_at": "2026-08-07T02:52:56.272897706Z",
+      "outcome": "deduplicated",
+      "receipt": "idempotent-api:idempotent-api-1"
+    }
+  ],
+  "kill": {
+    "barrier_observed_at": "2026-08-07T02:52:50.273234827Z",
+    "killed_at": "2026-08-07T02:52:50.277481632Z",
+    "worker_id": "worker-1",
+    "pid": 1020576,
+    "signal": "SIGKILL",
+    "exit_status": "signal: killed"
+  },
+  "destination_state": {
+    "physical_effects": [
+      {
+        "physical_id": "idempotent-api-1",
+        "logical_id": "effect-external-effects-20260806-v1-idempotent-api-protected-trial-1",
+        "receipt": "idempotent-api:idempotent-api-1",
+        "payload": "agent-output-v1",
+        "applied_at": "2026-08-07T02:52:50.271554377Z",
+        "attempt": 1,
+        "kind": "idempotent-api"
+      }
+    ]
+  },
+  "history": {
+    "retry_timed_out": true,
+    "completed_count": 1,
+    "completed_attempt": 2
+  },
+  "workflow_outcome": "idempotent-api:idempotent-api-1"
+}

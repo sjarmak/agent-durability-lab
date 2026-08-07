@@ -63,6 +63,22 @@ stale caller before the by-ID RPC.
 See [the experiment](experiments/activity-completion-identity/README.md) and
 [finding 0003](docs/findings/0003-activity-id-completion-is-not-attempt-scoped.md).
 
+## Fourth result: one Temporal completion can hide two external effects
+
+The external-effect experiment kills Worker 1 after a destination confirms its
+mutation and before the Activity returns. Temporal times out attempt 1, retries
+on Worker 2, and records one Activity completion in every run. In all 18 unsafe
+trials the destination nevertheless contains two physical effects.
+
+Six destination-specific protected arms each left one effect across three live
+trials: HTTP idempotency key, correlation lookup before retry, transactional
+unique key, Git marker reconciliation, simulated message-destination ID deduplication, and a
+content-addressed artifact plus stable reference. These are destination and
+application mechanisms, not a Temporal exactly-once guarantee.
+
+See [the experiment contract](experiments/external-effects/README.md) and
+[finding 0004](docs/findings/0004-one-temporal-completion-can-hide-two-effects.md).
+
 ## Run it
 
 Prerequisites are Go 1.25.12 or newer and Temporal CLI 1.8.0 or newer (bundling
@@ -73,6 +89,7 @@ make build
 ./bin/worker-death-experiment --mode all --run-id local-trial
 ./bin/worker-death-experiment --scenario launch-gap --arm all --run-id launch-gap-local
 ./bin/activity-completion-identity-experiment --arm all --trials 3 --run-id completion-local
+./bin/external-effect-experiment --destination all --mode all --trials 3 --run-id effects-local
 ```
 
 Each run creates a new directory in its experiment's `evidence/` directory.
@@ -101,6 +118,9 @@ and Workflow tests remain portable.
   and preserved evidence.
 - `experiments/activity-completion-identity/`: task-token versus logical-ID
   completion experiment, durable attempt fence, and preserved evidence.
+- `experiments/external-effects/`: six destination classes at the
+  effect-success/completion-loss boundary, with unsafe controls and preserved
+  repeated evidence.
 - `internal/workstore/`: atomic session, generation, effect, outcome, and event
   state used at the application correctness boundary.
 - `internal/failureinject/`: named HTTP barriers; timeouts guard deadlocks but do

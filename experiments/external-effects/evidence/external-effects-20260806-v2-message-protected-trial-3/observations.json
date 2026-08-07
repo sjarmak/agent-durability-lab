@@ -1,0 +1,54 @@
+{
+  "destination": "message",
+  "mode": "protected",
+  "effect_id": "effect-external-effects-20260806-v2-message-protected-trial-3",
+  "attempts": [
+    {
+      "attempt": 1,
+      "worker_id": "worker-1",
+      "pid": 1487907,
+      "started_at": "2026-08-07T03:00:25.181467121Z",
+      "effect_requested_at": "2026-08-07T03:00:25.186254278Z",
+      "effect_responded_at": "2026-08-07T03:00:25.187219895Z",
+      "outcome": "applied",
+      "receipt": "message:message-1"
+    },
+    {
+      "attempt": 2,
+      "worker_id": "worker-2",
+      "pid": 1488058,
+      "started_at": "2026-08-07T03:00:31.18356702Z",
+      "effect_requested_at": "2026-08-07T03:00:31.184912927Z",
+      "effect_responded_at": "2026-08-07T03:00:31.185806347Z",
+      "outcome": "deduplicated",
+      "receipt": "message:message-1"
+    }
+  ],
+  "kill": {
+    "barrier_observed_at": "2026-08-07T03:00:25.189485501Z",
+    "killed_at": "2026-08-07T03:00:25.199170545Z",
+    "worker_id": "worker-1",
+    "pid": 1487907,
+    "signal": "SIGKILL",
+    "exit_status": "signal: killed"
+  },
+  "destination_state": {
+    "physical_effects": [
+      {
+        "physical_id": "message-1",
+        "logical_id": "effect-external-effects-20260806-v2-message-protected-trial-3",
+        "receipt": "message:message-1",
+        "payload": "agent-output-v1",
+        "applied_at": "2026-08-07T03:00:25.186946628Z",
+        "attempt": 1,
+        "kind": "message"
+      }
+    ]
+  },
+  "history": {
+    "retry_timed_out": true,
+    "completed_count": 1,
+    "completed_attempt": 2
+  },
+  "workflow_outcome": "message:message-1"
+}

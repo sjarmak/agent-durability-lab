@@ -76,12 +76,41 @@ replaces the active hash; an older capability and a different competitor for the
 same attempt fail closed. This is a lab mechanism, not a claim that authorization
 and a remote effect are atomic.
 
+## External-effect boundary
+
+Temporal's Activity state machine and the destination's mutation state machine
+have no shared transaction. The experiment makes the gap explicit:
+
+```text
+destination mutation committed
+        ↓ exact barrier
+Worker SIGKILL
+        ↓ Start-to-Close timeout
+Activity attempt 2
+        ↓
+one Temporal completion; one or two destination effects
+```
+
+The Activity carries a stable logical effect ID across retry. What that ID can
+do depends on the destination. An idempotent API and the lab's simulated message
+destination atomically deduplicate it; a database makes it a unique transaction key; the Git and
+non-idempotent API arms reconcile before repeating; the artifact store publishes
+a content-addressed blob and stable reference. The common harness records the
+same boundary, identities, and oracle but does not flatten these mechanisms into
+a fictitious generic exactly-once interface.
+
+Reconciliation is weaker than atomic destination deduplication. The current
+non-idempotent API and Git conclusions require serialized same-ID callers. The
+artifact conclusion begins after both blob and reference exist; failure between
+those publications remains a separate experiment.
+
 ## Deliberate limitations
 
 The first milestone is single-host. The store can name a surviving local process;
-cross-host reachability and routing remain separate experiments. The synthetic
-effect destination understands fencing; later experiments must use destinations
-with weaker semantics and preserve their ambiguity rather than hiding it.
+cross-host reachability and routing remain separate experiments. The first
+synthetic effect destination understood fencing. The external-effect matrix now
+includes weaker destination semantics and preserves the assumptions and remaining
+ambiguity for each mechanism.
 
 The current launch-gap result covers Worker death before `exec`. Death after
 `exec` but before the child registers remains ambiguous: generation fencing can

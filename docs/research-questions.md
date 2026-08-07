@@ -10,9 +10,10 @@ not proof of an application-level guarantee.
    retry identity, reattachment, replacement, and stale-owner fencing.
 2. **Observed before `exec`:** a Worker dies after the durable launch decision but before child process
    registration: phantom ownership, reconciliation, and safe relaunch.
-3. An external effect succeeds immediately before Activity completion is lost:
-   idempotent and non-idempotent destinations, database/Git/message/artifact
-   effects, reconciliation, and explicit ambiguity.
+3. **Observed at the post-effect/pre-completion boundary:** idempotent and
+   non-idempotent APIs, database, Git, message, and artifact effects. All unsafe
+   retries duplicated the effect; six destination-specific mechanisms prevented
+   duplication under their recorded assumptions.
 4. **Observed:** `CompleteActivityByID` after retry: attempt-scoped task-token
    completion rejects the stale token, logical-ID completion accepts the stale
    result, and an application capability fence rejects the obsolete owner.
