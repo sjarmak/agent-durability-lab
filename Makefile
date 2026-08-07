@@ -10,7 +10,7 @@ test:
 	go test -race ./...
 
 test-live:
-	go test -race -v -run TestLiveTemporalWorkerDeathArms -timeout 3m ./experiments/worker-death/internal/lab
+	go test -race -v -run TestLiveTemporal -timeout 4m ./experiments/worker-death/internal/lab
 
 coverage:
 	go test -race -coverprofile=coverage.out ./internal/...

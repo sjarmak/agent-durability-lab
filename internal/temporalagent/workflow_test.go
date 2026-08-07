@@ -71,7 +71,7 @@ func TestWorkflowConfiguresFailureDetectionAndBoundedRetry(t *testing.T) {
 		activity.RegisterOptions{Name: ActivityName},
 	)
 	environment.ExecuteWorkflow(WorkerDeathWorkflow, WorkflowInput{
-		SessionID: "session-1", Mode: workstore.ModeFenced, ReplaceOnRetry: true,
+		SessionID: "session-1", Mode: workstore.ModeFenced, ReplaceOwnerOnRetry: true,
 	})
 	if err := environment.GetWorkflowError(); err != nil {
 		t.Fatalf("workflow failed: %v", err)
@@ -88,7 +88,12 @@ func TestWorkflowConfiguresFailureDetectionAndBoundedRetry(t *testing.T) {
 func TestWorkflowRejectsInvalidInputBeforeSchedulingActivity(t *testing.T) {
 	tests := []WorkflowInput{
 		{},
-		{SessionID: "session", Mode: workstore.ModeReattach, ReplaceOnRetry: true},
+		{SessionID: "session", Mode: workstore.ModeReattach, ReplaceOwnerOnRetry: true},
+		{SessionID: "session", Mode: workstore.ModeReattach, ReplacePendingLaunchOnRetry: true},
+		{
+			SessionID: "session", Mode: workstore.ModeFenced,
+			ReplaceOwnerOnRetry: true, ReplacePendingLaunchOnRetry: true,
+		},
 	}
 	for _, input := range tests {
 		var suite testsuite.WorkflowTestSuite

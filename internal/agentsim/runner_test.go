@@ -66,7 +66,7 @@ func TestReplacementRejectsDelayedStaleAgent(t *testing.T) {
 	waitBarrier(t, coordinator, "before-effect/1")
 
 	replacement := mustDecision(t, store, workstore.StartRequest{
-		SessionID: "session-1", Mode: workstore.ModeFenced, CandidateOwner: "owner-2", WorkerID: "worker-2", Attempt: 2, Replace: true,
+		SessionID: "session-1", Mode: workstore.ModeFenced, CandidateOwner: "owner-2", WorkerID: "worker-2", Attempt: 2, ReplaceOwner: true,
 	})
 	newResult := runAsync(runner, Config{
 		Lease: replacement.Lease, ActorID: "agent-new", PID: 456, ProcessStart: "boot:456",
@@ -99,6 +99,32 @@ func TestReplacementRejectsDelayedStaleAgent(t *testing.T) {
 	}
 	assertEvent(t, snapshot.Events, "effect_rejected_stale")
 	assertEvent(t, snapshot.Events, "completion_rejected_stale")
+}
+
+func TestPendingLaunchReplacementRejectsObsoleteProcessBeforeProgress(t *testing.T) {
+	store, barrierURL, _ := newTestDependencies(t)
+	old := mustDecision(t, store, workstore.StartRequest{
+		SessionID: "session-1", Mode: workstore.ModeFenced, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
+	})
+	replacement := mustDecision(t, store, workstore.StartRequest{
+		SessionID: "session-1", Mode: workstore.ModeFenced, CandidateOwner: "owner-2", WorkerID: "worker-2", Attempt: 2,
+		ReplacePendingLaunch: true,
+	})
+
+	_, err := New(store, failureinject.NewClient(barrierURL)).Run(
+		context.Background(), validConfig(old.Lease, "obsolete-agent", 123, "stale-effect", "stale-outcome"),
+	)
+	if !errors.Is(err, workstore.ErrStaleOwner) {
+		t.Fatalf("obsolete process = %v; want ErrStaleOwner", err)
+	}
+	snapshot := mustSnapshot(t, store, "session-1")
+	if len(snapshot.Effects) != 0 || snapshot.Outcome != nil {
+		t.Fatalf("obsolete process mutated state: effects=%+v outcome=%+v", snapshot.Effects, snapshot.Outcome)
+	}
+	if snapshot.ActiveGeneration != replacement.Lease.Generation {
+		t.Fatalf("active generation = %d; want %d", snapshot.ActiveGeneration, replacement.Lease.Generation)
+	}
+	assertEvent(t, snapshot.Events, "process_registration_rejected_stale")
 }
 
 func TestUnsafeCompetingAgentReportsExistingTerminalOutcome(t *testing.T) {

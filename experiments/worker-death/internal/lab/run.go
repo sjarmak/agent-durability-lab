@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/temporalio-labs/agent-durability-lab/internal/agentprocess"
+	"github.com/temporalio-labs/agent-durability-lab/internal/failureinject"
 	"github.com/temporalio-labs/agent-durability-lab/internal/temporalagent"
 	"github.com/temporalio-labs/agent-durability-lab/internal/workstore"
 	"go.temporal.io/sdk/client"
@@ -109,7 +110,7 @@ func Run(parent context.Context, options Options) (result Result, runErr error) 
 	}, temporalagent.WorkflowName, temporalagent.WorkflowInput{
 		SessionID:                    sessionID,
 		Mode:                         options.Mode,
-		ReplaceOnRetry:               options.Mode == workstore.ModeFenced,
+		ReplaceOwnerOnRetry:          options.Mode == workstore.ModeFenced,
 		BlockAttempt1BeforeHeartbeat: true,
 	})
 	if err != nil {
@@ -306,6 +307,39 @@ func waitBarrierAndRecord(
 	})
 }
 
+func waitExpectedBarrierAndRecord(
+	ctx context.Context,
+	barriers *barrierService,
+	store *workstore.Store,
+	sessionID string,
+	expected failureinject.Arrival,
+) error {
+	checked := 0
+	for {
+		arrivals, err := barriers.coordinator.WaitForArrivals(ctx, expected.Point, checked+1)
+		if err != nil {
+			return fmt.Errorf("wait for expected barrier %q: %w", expected.Point, err)
+		}
+		for _, arrival := range arrivals[checked:] {
+			if arrivalMatchesExpected(arrival, expected) {
+				return store.RecordObservation(ctx, workstore.Event{
+					Kind: "barrier_observed", SessionID: sessionID, Generation: arrival.Generation,
+					OwnerTokenHash: arrival.OwnerTokenHash, PID: arrival.PID,
+					Details: map[string]string{"point": arrival.Point, "actor_id": arrival.ActorID},
+				})
+			}
+			if err := store.RecordObservation(ctx, workstore.Event{
+				Kind: "barrier_arrival_ignored", SessionID: sessionID, Generation: arrival.Generation,
+				OwnerTokenHash: arrival.OwnerTokenHash, PID: arrival.PID,
+				Details: map[string]string{"point": arrival.Point, "actor_id": arrival.ActorID, "reason": "identity_mismatch"},
+			}); err != nil {
+				return err
+			}
+		}
+		checked = len(arrivals)
+	}
+}
+
 func waitForEvent(
 	ctx context.Context,
 	store *workstore.Store,
@@ -328,10 +362,10 @@ func waitForSnapshot(
 	defer ticker.Stop()
 	for {
 		snapshot, err := store.Snapshot(ctx, sessionID)
-		if err != nil {
+		if err != nil && !errors.Is(err, workstore.ErrSessionNotFound) {
 			return err
 		}
-		if ready(snapshot) {
+		if err == nil && ready(snapshot) {
 			return nil
 		}
 		select {

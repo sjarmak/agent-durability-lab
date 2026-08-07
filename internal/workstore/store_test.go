@@ -29,6 +29,8 @@ func TestUnsafeRetryLaunchesCompetingWriter(t *testing.T) {
 	if first.Lease.OwnerToken == second.Lease.OwnerToken {
 		t.Fatal("unsafe retry reused an owner token")
 	}
+	mustRegisterTestProcess(t, store, first.Lease, 101)
+	mustRegisterTestProcess(t, store, second.Lease, 102)
 
 	mustCommitEffect(t, store, first.Lease, "effect-1")
 	mustCommitEffect(t, store, second.Lease, "effect-2")
@@ -66,12 +68,128 @@ func TestStableSessionReattachesRetry(t *testing.T) {
 	}
 }
 
+func TestPendingLaunchRecoveryUsesFencedReplacementButAttachesToRegisteredProcess(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+
+	pending := mustStart(t, store, StartRequest{
+		SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
+	})
+	pendingSnapshot, err := store.Snapshot(ctx, "session-1")
+	if err != nil {
+		t.Fatalf("snapshot pending launch: %v", err)
+	}
+	if len(pendingSnapshot.Executors) != 1 || pendingSnapshot.Executors[0].Status != ExecutorStatusLaunchPending ||
+		pendingSnapshot.Executors[0].PID != 0 || pendingSnapshot.Executors[0].ProcessStart != "" {
+		t.Fatalf("pending executor = %+v; want unregistered launch_pending", pendingSnapshot.Executors)
+	}
+
+	replacement := mustStart(t, store, StartRequest{
+		SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-2", WorkerID: "worker-2", Attempt: 2,
+		ReplacePendingLaunch: true,
+	})
+	if replacement.Action != ActionLaunch || replacement.Lease.Generation != 2 {
+		t.Fatalf("replacement = %+v; want generation 2 launch", replacement)
+	}
+	if err := store.RegisterProcess(ctx, pending.Lease, Process{PID: 41, StartIdentity: "boot:41"}); !errors.Is(err, ErrStaleOwner) {
+		t.Fatalf("obsolete registration = %v; want ErrStaleOwner", err)
+	}
+	if err := store.RegisterProcess(ctx, replacement.Lease, Process{PID: 42, StartIdentity: "boot:42"}); err != nil {
+		t.Fatalf("register replacement: %v", err)
+	}
+
+	reattach := mustStart(t, store, StartRequest{
+		SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-3", WorkerID: "worker-3", Attempt: 3,
+		ReplacePendingLaunch: true,
+	})
+	if reattach.Action != ActionAttach || reattach.Lease != replacement.Lease {
+		t.Fatalf("registered retry = %+v; want attach to generation 2", reattach)
+	}
+	registeredSnapshot, err := store.Snapshot(ctx, "session-1")
+	if err != nil {
+		t.Fatalf("snapshot registered process: %v", err)
+	}
+	if len(registeredSnapshot.Executors) != 2 ||
+		registeredSnapshot.Executors[0].Status != ExecutorStatusSuperseded ||
+		registeredSnapshot.Executors[1].Status != ExecutorStatusRunning {
+		t.Fatalf("executor lifecycle = %+v", registeredSnapshot.Executors)
+	}
+	assertEventKinds(t, registeredSnapshot.Events,
+		"pending_launch_replaced", "process_registration_rejected_stale", "process_registered", "activity_reattached")
+}
+
+func TestPendingLaunchRecoveryRejectsDelayedOlderAttempt(t *testing.T) {
+	store := openTestStore(t)
+	first := mustStart(t, store, StartRequest{
+		SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
+	})
+	newer := mustStart(t, store, StartRequest{
+		SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-3", WorkerID: "worker-3", Attempt: 3,
+		ReplacePendingLaunch: true,
+	})
+	if newer.Lease.Generation != first.Lease.Generation+1 {
+		t.Fatalf("newer generation = %d; want %d", newer.Lease.Generation, first.Lease.Generation+1)
+	}
+
+	_, err := store.StartOrAttach(context.Background(), StartRequest{
+		SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-2", WorkerID: "worker-2", Attempt: 2,
+		ReplacePendingLaunch: true,
+	})
+	if !errors.Is(err, ErrStaleOwner) {
+		t.Fatalf("delayed attempt 2 = %v; want ErrStaleOwner", err)
+	}
+	snapshot, err := store.Snapshot(context.Background(), "session-1")
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+	if snapshot.ActiveGeneration != newer.Lease.Generation || len(snapshot.Executors) != 2 {
+		t.Fatalf("delayed attempt changed ownership: %+v", snapshot)
+	}
+	assertEventKinds(t, snapshot.Events, "pending_launch_replacement_rejected_stale_attempt")
+}
+
+func TestPendingExecutorCannotMutateBeforeProcessRegistration(t *testing.T) {
+	store := openTestStore(t)
+	decision := mustStart(t, store, StartRequest{
+		SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
+	})
+	tests := []struct {
+		name string
+		run  func() error
+	}{
+		{name: "progress", run: func() error { return store.RecordProgress(context.Background(), decision.Lease, "started") }},
+		{name: "effect", run: func() error {
+			return store.CommitEffect(context.Background(), decision.Lease, Effect{ID: "effect", Value: "changed"})
+		}},
+		{name: "completion", run: func() error {
+			return store.Complete(context.Background(), decision.Lease, Outcome{Value: "done"})
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if err := test.run(); !errors.Is(err, ErrExecutorNotRunning) {
+				t.Fatalf("pending %s = %v; want ErrExecutorNotRunning", test.name, err)
+			}
+		})
+	}
+	snapshot, err := store.Snapshot(context.Background(), "session-1")
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+	if len(snapshot.Effects) != 0 || snapshot.Outcome != nil {
+		t.Fatalf("pending mutation changed state: effects=%+v outcome=%+v", snapshot.Effects, snapshot.Outcome)
+	}
+	assertEventKinds(t, snapshot.Events,
+		"progress_rejected_not_running", "effect_rejected_not_running", "completion_rejected_not_running")
+}
+
 func TestCompletedSessionReturnsOutcomeWithoutLaunch(t *testing.T) {
 	store := openTestStore(t)
 	ctx := context.Background()
 	decision := mustStart(t, store, StartRequest{
 		SessionID: "session-1", Mode: ModeReattach, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
 	})
+	mustRegisterTestProcess(t, store, decision.Lease, 101)
 	want := Outcome{Value: "accepted", ArtifactRef: "sha256:abc"}
 	if err := store.Complete(ctx, decision.Lease, want); err != nil {
 		t.Fatalf("complete: %v", err)
@@ -95,8 +213,9 @@ func TestFencedReplacementRejectsStaleWriterAndCompletion(t *testing.T) {
 	old := mustStart(t, store, StartRequest{
 		SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
 	})
+	mustRegisterTestProcess(t, store, old.Lease, 101)
 	replacement := mustStart(t, store, StartRequest{
-		SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-2", WorkerID: "worker-2", Attempt: 2, Replace: true,
+		SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-2", WorkerID: "worker-2", Attempt: 2, ReplaceOwner: true,
 	})
 
 	if replacement.Action != ActionLaunch {
@@ -115,6 +234,7 @@ func TestFencedReplacementRejectsStaleWriterAndCompletion(t *testing.T) {
 		t.Fatalf("stale progress error = %v; want ErrStaleOwner", err)
 	}
 
+	mustRegisterTestProcess(t, store, replacement.Lease, 102)
 	mustCommitEffect(t, store, replacement.Lease, "replacement-effect")
 	want := Outcome{Value: "replacement"}
 	if err := store.Complete(ctx, replacement.Lease, want); err != nil {
@@ -187,6 +307,7 @@ func TestEvidenceExportIsOrderedJSONL(t *testing.T) {
 	decision := mustStart(t, store, StartRequest{
 		SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
 	})
+	mustRegisterTestProcess(t, store, decision.Lease, 101)
 	mustCommitEffect(t, store, decision.Lease, "effect-1")
 	if err := store.Complete(context.Background(), decision.Lease, Outcome{Value: "done"}); err != nil {
 		t.Fatalf("complete: %v", err)
@@ -268,6 +389,8 @@ func TestTerminalRejectionClosesCompetingExecutorState(t *testing.T) {
 	second := mustStart(t, store, StartRequest{
 		SessionID: "session-1", Mode: ModeUnsafe, CandidateOwner: "owner-2", WorkerID: "worker-2", Attempt: 2,
 	})
+	mustRegisterTestProcess(t, store, first.Lease, 101)
+	mustRegisterTestProcess(t, store, second.Lease, 102)
 	if err := store.Complete(context.Background(), first.Lease, Outcome{Value: "accepted"}); err != nil {
 		t.Fatalf("first completion: %v", err)
 	}
@@ -295,7 +418,9 @@ func TestStoreRejectsInvalidAndUnknownOperations(t *testing.T) {
 	invalid := []StartRequest{
 		{},
 		{SessionID: "session", Mode: "bad", CandidateOwner: "owner", WorkerID: "worker", Attempt: 1},
-		{SessionID: "session", Mode: ModeReattach, CandidateOwner: "owner", WorkerID: "worker", Attempt: 1, Replace: true},
+		{SessionID: "session", Mode: ModeReattach, CandidateOwner: "owner", WorkerID: "worker", Attempt: 1, ReplaceOwner: true},
+		{SessionID: "session", Mode: ModeReattach, CandidateOwner: "owner", WorkerID: "worker", Attempt: 1, ReplacePendingLaunch: true},
+		{SessionID: "session", Mode: ModeFenced, CandidateOwner: "owner", WorkerID: "worker", Attempt: 1, ReplaceOwner: true, ReplacePendingLaunch: true},
 	}
 	for _, request := range invalid {
 		if _, err := store.StartOrAttach(context.Background(), request); !errors.Is(err, ErrInvalidRequest) {
@@ -373,6 +498,15 @@ func mustStart(t *testing.T, store *Store, request StartRequest) Decision {
 		t.Fatalf("start or attach: %v", err)
 	}
 	return decision
+}
+
+func mustRegisterTestProcess(t *testing.T, store *Store, lease Lease, pid int) {
+	t.Helper()
+	if err := store.RegisterProcess(context.Background(), lease, Process{
+		PID: pid, StartIdentity: fmt.Sprintf("boot:%d", pid),
+	}); err != nil {
+		t.Fatalf("register process %d: %v", pid, err)
+	}
 }
 
 func mustCommitEffect(t *testing.T, store *Store, lease Lease, id string) {

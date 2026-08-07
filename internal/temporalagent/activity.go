@@ -50,7 +50,8 @@ func (a Activities) RunAgent(ctx context.Context, input ActivityInput) (workstor
 	decision, err := store.StartOrAttach(ctx, workstore.StartRequest{
 		SessionID: input.SessionID, Mode: input.Mode, CandidateOwner: ownerToken,
 		WorkerID: a.WorkerID, AgentBuild: a.AgentBuild, Attempt: info.Attempt,
-		Replace: input.Mode == workstore.ModeFenced && input.ReplaceOnRetry && info.Attempt > 1,
+		ReplaceOwner:         input.Mode == workstore.ModeFenced && input.ReplaceOwnerOnRetry && info.Attempt > 1,
+		ReplacePendingLaunch: input.Mode == workstore.ModeFenced && input.ReplacePendingLaunchOnRetry && info.Attempt > 1,
 	})
 	if err != nil {
 		return workstore.Outcome{}, fmt.Errorf("resolve agent session: %w", err)
@@ -59,6 +60,11 @@ func (a Activities) RunAgent(ctx context.Context, input ActivityInput) (workstor
 		return *decision.Outcome, nil
 	}
 	if decision.Action == workstore.ActionLaunch {
+		if input.BlockAttempt1AfterLaunchDecision && info.Attempt == 1 {
+			if err := a.blockAfterLaunchDecision(ctx, store, decision.Lease, info.Attempt); err != nil {
+				return workstore.Outcome{}, err
+			}
+		}
 		if err := a.launchAgent(decision.Lease, store.Path()); err != nil {
 			return workstore.Outcome{}, err
 		}
@@ -106,14 +112,35 @@ func (a Activities) blockBeforeFirstHeartbeat(
 	lease workstore.Lease,
 	attempt int32,
 ) error {
-	point := fmt.Sprintf("activity-before-first-heartbeat/%d", attempt)
+	return a.blockAtActivityBoundary(ctx, store, lease, attempt,
+		"activity-before-first-heartbeat", "activity_before_first_heartbeat")
+}
+
+func (a Activities) blockAfterLaunchDecision(
+	ctx context.Context,
+	store *workstore.Store,
+	lease workstore.Lease,
+	attempt int32,
+) error {
+	return a.blockAtActivityBoundary(ctx, store, lease, attempt,
+		"activity-after-launch-decision", "activity_after_launch_decision")
+}
+
+func (a Activities) blockAtActivityBoundary(
+	ctx context.Context,
+	store *workstore.Store,
+	lease workstore.Lease,
+	attempt int32,
+	pointPrefix, eventKind string,
+) error {
+	point := fmt.Sprintf("%s/%d", pointPrefix, attempt)
 	tokenHash := workstore.HashToken(lease.OwnerToken)
 	if err := store.RecordObservation(ctx, workstore.Event{
-		Kind: "activity_before_first_heartbeat", SessionID: lease.SessionID,
+		Kind: eventKind, SessionID: lease.SessionID,
 		Generation: lease.Generation, OwnerTokenHash: tokenHash,
 		WorkerID: a.WorkerID, Attempt: attempt,
 	}); err != nil {
-		return fmt.Errorf("record pre-heartbeat boundary: %w", err)
+		return fmt.Errorf("record Activity boundary %q: %w", point, err)
 	}
 	arrival := failureinject.Arrival{
 		ID: fmt.Sprintf("%s:%s", a.WorkerID, point), Point: point,
@@ -121,7 +148,7 @@ func (a Activities) blockBeforeFirstHeartbeat(
 		Generation: lease.Generation, ActorID: a.WorkerID,
 	}
 	if err := failureinject.NewClient(a.BarrierURL).Arrive(ctx, arrival); err != nil {
-		return fmt.Errorf("wait at pre-heartbeat boundary: %w", err)
+		return fmt.Errorf("wait at Activity boundary %q: %w", point, err)
 	}
 	return nil
 }
@@ -157,8 +184,14 @@ func (a Activities) validate(input ActivityInput) error {
 	if input.SessionID == "" || !input.Mode.Valid() {
 		return errors.New("activity requires a session ID and valid mode")
 	}
-	if input.ReplaceOnRetry && input.Mode != workstore.ModeFenced {
+	if input.ReplaceOwnerOnRetry && input.Mode != workstore.ModeFenced {
 		return errors.New("replacement on retry requires fenced mode")
+	}
+	if input.ReplacePendingLaunchOnRetry && input.Mode != workstore.ModeFenced {
+		return errors.New("pending launch recovery requires fenced mode")
+	}
+	if input.ReplaceOwnerOnRetry && input.ReplacePendingLaunchOnRetry {
+		return errors.New("replacement policies are mutually exclusive")
 	}
 	return nil
 }

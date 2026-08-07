@@ -21,8 +21,8 @@ func preserveEvidence(
 	store *workstore.Store,
 	sessionID string,
 	snapshot workstore.Snapshot,
-	verdict Verdict,
-	manifest Manifest,
+	verdict any,
+	manifest any,
 	temporalClient client.Client,
 	workflowID, workflowRunID string,
 ) error {

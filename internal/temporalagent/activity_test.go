@@ -70,6 +70,11 @@ func TestActivityReturnsPreviouslyAcceptedOutcomeWithoutLaunching(t *testing.T) 
 	if err != nil {
 		t.Fatalf("start session: %v", err)
 	}
+	if err := store.RegisterProcess(context.Background(), decision.Lease, workstore.Process{
+		PID: 42, StartIdentity: "boot:42",
+	}); err != nil {
+		t.Fatalf("register process: %v", err)
+	}
 	want := workstore.Outcome{Value: "already-durable"}
 	if err := store.Complete(context.Background(), decision.Lease, want); err != nil {
 		t.Fatalf("complete session: %v", err)
@@ -127,6 +132,45 @@ func TestActivityPreHeartbeatBoundaryBlocksUntilRelease(t *testing.T) {
 	}
 }
 
+func TestActivityAfterLaunchDecisionBoundaryExposesUnregisteredPendingExecutor(t *testing.T) {
+	store, err := workstore.Open(filepath.Join(t.TempDir(), "work.db"))
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	coordinator := failureinject.NewCoordinator()
+	server := httptest.NewServer(coordinator.Handler())
+	t.Cleanup(server.Close)
+	activities := Activities{
+		StorePath: store.Path(), AgentBinary: filepath.Join(t.TempDir(), "missing-agent"), BarrierURL: server.URL,
+		RunDirectory: t.TempDir(), WorkerID: "worker-test", AgentBuild: "test-build",
+	}
+
+	var suite testsuite.WorkflowTestSuite
+	environment := suite.NewTestActivityEnvironment()
+	environment.RegisterActivity(activities.RunAgent)
+	response := make(chan activityResponse, 1)
+	go func() {
+		value, runErr := environment.ExecuteActivity(activities.RunAgent, ActivityInput{
+			SessionID: "session-1", Mode: workstore.ModeFenced, BlockAttempt1AfterLaunchDecision: true,
+		})
+		response <- activityResponse{value: value, err: runErr}
+	}()
+
+	waitActivityBarrier(t, coordinator, "activity-after-launch-decision/1")
+	snapshot, err := store.Snapshot(context.Background(), "session-1")
+	if err != nil {
+		t.Fatalf("snapshot at launch boundary: %v", err)
+	}
+	if len(snapshot.Executors) != 1 || snapshot.Executors[0].Status != workstore.ExecutorStatusLaunchPending ||
+		snapshot.Executors[0].PID != 0 || snapshot.Executors[0].ProcessStart != "" {
+		t.Fatalf("boundary executor = %+v; want unregistered launch_pending", snapshot.Executors)
+	}
+	releaseActivityBarrier(t, coordinator, "activity-after-launch-decision/1")
+	if result := <-response; result.err == nil {
+		t.Fatal("Activity with missing launcher binary returned nil error")
+	}
+}
+
 func TestActivityValidationRejectsIncompleteConfiguration(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -142,7 +186,20 @@ func TestActivityValidationRejectsIncompleteConfiguration(t *testing.T) {
 		{
 			name:       "replacement without fence",
 			activities: Activities{StorePath: "x", AgentBinary: "x", BarrierURL: "x", RunDirectory: "x", WorkerID: "x", AgentBuild: "x"},
-			input:      ActivityInput{SessionID: "session", Mode: workstore.ModeReattach, ReplaceOnRetry: true},
+			input:      ActivityInput{SessionID: "session", Mode: workstore.ModeReattach, ReplaceOwnerOnRetry: true},
+		},
+		{
+			name:       "pending launch recovery without fence",
+			activities: Activities{StorePath: "x", AgentBinary: "x", BarrierURL: "x", RunDirectory: "x", WorkerID: "x", AgentBuild: "x"},
+			input:      ActivityInput{SessionID: "session", Mode: workstore.ModeReattach, ReplacePendingLaunchOnRetry: true},
+		},
+		{
+			name:       "conflicting recovery policies",
+			activities: Activities{StorePath: "x", AgentBinary: "x", BarrierURL: "x", RunDirectory: "x", WorkerID: "x", AgentBuild: "x"},
+			input: ActivityInput{
+				SessionID: "session", Mode: workstore.ModeFenced,
+				ReplaceOwnerOnRetry: true, ReplacePendingLaunchOnRetry: true,
+			},
 		},
 	}
 	for _, test := range tests {
@@ -233,6 +290,9 @@ func TestActivityWaitAndObservationHonorCancellation(t *testing.T) {
 	}
 	if err := activities.blockBeforeFirstHeartbeat(ctx, store, decision.Lease, 1); !errors.Is(err, context.Canceled) {
 		t.Fatalf("blockBeforeFirstHeartbeat = %v; want context.Canceled", err)
+	}
+	if err := activities.blockAfterLaunchDecision(ctx, store, decision.Lease, 1); !errors.Is(err, context.Canceled) {
+		t.Fatalf("blockAfterLaunchDecision = %v; want context.Canceled", err)
 	}
 }
 

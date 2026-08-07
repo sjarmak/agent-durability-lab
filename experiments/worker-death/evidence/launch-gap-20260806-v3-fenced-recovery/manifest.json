@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "experiment": "worker-death-launch-registration-gap",
+  "run_id": "launch-gap-20260806-v3-fenced-recovery",
+  "arm": "fenced-recovery",
+  "mode": "fenced",
+  "started_at": "2026-08-06T23:22:11.37024739Z",
+  "completed_at": "2026-08-06T23:22:19.218086806Z",
+  "temporal_cli": "temporal version 1.8.0 (Server 1.31.2, UI 2.50.1)",
+  "temporal_sdk": "v1.47.0",
+  "go_version": "go1.25.12",
+  "agent_protocol_build": "worker-death-v3",
+  "failure_boundary": "Worker SIGKILL after durable launch decision and before process start or registration",
+  "invariant": "an unregistered launch is not treated as live work; recovery accepts at most one fenced effect and outcome",
+  "falsifier": "control is reported healthy, recovery attaches to the phantom, a registered live process is replaced, or a stale generation mutates state"
+}

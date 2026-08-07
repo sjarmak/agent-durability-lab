@@ -56,6 +56,7 @@ func (s *Store) StartOrAttach(ctx context.Context, request StartRequest) (Decisi
 	}
 
 	var decision Decision
+	var domainErr error
 	err := s.update(ctx, func(tx *bolt.Tx) error {
 		sessions := tx.Bucket(sessionsBucket)
 		record, found, err := loadSession(sessions, request.SessionID)
@@ -83,12 +84,23 @@ func (s *Store) StartOrAttach(ctx context.Context, request StartRequest) (Decisi
 		case request.Mode == ModeUnsafe:
 			record = addExecutor(record, request, record.ActiveLease.Generation+1, false)
 			eventKind = "executor_launch_decided"
-		case request.Replace:
+		case request.ReplaceOwner:
+			if request.Attempt <= activeExecutorAttempt(record) {
+				domainErr = ErrStaleOwner
+				return appendReplacementRejectedEvent(tx, request, record.ActiveLease, "owner_replacement_rejected_stale_attempt")
+			}
 			record = addExecutor(record, request, record.ActiveLease.Generation+1, true)
 			eventKind = "owner_replaced"
+		case request.ReplacePendingLaunch && activeExecutorStatus(record) == ExecutorStatusLaunchPending:
+			if request.Attempt <= activeExecutorAttempt(record) {
+				domainErr = ErrStaleOwner
+				return appendReplacementRejectedEvent(tx, request, record.ActiveLease, "pending_launch_replacement_rejected_stale_attempt")
+			}
+			record = addExecutor(record, request, record.ActiveLease.Generation+1, true)
+			eventKind = "pending_launch_replaced"
 		default:
 			decision = Decision{Action: ActionAttach, Lease: record.ActiveLease}
-			return appendDecisionEvent(tx, request, record.ActiveLease, "activity_reattached")
+			return appendAttachEvent(tx, request, record.ActiveLease, activeExecutorStatus(record))
 		}
 		decision = Decision{Action: ActionLaunch, Lease: record.ActiveLease}
 		if err := saveSession(sessions, record); err != nil {
@@ -98,6 +110,9 @@ func (s *Store) StartOrAttach(ctx context.Context, request StartRequest) (Decisi
 	})
 	if err != nil {
 		return Decision{}, err
+	}
+	if domainErr != nil {
+		return Decision{}, domainErr
 	}
 	return decision, nil
 }
@@ -114,6 +129,7 @@ func (s *Store) RegisterProcess(ctx context.Context, lease Lease, process Proces
 		executor := executors[index]
 		executor.PID = process.PID
 		executor.ProcessStart = process.StartIdentity
+		executor.Status = ExecutorStatusRunning
 		executors[index] = executor
 		record.Executors = executors
 		return record, Event{
@@ -132,6 +148,9 @@ func (s *Store) RecordProgress(ctx context.Context, lease Lease, phase string) e
 		executor := record.Executors[index]
 		if record.Mode == ModeFenced && lease != record.ActiveLease {
 			return record, staleEventWithExecutor("progress_rejected_stale", lease, executor), ErrStaleOwner
+		}
+		if executor.Status != ExecutorStatusRunning {
+			return record, staleEventWithExecutor("progress_rejected_not_running", lease, executor), ErrExecutorNotRunning
 		}
 		return record, Event{
 			Kind: "agent_progress", SessionID: lease.SessionID, Generation: lease.Generation,
@@ -159,6 +178,9 @@ func (s *Store) CommitEffect(ctx context.Context, lease Lease, effect Effect) er
 		if record.Mode == ModeFenced && lease != record.ActiveLease {
 			return record, staleEventWithExecutor("effect_rejected_stale", lease, executor), ErrStaleOwner
 		}
+		if executor.Status != ExecutorStatusRunning {
+			return record, staleEventWithExecutor("effect_rejected_not_running", lease, executor), ErrExecutorNotRunning
+		}
 		accepted := AcceptedEffect{
 			Effect: effect, Generation: lease.Generation, OwnerTokenHash: HashToken(lease.OwnerToken), AcceptedAt: time.Now().UTC(),
 		}
@@ -182,14 +204,14 @@ func (s *Store) Complete(ctx context.Context, lease Lease, outcome Outcome) erro
 		}
 		if record.Outcome != nil {
 			kind := "completion_rejected_terminal"
-			status := "terminal_rejected"
+			status := ExecutorStatusTerminalRejected
 			domainErr := ErrOutcomeAlreadyAccepted
 			if *record.Outcome == outcome {
 				kind = "completion_duplicate"
-				status = "terminal_duplicate"
+				status = ExecutorStatusTerminalDuplicate
 				domainErr = nil
 			}
-			if executor.Status == "running" {
+			if executor.Status == ExecutorStatusRunning || executor.Status == ExecutorStatusLaunchPending {
 				executors := append([]executorRecord(nil), record.Executors...)
 				executor.Status = status
 				executors[index] = executor
@@ -201,10 +223,13 @@ func (s *Store) Complete(ctx context.Context, lease Lease, outcome Outcome) erro
 				Attempt: executor.Attempt, PID: executor.PID,
 			}, domainErr
 		}
+		if executor.Status != ExecutorStatusRunning {
+			return record, staleEventWithExecutor("completion_rejected_not_running", lease, executor), ErrExecutorNotRunning
+		}
 		accepted := outcome
 		record.Outcome = &accepted
 		executors := append([]executorRecord(nil), record.Executors...)
-		executor.Status = "completed"
+		executor.Status = ExecutorStatusCompleted
 		executors[index] = executor
 		record.Executors = executors
 		return record, Event{
@@ -315,8 +340,14 @@ func validateStartRequest(request StartRequest) error {
 	if request.SessionID == "" || request.CandidateOwner == "" || request.WorkerID == "" || request.Attempt < 1 || !request.Mode.Valid() {
 		return fmt.Errorf("%w: session, mode, candidate owner, worker, and positive attempt are required", ErrInvalidRequest)
 	}
-	if request.Replace && request.Mode != ModeFenced {
+	if request.ReplaceOwner && request.Mode != ModeFenced {
 		return fmt.Errorf("%w: replacement requires fenced mode", ErrInvalidRequest)
+	}
+	if request.ReplacePendingLaunch && request.Mode != ModeFenced {
+		return fmt.Errorf("%w: pending launch replacement requires fenced mode", ErrInvalidRequest)
+	}
+	if request.ReplaceOwner && request.ReplacePendingLaunch {
+		return fmt.Errorf("%w: replacement policies are mutually exclusive", ErrInvalidRequest)
 	}
 	return nil
 }
@@ -336,7 +367,7 @@ func addExecutor(record sessionRecord, request StartRequest, generation uint64, 
 	if supersede {
 		for index := range executors {
 			if executors[index].Lease == record.ActiveLease {
-				executors[index].Status = "superseded"
+				executors[index].Status = ExecutorStatusSuperseded
 				break
 			}
 		}
@@ -351,8 +382,24 @@ func addExecutor(record sessionRecord, request StartRequest, generation uint64, 
 func newExecutor(request StartRequest, lease Lease) executorRecord {
 	return executorRecord{
 		Lease: lease, WorkerID: request.WorkerID, AgentBuild: request.AgentBuild,
-		Attempt: request.Attempt, Status: "running", StartedAt: time.Now().UTC(),
+		Attempt: request.Attempt, Status: ExecutorStatusLaunchPending, StartedAt: time.Now().UTC(),
 	}
+}
+
+func activeExecutorStatus(record sessionRecord) string {
+	index := executorIndex(record.Executors, record.ActiveLease)
+	if index < 0 {
+		return ""
+	}
+	return record.Executors[index].Status
+}
+
+func activeExecutorAttempt(record sessionRecord) int32 {
+	index := executorIndex(record.Executors, record.ActiveLease)
+	if index < 0 {
+		return 0
+	}
+	return record.Executors[index].Attempt
 }
 
 func loadSession(bucket *bolt.Bucket, sessionID string) (sessionRecord, bool, error) {
@@ -382,6 +429,22 @@ func appendDecisionEvent(tx *bolt.Tx, request StartRequest, lease Lease, kind st
 	return appendEvent(tx, Event{
 		Kind: kind, SessionID: lease.SessionID, Generation: lease.Generation,
 		OwnerTokenHash: HashToken(lease.OwnerToken), WorkerID: request.WorkerID, Attempt: request.Attempt,
+	})
+}
+
+func appendAttachEvent(tx *bolt.Tx, request StartRequest, lease Lease, status string) error {
+	return appendEvent(tx, Event{
+		Kind: "activity_reattached", SessionID: lease.SessionID, Generation: lease.Generation,
+		OwnerTokenHash: HashToken(lease.OwnerToken), WorkerID: request.WorkerID, Attempt: request.Attempt,
+		Details: map[string]string{"executor_status": status},
+	})
+}
+
+func appendReplacementRejectedEvent(tx *bolt.Tx, request StartRequest, lease Lease, kind string) error {
+	return appendEvent(tx, Event{
+		Kind: kind, SessionID: lease.SessionID, Generation: lease.Generation,
+		OwnerTokenHash: HashToken(lease.OwnerToken), WorkerID: request.WorkerID, Attempt: request.Attempt,
+		Details: map[string]string{"reason": "attempt_must_increase"},
 	})
 }
 

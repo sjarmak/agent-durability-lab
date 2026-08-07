@@ -56,6 +56,33 @@ make build
 The command requires a locally installed `temporal` CLI unless `--temporal` is
 provided.
 
+The adjacent launch/registration-gap scenario has its own contract in
+[launch-registration-gap.md](launch-registration-gap.md). Run its negative
+control and conditional fenced recovery with:
+
+```bash
+./bin/worker-death-experiment --scenario launch-gap --arm all --run-id launch-gap-local
+```
+
+The control records a PID-less `launch_pending` phantom and then cancels the
+Workflow. The recovery arm replaces only that pending claim; the store tests
+also prove that the same policy attaches after a process reaches `running`,
+rejects out-of-order older replacement attempts, and rejects mutation before
+process registration.
+
+The final preserved launch-gap evidence uses agent protocol `worker-death-v3`:
+
+- [control](evidence/launch-gap-20260806-v3-control/verdict.json): attempt 2
+  attaches to generation 1 with no PID, effect, or outcome; the harness records
+  the phantom before cancellation.
+- [fenced recovery](evidence/launch-gap-20260806-v3-fenced-recovery/verdict.json):
+  generation 2 registers one process and produces one matching effect/outcome.
+
+The v1/v2 launch-gap directories remain unchanged. They reproduce the same
+application states but predate the monotonic-attempt guard, store-enforced
+registration gate, and full expected barrier-identity validation added after
+independent review; they are not the basis for the final mechanism claim.
+
 ## Evidence and oracle
 
 Each run preserves:
@@ -121,15 +148,17 @@ surviving child, that a wedged child should be replaced automatically, that
 arbitrary Git/API destinations enforce the fence, or that cancellation reaches
 the child after Worker death.
 
-An adjacent crash window is intentionally unresolved: the store records a launch
-decision before the child registers its process identity. A death in that window
-can leave reattachment waiting on a phantom executor. Bead
-`temporal_projects-dc9` requires a failing boundary experiment before any recovery
-rule is added.
+The pre-`exec` part of the adjacent launch/registration window is now captured by
+the [launch-gap finding](../../docs/findings/0002-launch-decision-is-not-process-liveness.md).
+The later post-`exec`, pre-registration window remains unresolved: fencing can
+reject a delayed obsolete process, but discovery and cleanup still need a
+dedicated failure-boundary experiment.
 
-The barrier service is unauthenticated and bound to loopback. It is a laboratory
-coordination mechanism, not a production process-control API; the experiment
-assumes other local processes are trusted not to forge arrivals. Raw owner tokens
+The barrier service is unauthenticated and bound to loopback. The launch-gap
+harness validates the full expected session, generation, owner hash, actor, and
+arrival ID before injecting `SIGKILL`, but a trusted same-user process could still
+read local state and forge that identity. It is a laboratory coordination
+mechanism, not a production process-control API. Raw owner tokens
 exist only in the mode-0600 application database and a mode-0600 launch request,
 which the simulator removes immediately after decoding. Portable evidence and
 logs contain token hashes.

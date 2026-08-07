@@ -49,3 +49,13 @@ func (s *barrierService) stop(ctx context.Context) error {
 	}
 	return errors.Join(shutdownErr, serveErr)
 }
+
+func arrivalMatchesExpected(actual, expected failureinject.Arrival) bool {
+	return actual.ID == expected.ID &&
+		actual.Point == expected.Point &&
+		actual.SessionID == expected.SessionID &&
+		actual.OwnerTokenHash == expected.OwnerTokenHash &&
+		actual.Generation == expected.Generation &&
+		actual.ActorID == expected.ActorID &&
+		actual.PID == expected.PID
+}

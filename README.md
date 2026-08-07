@@ -36,6 +36,21 @@ See [the experiment contract](experiments/worker-death/README.md),
 [the first finding](docs/findings/0001-worker-death-surviving-agent.md), and
 [the guarantee ledger](docs/guarantees.md).
 
+## Second result: a launch claim is not a live process
+
+The next boundary kills Worker 1 after `executor_launch_decided` is durable but
+before the Activity calls the process launcher. Blind retry reattachment finds
+the session yet can never observe an outcome: generation 1 is `launch_pending`
+with no PID. Temporal is retrying correctly while the application is stuck.
+
+The minimal recovery mechanism records `launch_pending` separately from
+`running`. Attempt 2 conditionally replaces only the pending claim under fenced
+generation 2. The final v3 control/recovery pair, two earlier preserved pairs,
+and two additional final-protocol live trials per arm reproduce the distinction.
+
+See [the exact contract](experiments/worker-death/launch-registration-gap.md) and
+[finding 0002](docs/findings/0002-launch-decision-is-not-process-liveness.md).
+
 ## Run it
 
 Prerequisites are Go 1.25.12 or newer and Temporal CLI 1.8.0 or newer (bundling
@@ -44,14 +59,15 @@ Server 1.31.2 or newer for the current Standalone Activity-era APIs).
 ```bash
 make build
 ./bin/worker-death-experiment --mode all --run-id local-trial
+./bin/worker-death-experiment --scenario launch-gap --arm all --run-id launch-gap-local
 ```
 
 Each run creates a new directory under `experiments/worker-death/evidence/`.
 Existing run directories are never overwritten.
 
 The default verification target includes unit, integration, process, replay, and
-live Temporal tests. It starts three local dev servers and sends real `SIGKILL`s
-to child Worker processes:
+live Temporal tests. It starts local dev servers and sends real `SIGKILL`s to
+Worker processes:
 
 ```bash
 make test

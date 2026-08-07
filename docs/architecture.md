@@ -28,6 +28,16 @@ owner generation/token, process registration, accepted outcome, and event/effect
 evidence. Every mutation that must reject a stale writer carries the generation
 and token to this boundary.
 
+An executor starts as `launch_pending`; only successful process registration
+makes it `running`. A retry may attach to `running` work. Recovering an
+unregistered pending launch instead creates a higher fenced generation and marks
+the old claim `superseded`. Replacement also requires the incoming Temporal
+attempt to exceed the active executor's attempt, preventing a delayed old attempt
+from reclaiming authority. Progress, effects, and first completion require
+`running` state in addition to a valid generation/token. These are application
+rules because Temporal cannot observe the boundary between a store commit and OS
+process creation.
+
 The agent simulator is a separate OS process. It emits progress, attempts an
 external effect, produces an outcome, can block at named barriers, and can outlive
 the Worker that launched it. A PID is diagnostic data, not durable identity.
@@ -57,3 +67,7 @@ The first milestone is single-host. The store can name a surviving local process
 cross-host reachability and routing remain separate experiments. The synthetic
 effect destination understands fencing; later experiments must use destinations
 with weaker semantics and preserve their ambiguity rather than hiding it.
+
+The current launch-gap result covers Worker death before `exec`. Death after
+`exec` but before the child registers remains ambiguous: generation fencing can
+reject the old child, but process discovery and cleanup are not yet established.

@@ -11,6 +11,7 @@ var (
 	ErrInvalidRequest         = errors.New("invalid work store request")
 	ErrSessionNotFound        = errors.New("session not found")
 	ErrStaleOwner             = errors.New("stale owner")
+	ErrExecutorNotRunning     = errors.New("executor not running")
 	ErrOutcomeAlreadyAccepted = errors.New("outcome already accepted")
 )
 
@@ -41,13 +42,14 @@ type Lease struct {
 }
 
 type StartRequest struct {
-	SessionID      string `json:"session_id"`
-	Mode           Mode   `json:"mode"`
-	CandidateOwner string `json:"candidate_owner"`
-	WorkerID       string `json:"worker_id"`
-	AgentBuild     string `json:"agent_build,omitempty"`
-	Attempt        int32  `json:"attempt"`
-	Replace        bool   `json:"replace"`
+	SessionID            string `json:"session_id"`
+	Mode                 Mode   `json:"mode"`
+	CandidateOwner       string `json:"candidate_owner"`
+	WorkerID             string `json:"worker_id"`
+	AgentBuild           string `json:"agent_build,omitempty"`
+	Attempt              int32  `json:"attempt"`
+	ReplaceOwner         bool   `json:"replace"`
+	ReplacePendingLaunch bool   `json:"replace_pending"`
 }
 
 type Decision struct {
@@ -84,6 +86,15 @@ type Executor struct {
 	Status         string    `json:"status"`
 	StartedAt      time.Time `json:"started_at"`
 }
+
+const (
+	ExecutorStatusLaunchPending     = "launch_pending"
+	ExecutorStatusRunning           = "running"
+	ExecutorStatusSuperseded        = "superseded"
+	ExecutorStatusCompleted         = "completed"
+	ExecutorStatusTerminalRejected  = "terminal_rejected"
+	ExecutorStatusTerminalDuplicate = "terminal_duplicate"
+)
 
 type Event struct {
 	Sequence       uint64            `json:"sequence"`

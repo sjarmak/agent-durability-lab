@@ -25,17 +25,21 @@ const (
 )
 
 type WorkflowInput struct {
-	SessionID                    string         `json:"session_id"`
-	Mode                         workstore.Mode `json:"mode"`
-	ReplaceOnRetry               bool           `json:"replace_on_retry"`
-	BlockAttempt1BeforeHeartbeat bool           `json:"block_attempt_1_before_heartbeat"`
+	SessionID                        string         `json:"session_id"`
+	Mode                             workstore.Mode `json:"mode"`
+	ReplaceOwnerOnRetry              bool           `json:"replace_on_retry"`
+	ReplacePendingLaunchOnRetry      bool           `json:"recover_pending_launch_on_retry"`
+	BlockAttempt1AfterLaunchDecision bool           `json:"block_attempt_1_after_launch_decision"`
+	BlockAttempt1BeforeHeartbeat     bool           `json:"block_attempt_1_before_heartbeat"`
 }
 
 type ActivityInput struct {
-	SessionID                    string         `json:"session_id"`
-	Mode                         workstore.Mode `json:"mode"`
-	ReplaceOnRetry               bool           `json:"replace_on_retry"`
-	BlockAttempt1BeforeHeartbeat bool           `json:"block_attempt_1_before_heartbeat"`
+	SessionID                        string         `json:"session_id"`
+	Mode                             workstore.Mode `json:"mode"`
+	ReplaceOwnerOnRetry              bool           `json:"replace_on_retry"`
+	ReplacePendingLaunchOnRetry      bool           `json:"recover_pending_launch_on_retry"`
+	BlockAttempt1AfterLaunchDecision bool           `json:"block_attempt_1_after_launch_decision"`
+	BlockAttempt1BeforeHeartbeat     bool           `json:"block_attempt_1_before_heartbeat"`
 }
 
 func ActivityID(sessionID string) string {
@@ -46,8 +50,14 @@ func WorkerDeathWorkflow(ctx workflow.Context, input WorkflowInput) (workstore.O
 	if input.SessionID == "" || !input.Mode.Valid() {
 		return workstore.Outcome{}, errors.New("workflow requires a session ID and valid mode")
 	}
-	if input.ReplaceOnRetry && input.Mode != workstore.ModeFenced {
+	if input.ReplaceOwnerOnRetry && input.Mode != workstore.ModeFenced {
 		return workstore.Outcome{}, errors.New("replacement on retry requires fenced mode")
+	}
+	if input.ReplacePendingLaunchOnRetry && input.Mode != workstore.ModeFenced {
+		return workstore.Outcome{}, errors.New("pending launch recovery requires fenced mode")
+	}
+	if input.ReplaceOwnerOnRetry && input.ReplacePendingLaunchOnRetry {
+		return workstore.Outcome{}, errors.New("replacement policies are mutually exclusive")
 	}
 	options := workflow.ActivityOptions{
 		ActivityID:             ActivityID(input.SessionID),
