@@ -59,6 +59,47 @@ func TestActivityLaunchesAgentAndReturnsCanonicalOutcome(t *testing.T) {
 	}
 }
 
+func TestActivityCanExposePostExecPreRegistrationBoundary(t *testing.T) {
+	store, err := workstore.Open(filepath.Join(t.TempDir(), "work.db"))
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	coordinator := failureinject.NewCoordinator()
+	server := httptest.NewServer(coordinator.Handler())
+	t.Cleanup(server.Close)
+	activities := Activities{
+		StorePath: store.Path(), AgentBinary: buildAgentSimulator(t), BarrierURL: server.URL,
+		RunDirectory: t.TempDir(), WorkerID: "worker-test", AgentBuild: "test-build",
+	}
+	var suite testsuite.WorkflowTestSuite
+	environment := suite.NewTestActivityEnvironment()
+	environment.RegisterActivity(activities.RunAgent)
+	response := make(chan activityResponse, 1)
+	go func() {
+		value, runErr := environment.ExecuteActivity(activities.RunAgent, ActivityInput{
+			SessionID: "session-1", Mode: workstore.ModeFenced, BlockAttempt1BeforeRegistration: true,
+		})
+		response <- activityResponse{value: value, err: runErr}
+	}()
+
+	waitActivityBarrier(t, coordinator, "before-registration/1")
+	snapshot, err := store.Snapshot(context.Background(), "session-1")
+	if err != nil {
+		t.Fatalf("snapshot before registration: %v", err)
+	}
+	if snapshot.Executors[0].Status != workstore.ExecutorStatusLaunchPending || snapshot.Executors[0].PID != 0 {
+		t.Fatalf("pre-registration executor = %+v", snapshot.Executors[0])
+	}
+	releaseActivityBarrier(t, coordinator, "before-registration/1")
+	waitActivityBarrier(t, coordinator, "before-effect/1")
+	releaseActivityBarrier(t, coordinator, "before-effect/1")
+	waitActivityBarrier(t, coordinator, "before-completion/1")
+	releaseActivityBarrier(t, coordinator, "before-completion/1")
+	if result := <-response; result.err != nil {
+		t.Fatalf("execute Activity: %v", result.err)
+	}
+}
+
 func TestActivityReturnsPreviouslyAcceptedOutcomeWithoutLaunching(t *testing.T) {
 	store, err := workstore.Open(filepath.Join(t.TempDir(), "work.db"))
 	if err != nil {

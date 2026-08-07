@@ -11,6 +11,7 @@ import (
 	"github.com/temporalio-labs/agent-durability-lab/internal/workstore"
 	enumspb "go.temporal.io/api/enums/v1"
 	historypb "go.temporal.io/api/history/v1"
+	workflowservice "go.temporal.io/api/workflowservice/v1"
 	"go.temporal.io/sdk/client"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -111,4 +112,12 @@ func moduleVersion(path string) string {
 		}
 	}
 	return "unknown"
+}
+
+func temporalServerVersion(ctx context.Context, temporalClient client.Client) string {
+	response, err := temporalClient.WorkflowService().GetSystemInfo(ctx, &workflowservice.GetSystemInfoRequest{})
+	if err != nil {
+		return "unknown: " + err.Error()
+	}
+	return response.GetServerVersion()
 }

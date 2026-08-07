@@ -29,14 +29,18 @@ evidence. Every mutation that must reject a stale writer carries the generation
 and token to this boundary.
 
 An executor starts as `launch_pending`; only successful process registration
-makes it `running`. A retry may attach to `running` work. Recovering an
-unregistered pending launch instead creates a higher fenced generation and marks
-the old claim `superseded`. Replacement also requires the incoming Temporal
-attempt to exceed the active executor's attempt, preventing a delayed old attempt
-from reclaiming authority. Progress, effects, and first completion require
-`running` state in addition to a valid generation/token. These are application
-rules because Temporal cannot observe the boundary between a store commit and OS
-process creation.
+makes it `running`. A retry may attach to `running` work. `launch_pending` alone
+does not justify either attachment or replacement: live evidence now shows it
+can describe both a pre-`exec` phantom and a post-`exec` child blocked before
+registration. A trusted discovery/control plane can support attachment to the
+exact child. An explicit replacement policy instead creates a higher fenced
+generation and marks the old claim `superseded`.
+
+Replacement also requires the incoming Temporal attempt to exceed the active
+executor's attempt, preventing a delayed old attempt from reclaiming authority.
+Progress, effects, and first completion require `running` state in addition to a
+valid generation/token. These are application rules because Temporal cannot
+observe the boundary between a store commit and OS process creation.
 
 The agent simulator is a separate OS process. It emits progress, attempts an
 external effect, produces an outcome, can block at named barriers, and can outlive
@@ -112,6 +116,8 @@ synthetic effect destination understood fencing. The external-effect matrix now
 includes weaker destination semantics and preserves the assumptions and remaining
 ambiguity for each mechanism.
 
-The current launch-gap result covers Worker death before `exec`. Death after
-`exec` but before the child registers remains ambiguous: generation fencing can
-reject the old child, but process discovery and cleanup are not yet established.
+The launch-gap experiments cover both sides of `exec`. Their central result is
+that durable launch state is not process truth. The post-`exec` arm uses a
+trusted loopback barrier as discovery evidence and observes cooperative stale
+child exit by exact Linux PID/start identity. Cross-host discovery, arbitrary
+credential revocation, and cleanup of an uncooperative child remain open.

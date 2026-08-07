@@ -66,16 +66,19 @@ Temporal procedure durability did not imply external-process liveness.
 
 ## What this does not establish
 
-- Whether a child started immediately before Worker death but failed to register.
+- This finding alone does not cover a child that started immediately before
+  Worker death but failed to register; [finding 0005](0005-launch-pending-does-not-identify-process-reality.md)
+  now supplies that separate evidence.
 - Whether Temporal durably observed a heartbeat from the attached control retry.
 - Cross-host discovery or attachment to an unregistered process.
 - Automatic policy for how long a `launch_pending` state may remain valid.
 - Cleanup or credential revocation for an OS process rejected during registration.
 - Safety at a destination that ignores the generation fence.
 
-The post-`exec`, pre-registration window remains a separate ambiguity. Fencing
-keeps a replacement authoritative, but discovery and cleanup still require
-experimental evidence.
+The post-`exec`, pre-registration window was a separate ambiguity at the time of
+this finding. [Finding 0005](0005-launch-pending-does-not-identify-process-reality.md)
+now observes trusted local discovery, attachment, fenced replacement, stale
+registration rejection, and cooperative cleanup at that boundary.
 
 An attempted stronger control oracle waited for attempt-2 heartbeat details via
 Temporal's Describe API before cancellation. One of two live trials reached the

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "experiment": "worker-death-post-exec-pre-registration",
+  "run_id": "post-exec-gap-20260806-v1-fenced-replacement-trial-1",
+  "arm": "fenced-replacement",
+  "mode": "fenced",
+  "started_at": "2026-08-07T03:50:21.785476064Z",
+  "completed_at": "2026-08-07T03:50:29.556600614Z",
+  "temporal_cli": "temporal version 1.8.0 (Server 1.31.2, UI 2.50.1)",
+  "temporal_server": "1.31.2",
+  "temporal_api": "v1.63.4",
+  "temporal_sdk": "v1.47.0",
+  "go_version": "go1.25.12",
+  "agent_protocol_build": "worker-death-v3",
+  "failure_boundary": "Worker SIGKILL after child exec and exact child-side barrier arrival, before process registration",
+  "invariant": "retry leaves one accepted effect/outcome; reuse does not launch a competitor and replacement rejects obsolete authority",
+  "falsifier": "child identity is absent at the boundary, attach launches a competitor, replacement accepts stale registration, or obsolete identity remains after rejection",
+  "credential_boundary": "the generation capability is rejected by the application store; arbitrary external credentials are not revoked by Temporal or this experiment",
+  "cleanup_boundary": "single-host Linux PID plus process-start identity; the cooperative stale child exits after registration rejection"
+}

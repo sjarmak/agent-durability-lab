@@ -116,6 +116,15 @@ func TestPendingLaunchRecoveryUsesFencedReplacementButAttachesToRegisteredProces
 	}
 	assertEventKinds(t, registeredSnapshot.Events,
 		"pending_launch_replaced", "process_registration_rejected_stale", "process_registered", "activity_reattached")
+	for _, event := range registeredSnapshot.Events {
+		if event.Kind == "process_registration_rejected_stale" {
+			if event.Attempt != 1 || event.WorkerID != "worker-1" || event.PID != 41 || event.Details["process_start"] != "boot:41" {
+				t.Fatalf("stale registration identity = %+v", event)
+			}
+			return
+		}
+	}
+	t.Fatal("stale registration event not found")
 }
 
 func TestPendingLaunchRecoveryRejectsDelayedOlderAttempt(t *testing.T) {

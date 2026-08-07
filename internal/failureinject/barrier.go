@@ -24,6 +24,7 @@ type Arrival struct {
 	Generation     uint64    `json:"generation,omitempty"`
 	ActorID        string    `json:"actor_id"`
 	PID            int       `json:"pid,omitempty"`
+	ProcessStart   string    `json:"process_start,omitempty"`
 	Time           time.Time `json:"time"`
 }
 
@@ -172,7 +173,7 @@ func validateArrival(arrival Arrival) error {
 func sameArrival(left, right Arrival) bool {
 	return left.ID == right.ID && left.Point == right.Point && left.SessionID == right.SessionID &&
 		left.OwnerTokenHash == right.OwnerTokenHash && left.Generation == right.Generation &&
-		left.ActorID == right.ActorID && left.PID == right.PID
+		left.ActorID == right.ActorID && left.PID == right.PID && left.ProcessStart == right.ProcessStart
 }
 
 func waitForRelease(ctx context.Context, released <-chan struct{}) error {

@@ -83,6 +83,24 @@ application states but predate the monotonic-attempt guard, store-enforced
 registration gate, and full expected barrier-identity validation added after
 independent review; they are not the basis for the final mechanism claim.
 
+The later post-`exec`, pre-registration scenario is specified in
+[post-exec-registration-gap.md](post-exec-registration-gap.md). It compares
+reattaching to a child proven alive through an independent discovery barrier
+with fenced replacement and stale-registration cleanup:
+
+```bash
+./bin/worker-death-experiment \
+  --scenario post-exec-gap --arm all --trials 3 \
+  --run-id post-exec-local
+```
+
+The final `post-exec-gap-20260806-v3-*` matrix preserves three trials per arm,
+including a standalone `pre-kill-state.json` captured immediately before each
+Worker kill. Representative [attach](evidence/post-exec-gap-20260806-v3-attach-control-trial-1/verdict.json)
+and [replacement](evidence/post-exec-gap-20260806-v3-fenced-replacement-trial-1/verdict.json)
+verdicts are valid. V1 has an obsolete protocol label and v2 lacks the standalone
+pre-kill snapshot; both remain preserved but are excluded from the final claim.
+
 ## Evidence and oracle
 
 Each run preserves:
@@ -92,6 +110,7 @@ evidence/<run-id>/
   manifest.json
   events.jsonl
   application-state.json
+  pre-kill-state.json       # post-exec registration-gap scenario
   verdict.json
   temporal-history.json
   temporal-server.log
@@ -148,11 +167,12 @@ surviving child, that a wedged child should be replaced automatically, that
 arbitrary Git/API destinations enforce the fence, or that cancellation reaches
 the child after Worker death.
 
-The pre-`exec` part of the adjacent launch/registration window is now captured by
-the [launch-gap finding](../../docs/findings/0002-launch-decision-is-not-process-liveness.md).
-The later post-`exec`, pre-registration window remains unresolved: fencing can
-reject a delayed obsolete process, but discovery and cleanup still need a
-dedicated failure-boundary experiment.
+The pre-`exec` and post-`exec` sides of the launch/registration window are now
+captured by [finding 0002](../../docs/findings/0002-launch-decision-is-not-process-liveness.md)
+and [finding 0005](../../docs/findings/0005-launch-pending-does-not-identify-process-reality.md).
+Together they show that identical `launch_pending` store state can represent no
+process or a live unregistered process. Cross-host discovery and uncooperative
+cleanup remain unresolved.
 
 The barrier service is unauthenticated and bound to loopback. The launch-gap
 harness validates the full expected session, generation, owner hash, actor, and

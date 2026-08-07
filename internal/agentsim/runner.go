@@ -10,12 +10,13 @@ import (
 )
 
 type Config struct {
-	Lease        workstore.Lease   `json:"lease"`
-	ActorID      string            `json:"actor_id"`
-	PID          int               `json:"pid"`
-	ProcessStart string            `json:"process_start"`
-	Effect       workstore.Effect  `json:"effect"`
-	Outcome      workstore.Outcome `json:"outcome"`
+	Lease                   workstore.Lease   `json:"lease"`
+	ActorID                 string            `json:"actor_id"`
+	PID                     int               `json:"pid"`
+	ProcessStart            string            `json:"process_start"`
+	Effect                  workstore.Effect  `json:"effect"`
+	Outcome                 workstore.Outcome `json:"outcome"`
+	BlockBeforeRegistration bool              `json:"block_before_registration,omitempty"`
 }
 
 type Result struct {
@@ -37,6 +38,11 @@ func New(store *workstore.Store, barrier *failureinject.Client) *Runner {
 func (r *Runner) Run(ctx context.Context, config Config) (Result, error) {
 	if err := r.validate(config); err != nil {
 		return Result{}, err
+	}
+	if config.BlockBeforeRegistration {
+		if err := r.arrive(ctx, config, "before-registration"); err != nil {
+			return Result{}, err
+		}
 	}
 	if err := r.store.RegisterProcess(ctx, config.Lease, workstore.Process{
 		PID: config.PID, StartIdentity: config.ProcessStart,
@@ -100,6 +106,7 @@ func (r *Runner) arrive(ctx context.Context, config Config, phase string) error 
 		ID: fmt.Sprintf("%s:%s", config.ActorID, point), Point: point,
 		SessionID: config.Lease.SessionID, OwnerTokenHash: workstore.HashToken(config.Lease.OwnerToken),
 		Generation: config.Lease.Generation, ActorID: config.ActorID, PID: config.PID,
+		ProcessStart: config.ProcessStart,
 	}
 	if err := r.barrier.Arrive(ctx, arrival); err != nil {
 		return fmt.Errorf("arrive at barrier %q: %w", point, err)

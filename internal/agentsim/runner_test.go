@@ -53,6 +53,39 @@ func TestRunProducesProgressEffectAndOutcomeAtNamedBoundaries(t *testing.T) {
 	}
 }
 
+func TestRunCanBlockBeforeProcessRegistration(t *testing.T) {
+	store, barrierURL, coordinator := newTestDependencies(t)
+	decision := mustDecision(t, store, workstore.StartRequest{
+		SessionID: "session-1", Mode: workstore.ModeFenced, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
+	})
+	runner := New(store, failureinject.NewClient(barrierURL))
+	result := runAsync(runner, Config{
+		Lease: decision.Lease, ActorID: "agent-1", PID: 123, ProcessStart: "boot:123",
+		Effect: workstore.Effect{ID: "effect-1", Value: "changed"}, Outcome: workstore.Outcome{Value: "done"},
+		BlockBeforeRegistration: true,
+	})
+
+	arrivals, err := coordinator.WaitForArrivals(context.Background(), "before-registration/1", 1)
+	if err != nil {
+		t.Fatalf("wait before registration: %v", err)
+	}
+	if arrivals[0].PID != 123 || arrivals[0].ProcessStart != "boot:123" {
+		t.Fatalf("arrival process identity = %+v", arrivals[0])
+	}
+	snapshot := mustSnapshot(t, store, "session-1")
+	if snapshot.Executors[0].Status != workstore.ExecutorStatusLaunchPending || snapshot.Executors[0].PID != 0 {
+		t.Fatalf("pre-registration executor = %+v", snapshot.Executors[0])
+	}
+	releaseBarrier(t, coordinator, "before-registration/1")
+	waitBarrier(t, coordinator, "before-effect/1")
+	releaseBarrier(t, coordinator, "before-effect/1")
+	waitBarrier(t, coordinator, "before-completion/1")
+	releaseBarrier(t, coordinator, "before-completion/1")
+	if response := <-result; response.err != nil {
+		t.Fatalf("run after registration release: %v", response.err)
+	}
+}
+
 func TestReplacementRejectsDelayedStaleAgent(t *testing.T) {
 	store, barrierURL, coordinator := newTestDependencies(t)
 	old := mustDecision(t, store, workstore.StartRequest{

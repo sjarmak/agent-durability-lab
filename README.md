@@ -79,6 +79,22 @@ application mechanisms, not a Temporal exactly-once guarantee.
 See [the experiment contract](experiments/external-effects/README.md) and
 [finding 0004](docs/findings/0004-one-temporal-completion-can-hide-two-effects.md).
 
+## Fifth result: pending launch state cannot reveal process reality
+
+The post-`exec`, pre-registration experiment kills Worker 1 only after both the
+child and Activity reach independent barriers. At that instant, the application
+store still shows generation 1 as `launch_pending` with PID 0, while the
+preserved boundary snapshot proves a distinct child PID/start identity is alive.
+
+Across three trials per arm, a discovery-backed attach reused that exact child
+without a competitor. Explicit replacement advanced to generation 2; the old
+child remained alive, then its delayed registration was rejected with its exact
+identity and it exited. Combined with the earlier pre-`exec` phantom, this proves
+the same durable state can describe two different external realities.
+
+See [the experiment](experiments/worker-death/post-exec-registration-gap.md) and
+[finding 0005](docs/findings/0005-launch-pending-does-not-identify-process-reality.md).
+
 ## Run it
 
 Prerequisites are Go 1.25.12 or newer and Temporal CLI 1.8.0 or newer (bundling
@@ -88,6 +104,7 @@ Server 1.31.2 or newer for the current Standalone Activity-era APIs).
 make build
 ./bin/worker-death-experiment --mode all --run-id local-trial
 ./bin/worker-death-experiment --scenario launch-gap --arm all --run-id launch-gap-local
+./bin/worker-death-experiment --scenario post-exec-gap --arm all --trials 3 --run-id post-exec-local
 ./bin/activity-completion-identity-experiment --arm all --trials 3 --run-id completion-local
 ./bin/external-effect-experiment --destination all --mode all --trials 3 --run-id effects-local
 ```

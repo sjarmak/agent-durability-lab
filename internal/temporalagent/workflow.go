@@ -30,6 +30,7 @@ type WorkflowInput struct {
 	ReplaceOwnerOnRetry              bool           `json:"replace_on_retry"`
 	ReplacePendingLaunchOnRetry      bool           `json:"recover_pending_launch_on_retry"`
 	BlockAttempt1AfterLaunchDecision bool           `json:"block_attempt_1_after_launch_decision"`
+	BlockAttempt1BeforeRegistration  bool           `json:"block_attempt_1_before_registration,omitempty"`
 	BlockAttempt1BeforeHeartbeat     bool           `json:"block_attempt_1_before_heartbeat"`
 }
 
@@ -39,6 +40,7 @@ type ActivityInput struct {
 	ReplaceOwnerOnRetry              bool           `json:"replace_on_retry"`
 	ReplacePendingLaunchOnRetry      bool           `json:"recover_pending_launch_on_retry"`
 	BlockAttempt1AfterLaunchDecision bool           `json:"block_attempt_1_after_launch_decision"`
+	BlockAttempt1BeforeRegistration  bool           `json:"block_attempt_1_before_registration,omitempty"`
 	BlockAttempt1BeforeHeartbeat     bool           `json:"block_attempt_1_before_heartbeat"`
 }
 

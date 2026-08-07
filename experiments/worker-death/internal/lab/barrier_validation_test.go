@@ -19,13 +19,14 @@ func TestArrivalMatchesExpectedIdentity(t *testing.T) {
 	}
 
 	tests := map[string]func(*failureinject.Arrival){
-		"id":         func(arrival *failureinject.Arrival) { arrival.ID = "spoof" },
-		"point":      func(arrival *failureinject.Arrival) { arrival.Point = "wrong" },
-		"session":    func(arrival *failureinject.Arrival) { arrival.SessionID = "wrong" },
-		"owner hash": func(arrival *failureinject.Arrival) { arrival.OwnerTokenHash = "wrong" },
-		"generation": func(arrival *failureinject.Arrival) { arrival.Generation = 2 },
-		"actor":      func(arrival *failureinject.Arrival) { arrival.ActorID = "wrong" },
-		"pid":        func(arrival *failureinject.Arrival) { arrival.PID = 42 },
+		"id":            func(arrival *failureinject.Arrival) { arrival.ID = "spoof" },
+		"point":         func(arrival *failureinject.Arrival) { arrival.Point = "wrong" },
+		"session":       func(arrival *failureinject.Arrival) { arrival.SessionID = "wrong" },
+		"owner hash":    func(arrival *failureinject.Arrival) { arrival.OwnerTokenHash = "wrong" },
+		"generation":    func(arrival *failureinject.Arrival) { arrival.Generation = 2 },
+		"actor":         func(arrival *failureinject.Arrival) { arrival.ActorID = "wrong" },
+		"pid":           func(arrival *failureinject.Arrival) { arrival.PID = 42 },
+		"process start": func(arrival *failureinject.Arrival) { arrival.ProcessStart = "wrong" },
 	}
 	for name, mutate := range tests {
 		t.Run(name, func(t *testing.T) {

@@ -113,6 +113,14 @@ func TestCurrentWorkflowReplaysCapturedHistory(t *testing.T) {
 	}
 }
 
+func TestCurrentWorkflowReplaysPostExecGapHistory(t *testing.T) {
+	replayer := worker.NewWorkflowReplayer()
+	replayer.RegisterWorkflowWithOptions(WorkerDeathWorkflow, workflow.RegisterOptions{Name: WorkflowName})
+	if err := replayer.ReplayWorkflowHistoryFromJSONFile(nil, postExecCapturedHistoryPath(t)); err != nil {
+		t.Fatalf("replay post-exec workflow: %v", err)
+	}
+}
+
 func TestDeliberatelyNondeterministicWorkflowChangeIsRejected(t *testing.T) {
 	replayer := worker.NewWorkflowReplayer()
 	replayer.RegisterWorkflowWithOptions(nondeterministicWorkflow, workflow.RegisterOptions{Name: WorkflowName})
@@ -182,5 +190,18 @@ func capturedHistoryPath(t *testing.T) string {
 	root := filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
 	return filepath.Join(
 		root, "experiments", "worker-death", "evidence", "milestone1-20260806-v3-reattach", "temporal-history.json",
+	)
+}
+
+func postExecCapturedHistoryPath(t *testing.T) string {
+	t.Helper()
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("locate replay test source")
+	}
+	root := filepath.Clean(filepath.Join(filepath.Dir(file), "..", ".."))
+	return filepath.Join(
+		root, "experiments", "worker-death", "evidence",
+		"post-exec-gap-20260806-v3-fenced-replacement-trial-1", "temporal-history.json",
 	)
 }

@@ -65,7 +65,9 @@ func (a Activities) RunAgent(ctx context.Context, input ActivityInput) (workstor
 				return workstore.Outcome{}, err
 			}
 		}
-		if err := a.launchAgent(decision.Lease, store.Path()); err != nil {
+		if err := a.launchAgent(
+			decision.Lease, store.Path(), input.BlockAttempt1BeforeRegistration && info.Attempt == 1,
+		); err != nil {
 			return workstore.Outcome{}, err
 		}
 	}
@@ -78,7 +80,7 @@ func (a Activities) RunAgent(ctx context.Context, input ActivityInput) (workstor
 	return a.waitForOutcome(ctx, store, decision.Lease)
 }
 
-func (a Activities) launchAgent(lease workstore.Lease, storePath string) error {
+func (a Activities) launchAgent(lease workstore.Lease, storePath string, blockBeforeRegistration bool) error {
 	tokenHash := workstore.HashToken(lease.OwnerToken)
 	actorID := fmt.Sprintf("agent/%s/g%d/%s", lease.SessionID, lease.Generation, tokenHash[:12])
 	launcher := agentprocess.NewLauncher(a.AgentBinary, filepath.Join(a.RunDirectory, sessionDirectoryName(lease.SessionID)))
@@ -86,6 +88,7 @@ func (a Activities) launchAgent(lease workstore.Lease, storePath string) error {
 		StorePath: storePath, BarrierURL: a.BarrierURL,
 		Config: agentsim.Config{
 			Lease: lease, ActorID: actorID,
+			BlockBeforeRegistration: blockBeforeRegistration,
 			Effect: workstore.Effect{
 				ID:    fmt.Sprintf("%s/tool-write/g%d", lease.SessionID, lease.Generation),
 				Value: fmt.Sprintf("mutation by generation %d", lease.Generation),

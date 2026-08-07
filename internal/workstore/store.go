@@ -122,11 +122,15 @@ func (s *Store) RegisterProcess(ctx context.Context, lease Lease, process Proces
 		return fmt.Errorf("%w: process PID and start identity are required", ErrInvalidRequest)
 	}
 	return s.changeExecutor(ctx, lease, func(record sessionRecord, index int) (sessionRecord, Event, error) {
+		executor := record.Executors[index]
 		if record.Mode == ModeFenced && lease != record.ActiveLease {
-			return record, staleEvent("process_registration_rejected_stale", lease), ErrStaleOwner
+			event := staleEventWithExecutor("process_registration_rejected_stale", lease, executor)
+			event.PID = process.PID
+			event.Details = map[string]string{"process_start": process.StartIdentity}
+			return record, event, ErrStaleOwner
 		}
 		executors := append([]executorRecord(nil), record.Executors...)
-		executor := executors[index]
+		executor = executors[index]
 		executor.PID = process.PID
 		executor.ProcessStart = process.StartIdentity
 		executor.Status = ExecutorStatusRunning

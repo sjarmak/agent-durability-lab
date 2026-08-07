@@ -8,8 +8,11 @@ not proof of an application-level guarantee.
 
 1. **Observed:** Worker death while an independently running agent survives:
    retry identity, reattachment, replacement, and stale-owner fencing.
-2. **Observed before `exec`:** a Worker dies after the durable launch decision but before child process
-   registration: phantom ownership, reconciliation, and safe relaunch.
+2. **Observed on both sides of `exec`:** a Worker dies after the durable launch
+   decision but before child registration. The same PID-less `launch_pending`
+   state represented either a phantom or a live unregistered child; trusted
+   discovery enabled attach, while generation replacement rejected stale
+   registration and observed cooperative cleanup.
 3. **Observed at the post-effect/pre-completion boundary:** idempotent and
    non-idempotent APIs, database, Git, message, and artifact effects. All unsafe
    retries duplicated the effect; six destination-specific mechanisms prevented

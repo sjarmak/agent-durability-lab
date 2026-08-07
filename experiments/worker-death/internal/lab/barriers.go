@@ -57,5 +57,6 @@ func arrivalMatchesExpected(actual, expected failureinject.Arrival) bool {
 		actual.OwnerTokenHash == expected.OwnerTokenHash &&
 		actual.Generation == expected.Generation &&
 		actual.ActorID == expected.ActorID &&
-		actual.PID == expected.PID
+		actual.PID == expected.PID &&
+		actual.ProcessStart == expected.ProcessStart
 }
