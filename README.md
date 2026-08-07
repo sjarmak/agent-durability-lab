@@ -51,6 +51,18 @@ and two additional final-protocol live trials per arm reproduce the distinction.
 See [the exact contract](experiments/worker-death/launch-registration-gap.md) and
 [finding 0002](docs/findings/0002-launch-decision-is-not-process-liveness.md).
 
+## Third result: logical Activity ID is not attempt identity
+
+The asynchronous-completion experiment lets attempt 1 time out, observes
+attempt 2 start, and then submits a completion attributed to obsolete attempt 1.
+Across three live trials per arm, attempt 1's task token was rejected, while
+`CompleteActivityByID` accepted the stale result and completed the current
+logical Activity. An application-owned opaque capability fence rejected the
+stale caller before the by-ID RPC.
+
+See [the experiment](experiments/activity-completion-identity/README.md) and
+[finding 0003](docs/findings/0003-activity-id-completion-is-not-attempt-scoped.md).
+
 ## Run it
 
 Prerequisites are Go 1.25.12 or newer and Temporal CLI 1.8.0 or newer (bundling
@@ -60,9 +72,10 @@ Server 1.31.2 or newer for the current Standalone Activity-era APIs).
 make build
 ./bin/worker-death-experiment --mode all --run-id local-trial
 ./bin/worker-death-experiment --scenario launch-gap --arm all --run-id launch-gap-local
+./bin/activity-completion-identity-experiment --arm all --trials 3 --run-id completion-local
 ```
 
-Each run creates a new directory under `experiments/worker-death/evidence/`.
+Each run creates a new directory in its experiment's `evidence/` directory.
 Existing run directories are never overwritten.
 
 The default verification target includes unit, integration, process, replay, and
@@ -86,6 +99,8 @@ and Workflow tests remain portable.
   decisions, and supported findings.
 - `experiments/worker-death/`: the first experiment, offline oracle, live harness,
   and preserved evidence.
+- `experiments/activity-completion-identity/`: task-token versus logical-ID
+  completion experiment, durable attempt fence, and preserved evidence.
 - `internal/workstore/`: atomic session, generation, effect, outcome, and event
   state used at the application correctness boundary.
 - `internal/failureinject/`: named HTTP barriers; timeouts guard deadlocks but do

@@ -8,13 +8,14 @@ not proof of an application-level guarantee.
 
 1. **Observed:** Worker death while an independently running agent survives:
    retry identity, reattachment, replacement, and stale-owner fencing.
-2. A Worker dies after the durable launch decision but before child process
+2. **Observed before `exec`:** a Worker dies after the durable launch decision but before child process
    registration: phantom ownership, reconciliation, and safe relaunch.
 3. An external effect succeeds immediately before Activity completion is lost:
    idempotent and non-idempotent destinations, database/Git/message/artifact
    effects, reconciliation, and explicit ambiguity.
-4. `CompleteActivityByID` after retry: compare attempt-scoped task-token
-   completion, logical-ID completion, and application fencing on a live service.
+4. **Observed:** `CompleteActivityByID` after retry: attempt-scoped task-token
+   completion rejects the stale token, logical-ID completion accepts the stale
+   result, and an application capability fence rejects the obsolete owner.
 5. Cancellation across Worker death, unreachable agents, ownership changes, and
    completion races.
 6. Workflow and Activity evolution across deployments: replay compatibility,

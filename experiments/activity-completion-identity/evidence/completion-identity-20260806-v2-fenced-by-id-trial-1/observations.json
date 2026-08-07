@@ -1,0 +1,50 @@
+{
+  "arm": "fenced-by-id",
+  "attempts": [
+    {
+      "attempt": 1,
+      "observed_at": "2026-08-07T02:16:08.308486548Z",
+      "task_token_hash": "8d71b9f9b4202f57107842ff76ce92a39588fdb8006f385d8dc37fce6e1292d5",
+      "owner_token_hash": "3920c6982798653dbded6dff7bc81ccb740bb31e9581f919b68befb3cbd8f588"
+    },
+    {
+      "attempt": 2,
+      "observed_at": "2026-08-07T02:16:10.306996351Z",
+      "task_token_hash": "3e267e6a2d3bae3ccc376a4c79e0722c9c974c47e3da8fdcdb229323859cf192",
+      "owner_token_hash": "daa6c9947d460d0134f4f0c12c10f12f34d05295b58178752eca8db365a44df5"
+    }
+  ],
+  "completions": [
+    {
+      "caller_attempt": 1,
+      "mechanism": "application_fence",
+      "requested_at": "2026-08-07T02:16:10.307021579Z",
+      "responded_at": "2026-08-07T02:16:10.307025707Z",
+      "accepted": false,
+      "error_code": "stale_attempt",
+      "error_type": "*errors.errorString",
+      "error": "stale activity attempt"
+    },
+    {
+      "caller_attempt": 2,
+      "mechanism": "activity_id",
+      "requested_at": "2026-08-07T02:16:10.307027781Z",
+      "responded_at": "2026-08-07T02:16:10.314430788Z",
+      "accepted": true,
+      "result": "current-attempt-2"
+    }
+  ],
+  "history": {
+    "started_attempts": [
+      2
+    ],
+    "retry_failures": [
+      {
+        "started_attempt": 2,
+        "timeout_type": "StartToClose"
+      }
+    ],
+    "completed_count": 1
+  },
+  "workflow_outcome": "current-attempt-2"
+}

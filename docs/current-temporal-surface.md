@@ -24,8 +24,8 @@ Primary references:
 - [CHASM architecture](https://github.com/temporalio/temporal/blob/v1.31.2/docs/architecture/chasm.md)
 - [Go SDK 1.47.0 release](https://github.com/temporalio/sdk-go/releases/tag/v1.47.0)
 
-The highest-value source-level boundary found during this milestone is completion
-identity. Normal Activity task-token completion validates the attempt. Server
-source indicates that `CompleteActivityByID` constructs a synthetic token on a
-different validation path. A live reproduction is required before stating the
-application impact.
+The completion-identity boundary is now live-tested on the versions above.
+Normal Activity task-token completion rejected attempt 1 after attempt 2
+started. `CompleteActivityByID` accepted a result attributed to attempt 1 and
+completed the current logical Activity. See
+[finding 0003](findings/0003-activity-id-completion-is-not-attempt-scoped.md).

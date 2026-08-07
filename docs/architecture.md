@@ -61,6 +61,21 @@ An Activity heartbeat may speed detection and carry recovery hints, but it is no
 the creation fence. Retry lookup starts from the stable application session key so
 the crash-before-first-heartbeat window remains representable.
 
+## Completion identity boundary
+
+An asynchronous Activity task token identifies a delivery attempt closely enough
+for the pinned Temporal Server to reject it after a later attempt starts. A
+Workflow ID, Run ID, and Activity ID identify the logical pending Activity, not
+the external executor submitting the request. Completion by logical ID therefore
+requires an application authorization check when old and new executors may
+coexist.
+
+The completion-identity experiment uses a monotonic attempt plus an opaque owner
+capability. Only the capability hash is persisted. A newer attempt atomically
+replaces the active hash; an older capability and a different competitor for the
+same attempt fail closed. This is a lab mechanism, not a claim that authorization
+and a remote effect are atomic.
+
 ## Deliberate limitations
 
 The first milestone is single-host. The store can name a surviving local process;

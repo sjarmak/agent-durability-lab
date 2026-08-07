@@ -1,0 +1,49 @@
+{
+  "arm": "stale-by-id",
+  "attempts": [
+    {
+      "attempt": 1,
+      "observed_at": "2026-08-07T01:16:28.534435815Z",
+      "task_token_hash": "e5b23ab1f5804506bd4f163a0b04d4cb78444228b35eb61645042405994f6e0e",
+      "owner_token_hash": "278041d00c4bfd4882512edbe7e891226bd95b20cdfcb249efd6fbce1c434ae0"
+    },
+    {
+      "attempt": 2,
+      "observed_at": "2026-08-07T01:16:30.534037416Z",
+      "task_token_hash": "1087f14a87341ac3d4d111227aa1fc54ce2860ff9edb1ad4f15acf4c9acfe975",
+      "owner_token_hash": "b8c4ec183ef091c6868eaa8eb724e64f86419742eb930bc686b2443bcff9304e"
+    }
+  ],
+  "completions": [
+    {
+      "caller_attempt": 1,
+      "mechanism": "activity_id",
+      "submitted_at": "2026-08-07T01:16:30.541027666Z",
+      "accepted": true,
+      "result": "stale-attempt-1"
+    },
+    {
+      "caller_attempt": 2,
+      "mechanism": "task_token",
+      "submitted_at": "2026-08-07T01:16:30.549540226Z",
+      "accepted": false,
+      "error_code": "NotFound",
+      "error_type": "*serviceerror.NotFound",
+      "error": "invalid activityID or activity already timed out or invoking workflow is completed",
+      "result": "current-attempt-2"
+    }
+  ],
+  "history": {
+    "started_attempts": [
+      2
+    ],
+    "retry_failures": [
+      {
+        "started_attempt": 2,
+        "timeout_type": "StartToClose"
+      }
+    ],
+    "completed_count": 1
+  },
+  "workflow_outcome": "stale-attempt-1"
+}

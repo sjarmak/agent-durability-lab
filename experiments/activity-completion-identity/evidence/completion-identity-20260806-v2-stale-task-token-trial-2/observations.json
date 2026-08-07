@@ -1,0 +1,51 @@
+{
+  "arm": "stale-task-token",
+  "attempts": [
+    {
+      "attempt": 1,
+      "observed_at": "2026-08-07T02:15:49.440850996Z",
+      "task_token_hash": "720bbdbdd26b5ad820b2743bd9edaa2f4d072be61c8f12a3402bc706c77e1519",
+      "owner_token_hash": "47b77e547534c7650462042af5d6f1f90eca1fa62d66325d4b207651cfeb26bb"
+    },
+    {
+      "attempt": 2,
+      "observed_at": "2026-08-07T02:15:51.443571753Z",
+      "task_token_hash": "ce0c0c541c7208339282e3a0a570d11771608d94f776f07b83cf85ac35c13e02",
+      "owner_token_hash": "f99b425bc33d22c1afc2e204cd81eb3f79d4064b787bb84f103f9b04ff0b798b"
+    }
+  ],
+  "completions": [
+    {
+      "caller_attempt": 1,
+      "mechanism": "task_token",
+      "requested_at": "2026-08-07T02:15:51.443595498Z",
+      "responded_at": "2026-08-07T02:15:51.444417614Z",
+      "accepted": false,
+      "error_code": "NotFound",
+      "error_type": "*serviceerror.NotFound",
+      "error": "invalid activityID or activity already timed out or invoking workflow is completed",
+      "result": "stale-attempt-1"
+    },
+    {
+      "caller_attempt": 2,
+      "mechanism": "task_token",
+      "requested_at": "2026-08-07T02:15:51.444418646Z",
+      "responded_at": "2026-08-07T02:15:51.450349017Z",
+      "accepted": true,
+      "result": "current-attempt-2"
+    }
+  ],
+  "history": {
+    "started_attempts": [
+      2
+    ],
+    "retry_failures": [
+      {
+        "started_attempt": 2,
+        "timeout_type": "StartToClose"
+      }
+    ],
+    "completed_count": 1
+  },
+  "workflow_outcome": "current-attempt-2"
+}

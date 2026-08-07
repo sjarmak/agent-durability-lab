@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "experiment": "activity-completion-identity",
+  "run_id": "live-stale-task-token",
+  "arm": "stale-task-token",
+  "started_at": "2026-08-07T01:11:41.809856066Z",
+  "completed_at": "2026-08-07T01:11:44.400236725Z",
+  "temporal_cli": "temporal version 1.8.0 (Server 1.31.2, UI 2.50.1)",
+  "temporal_server": "1.31.2",
+  "temporal_api": "unknown",
+  "temporal_sdk": "unknown",
+  "go_version": "go1.25.12",
+  "failure_boundary": "attempt 1 Start-to-Close timeout followed by attempt 2 start, before stale completion submission",
+  "invariant": "once attempt 2 owns the operation, attempt 1 cannot select the accepted Workflow result",
+  "falsifier": "stale task token succeeds, stale completion by ID is attempt-scoped, or the application fence authorizes attempt 1"
+}
