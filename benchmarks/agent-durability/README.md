@@ -187,11 +187,14 @@ table.
 
 ## Common harness status
 
-The adapter-neutral v1 schema/oracle calibration foundation is implemented in
-three deliberately separate packages:
+The adapter-neutral v1 harness is implemented in five deliberately separated
+packages:
 
 - `protocol` owns the fixed identities and strict evidence schemas;
-- `calibration` emits append-only raw evidence and has no verdict-writing API;
+- `evidence` publishes typed, append-only raw bundles and has no verdict API;
+- `calibration` produces deterministic apparatus fixtures through that writer;
+- `livecommon` drives the real simulator, Bolt store, named barriers, and exact
+  Linux process control while retaining adapter-owned orchestration; and
 - `oracle` verifies file hashes, fault bracketing, stable process identity, and
   agreement between events, authority state, and the destination journal before
   evaluating a case invariant.
@@ -227,9 +230,25 @@ post-cancellation-outcome, and frozen-process contradictions were not all
 derived independently. No suite was rewritten; v4 was generated after every
 review finding was encoded as a regression test.
 
-Before system adapters count, `temporal_projects-y33.1` still needs to expose the
-append-only writer as a common adapter API and connect the existing live
-simulator, authority store, effect destination, named barrier, and process
-controller to this evidence contract. Vendor coding-agent adapters then reuse
-that boundary, adding transcript, vendor-session, sandbox, worktree, and
+The common live conformance fixture is also complete. Build the simulator and
+run a source-pinned suite with:
+
+```bash
+go build -o /tmp/agent-simulator ./cmd/agent-simulator
+go run ./benchmarks/agent-durability/cmd/live-common \
+  -agent-binary /tmp/agent-simulator \
+  -adapter-version source-sha256:<immutable-source-hash> \
+  -evidence-dir benchmarks/agent-durability/evidence/<new-live-suite-id>
+```
+
+The corrected preserved suite is
+[`live-common-20260807-v2`](evidence/live-common-20260807-v2): 24
+`valid-pass`, 12 intentional `valid-fail`, and zero invalid runs across three
+live trials for every case and probe. The first live suite remains preserved but
+is superseded because it recorded `v1` rather than an immutable adapter source
+identity. [Finding 0007](../../docs/findings/0007-live-common-harness-calibrates-the-oracle.md)
+states the supported apparatus claim and its limits.
+
+System and vendor coding-agent adapters now reuse this boundary, adding native
+durability records plus transcript, vendor-session, sandbox, worktree, and
 tool-call identities rather than creating another benchmark contract.

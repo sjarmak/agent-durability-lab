@@ -225,6 +225,30 @@ func (s *Store) CommitEffect(ctx context.Context, lease Lease, effect Effect) er
 	})
 }
 
+// CommitEffectWithoutAuthority exists only for unsafe benchmark controls. It
+// records the external mutation while deliberately bypassing generation,
+// cancellation, and executor-state checks so the protected path has a real
+// falsifier.
+func (s *Store) CommitEffectWithoutAuthority(ctx context.Context, lease Lease, effect Effect) error {
+	if effect.ID == "" {
+		return fmt.Errorf("%w: effect ID is required", ErrInvalidRequest)
+	}
+	return s.changeExecutor(ctx, lease, func(record sessionRecord, index int) (sessionRecord, Event, error) {
+		executor := record.Executors[index]
+		accepted := AcceptedEffect{
+			Effect: effect, Generation: lease.Generation,
+			OwnerTokenHash: HashToken(lease.OwnerToken), AcceptedAt: time.Now().UTC(),
+		}
+		record.Effects = append(append([]AcceptedEffect(nil), record.Effects...), accepted)
+		return record, Event{
+			Kind: "effect_accepted_without_authority", SessionID: lease.SessionID,
+			Generation: lease.Generation, OwnerTokenHash: accepted.OwnerTokenHash,
+			WorkerID: executor.WorkerID, Attempt: executor.Attempt, PID: executor.PID,
+			Details: map[string]string{"effect_id": effect.ID},
+		}, nil
+	})
+}
+
 func (s *Store) Complete(ctx context.Context, lease Lease, outcome Outcome) error {
 	if outcome.Value == "" {
 		return fmt.Errorf("%w: outcome value is required", ErrInvalidRequest)

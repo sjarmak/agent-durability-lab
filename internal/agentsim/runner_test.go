@@ -174,6 +174,39 @@ func TestCancellationRejectsDelayedAgentEffectAndCompletion(t *testing.T) {
 	assertEvent(t, snapshot.Events, "completion_rejected_canceled")
 }
 
+func TestUnsafeControlCanApplyEffectWithoutAuthorityAfterCancellation(t *testing.T) {
+	store, barrierURL, coordinator := newTestDependencies(t)
+	decision := mustDecision(t, store, workstore.StartRequest{
+		SessionID: "session-1", Mode: workstore.ModeFenced, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
+	})
+	runner := New(store, failureinject.NewClient(barrierURL))
+	config := validConfig(decision.Lease, "agent-1", 123, "effect-1", "done")
+	config.BypassAuthorityForEffect = true
+	result := runAsync(runner, config)
+	waitBarrier(t, coordinator, "before-effect/1")
+	if _, err := store.CancelSession(context.Background(), workstore.CancelRequest{
+		SessionID: "session-1", RequestID: "cancel-1",
+	}); err != nil {
+		t.Fatalf("cancel session: %v", err)
+	}
+	releaseBarrier(t, coordinator, "before-effect/1")
+	waitBarrier(t, coordinator, "before-completion/1")
+	releaseBarrier(t, coordinator, "before-completion/1")
+
+	response := <-result
+	if response.err != nil {
+		t.Fatalf("run unsafe control: %v", response.err)
+	}
+	if !response.result.EffectAccepted || response.result.CompletionAccepted || response.result.CompletionRejection != "session_canceled" {
+		t.Fatalf("unsafe result = %+v; want effect accepted and completion rejected", response.result)
+	}
+	snapshot := mustSnapshot(t, store, "session-1")
+	if len(snapshot.Effects) != 1 || snapshot.Outcome != nil {
+		t.Fatalf("unsafe state = effects=%+v outcome=%+v", snapshot.Effects, snapshot.Outcome)
+	}
+	assertEvent(t, snapshot.Events, "effect_accepted_without_authority")
+}
+
 func TestPendingLaunchReplacementRejectsObsoleteProcessBeforeProgress(t *testing.T) {
 	store, barrierURL, _ := newTestDependencies(t)
 	old := mustDecision(t, store, workstore.StartRequest{

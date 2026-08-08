@@ -537,6 +537,32 @@ func TestCancellationAndCompletionUseFirstCommittedTerminalTransition(t *testing
 	})
 }
 
+func TestCommitEffectWithoutAuthorityIsAnExplicitPostCancellationNegativeControl(t *testing.T) {
+	store := openTestStore(t)
+	decision := mustStart(t, store, StartRequest{
+		SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-1", WorkerID: "worker-1", Attempt: 1,
+	})
+	mustRegisterTestProcess(t, store, decision.Lease, 101)
+	if _, err := store.CancelSession(context.Background(), CancelRequest{
+		SessionID: "session-1", RequestID: "cancel-1",
+	}); err != nil {
+		t.Fatalf("cancel session: %v", err)
+	}
+
+	effect := Effect{ID: "late-effect", Value: "unsafe"}
+	if err := store.CommitEffectWithoutAuthority(context.Background(), decision.Lease, effect); err != nil {
+		t.Fatalf("commit negative-control effect: %v", err)
+	}
+	snapshot, err := store.Snapshot(context.Background(), "session-1")
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+	if len(snapshot.Effects) != 1 || snapshot.Effects[0].Effect != effect {
+		t.Fatalf("effects = %+v, want explicit unsafe effect", snapshot.Effects)
+	}
+	assertEventKinds(t, snapshot.Events, "cancellation_committed", "effect_accepted_without_authority")
+}
+
 func TestCancellationIsIdempotent(t *testing.T) {
 	store := openTestStore(t)
 	decision := mustStart(t, store, StartRequest{

@@ -419,7 +419,7 @@ The repository tracks that sequence in Beads:
 
 | Work | Bead | Dependency |
 | --- | --- | --- |
-| Common cross-system harness | `temporal_projects-y33.1` | Ready |
+| Common cross-system harness | `temporal_projects-y33.1` | Complete: live calibration |
 | Temporal adapter | `temporal_projects-y33.2` | Common harness |
 | Restate adapter | `temporal_projects-y33.3` | Common harness |
 | DBOS Go adapter | `temporal_projects-y33.4` | Common harness |

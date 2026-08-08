@@ -1,19 +1,14 @@
 package calibration
 
 import (
-	"bufio"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"runtime"
-	"sort"
 	"time"
 
+	"github.com/sjarmak/temporal_projects/benchmarks/agent-durability/evidence"
 	"github.com/sjarmak/temporal_projects/benchmarks/agent-durability/protocol"
 )
 
@@ -24,17 +19,6 @@ type Config struct {
 	Trial int
 }
 
-type rawRun struct {
-	manifest    protocol.Manifest
-	events      []protocol.Event
-	authority   protocol.AuthorityState
-	destination protocol.DestinationState
-	fault       protocol.FaultBoundary
-	processes   []protocol.ProcessObservation
-	native      []protocol.NativeRecord
-	input       protocol.EffectiveInput
-}
-
 func Run(ctx context.Context, config Config) (string, error) {
 	if err := validateConfig(config); err != nil {
 		return "", err
@@ -43,22 +27,7 @@ func Run(ctx context.Context, config Config) (string, error) {
 		return "", err
 	}
 	runID := fmt.Sprintf("%s-%s-trial-%d", config.Case, config.Probe, config.Trial)
-	runDir := filepath.Join(config.Root, runID)
-	if err := os.MkdirAll(config.Root, 0o750); err != nil {
-		return "", fmt.Errorf("create evidence root: %w", err)
-	}
-	if err := os.Mkdir(runDir, 0o750); err != nil {
-		if errors.Is(err, os.ErrExist) {
-			return runDir, fmt.Errorf("%w: %s", protocol.ErrEvidenceExists, runDir)
-		}
-		return runDir, fmt.Errorf("create run evidence: %w", err)
-	}
-
-	raw := buildRun(config, runID)
-	if err := writeRawEvidence(ctx, runDir, raw); err != nil {
-		return runDir, err
-	}
-	return runDir, nil
+	return evidence.WriteRun(ctx, config.Root, buildRun(config, runID))
 }
 
 func validateConfig(config Config) error {
@@ -68,7 +37,7 @@ func validateConfig(config Config) error {
 	return nil
 }
 
-func buildRun(config Config, runID string) rawRun {
+func buildRun(config Config, runID string) evidence.Bundle {
 	sessionID := "session-" + runID
 	builder := newRunBuilder(config.Trial, sessionID)
 	if config.Probe == protocol.ProbeUnfaulted {
@@ -95,10 +64,18 @@ func buildRun(config Config, runID string) rawRun {
 		Runtime:          runtime.GOOS + "/" + runtime.GOARCH,
 		Settings:         map[string]string{"clock": "deterministic", "retry": "case-defined", "timeout": "test-context-only"},
 	}
-	return rawRun{
-		manifest: protocol.Manifest{ContractVersion: protocol.ContractVersion, RunID: runID, Case: config.Case, Probe: config.Probe, Trial: config.Trial, SessionID: sessionID},
-		events:   builder.events, authority: builder.authority, destination: builder.destination,
-		fault: builder.fault, processes: builder.processes, native: builder.native, input: input,
+	return evidence.Bundle{
+		Identity: evidence.RunIdentity{
+			RunID: runID, Case: config.Case, Probe: config.Probe,
+			Trial: config.Trial, SessionID: sessionID,
+		},
+		Events:      builder.events,
+		Authority:   builder.authority,
+		Destination: builder.destination,
+		Fault:       builder.fault,
+		Processes:   builder.processes,
+		Native:      builder.native,
+		Input:       input,
 	}
 }
 
@@ -254,115 +231,6 @@ func (b *runBuilder) acceptOutcome(actor string, generation uint64, process stri
 
 func (b *runBuilder) triggeredFault(point string, after, before uint64, actor, process string) protocol.FaultBoundary {
 	return protocol.FaultBoundary{Point: point, Triggered: true, AfterSequence: after, BeforeSequence: before, ActorID: actor, ProcessIdentity: process, TriggeredAt: b.now.Add(time.Duration(after)*time.Millisecond + time.Microsecond).Format(time.RFC3339Nano)}
-}
-
-func writeRawEvidence(ctx context.Context, runDir string, raw rawRun) error {
-	if err := raw.input.Validate(); err != nil {
-		return err
-	}
-	files := map[string]any{
-		protocol.AuthorityStateFile:      raw.authority,
-		protocol.DestinationStateFile:    raw.destination,
-		protocol.FaultBoundaryFile:       raw.fault,
-		protocol.NativeJournalFile:       raw.native,
-		protocol.ProcessObservationsFile: raw.processes,
-		protocol.EffectiveInputFile:      raw.input,
-	}
-	for name, value := range files {
-		if err := writeJSONExclusive(ctx, filepath.Join(runDir, name), value); err != nil {
-			return err
-		}
-	}
-	if err := writeJSONLExclusive(ctx, filepath.Join(runDir, protocol.CommonEventsFile), raw.events); err != nil {
-		return err
-	}
-	names := make([]string, 0, len(files)+1)
-	for name := range files {
-		names = append(names, name)
-	}
-	names = append(names, protocol.CommonEventsFile)
-	sort.Strings(names)
-	raw.manifest.EvidenceSHA256 = make(map[string]string, len(names))
-	for _, name := range names {
-		hash, err := protocol.FileSHA256(filepath.Join(runDir, name))
-		if err != nil {
-			return fmt.Errorf("hash %s: %w", name, err)
-		}
-		raw.manifest.EvidenceSHA256[name] = hash
-	}
-	raw.manifest.InputSHA256 = raw.manifest.EvidenceSHA256[protocol.EffectiveInputFile]
-	if err := raw.manifest.Validate(); err != nil {
-		return err
-	}
-	return writeJSONExclusive(ctx, filepath.Join(runDir, protocol.ManifestFile), raw.manifest)
-}
-
-func writeJSONExclusive(ctx context.Context, path string, value any) error {
-	data, err := json.MarshalIndent(value, "", "  ")
-	if err != nil {
-		return fmt.Errorf("encode %s: %w", filepath.Base(path), err)
-	}
-	return writeExclusive(ctx, path, append(data, '\n'))
-}
-
-func writeJSONLExclusive(ctx context.Context, path string, events []protocol.Event) error {
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-	if err != nil {
-		return evidenceWriteError(path, err)
-	}
-	writer := bufio.NewWriter(file)
-	encoder := json.NewEncoder(writer)
-	for _, event := range events {
-		if err := ctx.Err(); err != nil {
-			_ = file.Close()
-			return err
-		}
-		if err := encoder.Encode(event); err != nil {
-			_ = file.Close()
-			return fmt.Errorf("encode event: %w", err)
-		}
-	}
-	if err := writer.Flush(); err != nil {
-		_ = file.Close()
-		return fmt.Errorf("flush events: %w", err)
-	}
-	if err := file.Sync(); err != nil {
-		_ = file.Close()
-		return fmt.Errorf("sync events: %w", err)
-	}
-	if err := file.Close(); err != nil {
-		return fmt.Errorf("close events: %w", err)
-	}
-	return nil
-}
-
-func writeExclusive(ctx context.Context, path string, data []byte) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
-	if err != nil {
-		return evidenceWriteError(path, err)
-	}
-	if _, err := file.Write(data); err != nil {
-		_ = file.Close()
-		return fmt.Errorf("write %s: %w", filepath.Base(path), err)
-	}
-	if err := file.Sync(); err != nil {
-		_ = file.Close()
-		return fmt.Errorf("sync %s: %w", filepath.Base(path), err)
-	}
-	if err := file.Close(); err != nil {
-		return fmt.Errorf("close %s: %w", filepath.Base(path), err)
-	}
-	return nil
-}
-
-func evidenceWriteError(path string, err error) error {
-	if errors.Is(err, os.ErrExist) {
-		return fmt.Errorf("%w: %s", protocol.ErrEvidenceExists, path)
-	}
-	return fmt.Errorf("create %s: %w", filepath.Base(path), err)
 }
 
 func hashString(value string) string {

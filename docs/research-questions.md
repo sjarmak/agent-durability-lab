@@ -69,9 +69,11 @@ adapters. Native-minimum, portable-safety, and optional native-optimized arms
 are reported separately so a co-transactional product feature is not mistaken
 for an intrinsic advantage on an unmatched workload.
 
-This is currently a benchmark design, not comparison evidence. Durable Task and
-AWS Step Functions are deferred until the first wave identifies a decision that
-their architecture could change.
+The contract, append-only writer, independent oracle, and live common apparatus
+are implemented and calibrated, but this is still not comparison evidence. No
+durability-system adapter is conformant yet. Durable Task and AWS Step Functions
+remain deferred until the first wave identifies a decision that their
+architecture could change.
 
 The ordering changes when evidence exposes a higher-risk boundary. Changes and
 their rationale are recorded in a decision or finding, not silently applied.

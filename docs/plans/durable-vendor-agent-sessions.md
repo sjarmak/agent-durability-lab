@@ -428,6 +428,13 @@ The protected claim becomes false or narrower if any of the following occurs:
 
 ## Build sequence
 
+The prerequisite common evidence boundary is complete. Its source-pinned live
+suite exercises the shared simulator, authority/effect state, named barriers,
+process controller, append-only writer, and independent oracle; see
+[Finding 0007](../findings/0007-live-common-harness-calibrates-the-oracle.md).
+Vendor and Temporal-native arms must consume that boundary rather than create
+their own verdict or evidence format.
+
 1. Build a deterministic fixture repository and controlled tool destination.
    The task must expose barriers around one observable edit or effect and a final
    result; it must not depend on model judgment for the oracle.
@@ -530,6 +537,7 @@ reconciliation. The experiment must still determine whether that claim is true.
 - [Finding 0002: Launch decision is not process liveness](../findings/0002-launch-decision-is-not-process-liveness.md)
 - [Finding 0004: One Temporal completion can hide two effects](../findings/0004-one-temporal-completion-can-hide-two-effects.md)
 - [Finding 0006: Cancellation requires application revocation](../findings/0006-cancellation-requires-application-revocation.md)
+- [Finding 0007: Live common harness calibration](../findings/0007-live-common-harness-calibrates-the-oracle.md)
 
 Related open work includes agent-session compatibility across Worker Versioning
 (`temporal_projects-0xm`), partial Workflow Stream recovery
