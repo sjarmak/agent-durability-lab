@@ -1,0 +1,49 @@
+[project]
+name = "temporal-native-agent-baseline"
+version = "0.1.0"
+description = "Hermetic Temporal-native OpenAI Agents durability experiment"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "openai-agents==0.19.4",
+  "pydantic==2.13.4",
+  "temporalio[openai-agents,opentelemetry]==1.31.0",
+]
+
+[dependency-groups]
+dev = [
+  "pytest==9.1.1",
+  "pytest-asyncio==1.4.0",
+  "pytest-cov==7.1.0",
+  "ruff==0.16.2",
+]
+
+[build-system]
+requires = ["hatchling==1.29.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["temporal_native"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["temporal_native"]
+omit = [
+  "temporal_native/run_trials.py",
+  "temporal_native/worker.py",
+]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]

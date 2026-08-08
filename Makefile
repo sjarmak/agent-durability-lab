@@ -1,4 +1,4 @@
-.PHONY: build test test-live coverage clean
+.PHONY: build test test-live test-temporal-native coverage evidence-temporal-native clean
 
 build:
 	mkdir -p bin
@@ -11,6 +11,7 @@ build:
 	go build -o bin/cancellation-experiment ./experiments/cancellation/cmd/experiment
 	go build -o bin/agent-durability-calibrate ./benchmarks/agent-durability/cmd/calibrate
 	go build -o bin/agent-durability-live-common ./benchmarks/agent-durability/cmd/live-common
+	go build -o bin/temporal-native-evidence ./experiments/durable-vendor-sessions/temporal-native/cmd/temporal-native-evidence
 
 test:
 	go test -race ./...
@@ -21,6 +22,14 @@ test-live:
 		./experiments/activity-completion-identity/internal/lab \
 		./experiments/external-effects/internal/lab \
 		./experiments/cancellation/internal/lab
+
+test-temporal-native:
+	cd experiments/durable-vendor-sessions/temporal-native && uv run pytest -q
+
+evidence-temporal-native:
+	@test -n "$(EVIDENCE_ROOT)" || (echo "EVIDENCE_ROOT is required"; exit 1)
+	uv run --project experiments/durable-vendor-sessions/temporal-native \
+		python -m temporal_native.run_trials --evidence-root "$(EVIDENCE_ROOT)" --trials 3
 
 coverage:
 	go test -race -coverprofile=coverage.out ./internal/...
@@ -43,7 +52,13 @@ coverage:
 	go tool cover -func=coverage.agent-durability.out
 	@harness_coverage=$$(go tool cover -func=coverage.agent-durability.out | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
 	awk -v coverage="$$harness_coverage" 'BEGIN { if (coverage + 0 < 80) { printf "agent durability harness coverage %.1f%% is below 80%%\n", coverage; exit 1 } }'
+	go test -race -coverprofile=coverage.temporal-native-adapter.out ./experiments/durable-vendor-sessions/temporal-native/evidenceadapter
+	go tool cover -func=coverage.temporal-native-adapter.out
+	@adapter_coverage=$$(go tool cover -func=coverage.temporal-native-adapter.out | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
+	awk -v coverage="$$adapter_coverage" 'BEGIN { if (coverage + 0 < 80) { printf "Temporal-native adapter coverage %.1f%% is below 80%%\n", coverage; exit 1 } }'
+	cd experiments/durable-vendor-sessions/temporal-native && \
+		uv run pytest -q --cov=temporal_native --cov-branch --cov-fail-under=80
 
 clean:
 	rm -rf bin
-	rm -f coverage.out coverage.completion.out coverage.external-effects.out coverage.cancellation.out coverage.agent-durability.out
+	rm -f coverage.out coverage.completion.out coverage.external-effects.out coverage.cancellation.out coverage.agent-durability.out coverage.temporal-native-adapter.out
