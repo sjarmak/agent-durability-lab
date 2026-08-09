@@ -1,175 +1,123 @@
 # Agent Durability Lab
 
-This repository asks a stricter question than whether Temporal recovers:
+This repository investigates a stricter question than whether a durable
+execution system recovers:
 
-> After Temporal recovers, is the overall agent application still correct?
+> After recovery, is the overall agent application still correct?
 
-It is a single-machine engineering research lab for long-running agent processes,
-external effects, ownership, cancellation, streams, artifacts, and deployment
-changes. Experiments start with an invariant and a negative control, inject a
-fault at an exact barrier, and preserve machine-checkable evidence.
+The lab studies long-running agent work that crosses several independently
+durable systems: an orchestrator, application-owned state, operating-system or
+vendor processes, and external destinations such as APIs, databases, Git,
+message systems, and artifact stores. Recovery in one layer does not by itself
+establish correct ownership, effects, cancellation, or completion across the
+others.
 
-## First result: Worker death with a surviving agent
+This is an evidence lab, not a general agent framework or a collection of
+successful Workflow demos. Its purpose is to identify failure boundaries,
+reproduce them under controlled faults, and establish the smallest mechanism
+that survives them.
 
-The first experiment runs a real Temporal dev server, two Worker processes, and
-detached agent simulators. Worker 1 is killed with `SIGKILL` after its child has
-reported progress and immediately before the Activity's first heartbeat. Temporal
-times out the Activity task and dispatches attempt 2 to Worker 2.
+## Research program
 
-| Arm | Executors | Accepted effects | Outcome | Safety result |
-| --- | ---: | ---: | --- | --- |
-| Unsafe retry | 2 | 2 | one winner | invariant violated as expected |
-| Stable reattachment | 1 | 1 | generation 1 | invariant satisfied |
-| Fenced replacement | 2 (explicit replacement) | 1 | generation 2 | old effect and completion rejected |
+The intended work is organized around five related questions:
 
-The result separates three mechanisms:
+1. **Execution identity and authority.** How does one logical operation retain a
+   stable identity across retries while obsolete executors lose the authority to
+   write, complete, acknowledge, or stop current work?
+2. **External effects and publication.** What happens when an effect commits but
+   its acknowledgement or Activity completion is lost, and which destination
+   protocols can deduplicate, fence, or reconcile the ambiguity?
+3. **Lifecycle recovery.** How should an application recover processes, vendor
+   sessions, cancellation, streams, artifacts, and versioned deployments when
+   durable state and external reality temporarily disagree?
+4. **Bounded recovery under load.** How do retry budgets, admission control,
+   poison isolation, backpressure, progress detection, and orchestration
+   topology affect safety, liveness, and recovery cost?
+5. **Cross-system comparison.** Which guarantees come from a durable-execution
+   system, which come from application policy, and which require cooperation
+   from the destination? Comparisons hold the workload, failure schedule,
+   evidence, and oracle fixed while allowing idiomatic system adapters.
 
-- Temporal durably redelivered the Activity after the Worker stopped heartbeating.
-- The application session registry made retry attach to the surviving child.
-- The application generation/token check rejected the obsolete child's authority.
+The [research questions](docs/research-questions.md) describe the investigation
+queue. Dated completion state and result summaries live under
+[`docs/progress/`](docs/progress/README.md), rather than in this overview.
 
-Temporal's stale Activity task-token validation is not the same as application
-writer fencing. The child never possesses a Temporal task token; without the
-application check it can still mutate an external destination.
+## Evidence standard
 
-See [the experiment contract](experiments/worker-death/README.md),
-[the first finding](docs/findings/0001-worker-death-surviving-agent.md), and
-[the guarantee ledger](docs/guarantees.md).
+Every experiment begins with a written contract that states:
 
-## Second result: a launch claim is not a live process
+- an application-level safety or liveness invariant;
+- the exact failure boundary and the component being disrupted;
+- a machine-checkable success/failure oracle;
+- the logical, ownership, delivery, process, effect, and artifact identities;
+- the responsibility split among the durable system, application, and external
+  destination; and
+- an observable falsifier that would narrow or overturn the conclusion.
 
-The next boundary kills Worker 1 after `executor_launch_decided` is durable but
-before the Activity calls the process launcher. Blind retry reattachment finds
-the session yet can never observe an outcome: generation 1 is `launch_pending`
-with no PID. Temporal is retrying correctly while the application is stuck.
+A qualifying experiment includes an unsafe negative control capable of
+violating the invariant, injects faults at named barriers instead of timing
+guesses, preserves raw evidence, and repeats concurrency-sensitive trials.
+Harness mistakes and superseded runs remain visible. The full protocol is in
+[the experiment methodology](docs/experiment-methodology.md).
 
-The minimal recovery mechanism records `launch_pending` separately from
-`running`. Attempt 2 conditionally replaces only the pending claim under fenced
-generation 2. The final v3 control/recovery pair, two earlier preserved pairs,
-and two additional final-protocol live trials per arm reproduce the distinction.
+## Architectural boundary
 
-See [the exact contract](experiments/worker-death/launch-registration-gap.md) and
-[finding 0002](docs/findings/0002-launch-decision-is-not-process-liveness.md).
+The working architecture separates three kinds of responsibility:
 
-## Third result: logical Activity ID is not attempt identity
+- The durable execution system records and recovers procedure: ordering,
+  retries, waits, cancellation requests, and accepted completion.
+- The application owns logical operation identity, current ownership authority,
+  lifecycle policy, bounded recovery, and the links between executions and
+  artifacts.
+- The destination accepting an external mutation must enforce the relevant
+  idempotency key, transaction, fence, conditional publication, or
+  reconciliation protocol.
 
-The asynchronous-completion experiment lets attempt 1 time out, observes
-attempt 2 start, and then submits a completion attributed to obsolete attempt 1.
-Across three live trials per arm, attempt 1's task token was rejected, while
-`CompleteActivityByID` accepted the stale result and completed the current
-logical Activity. An application-owned opaque capability fence rejected the
-stale caller before the by-ID RPC.
+An Activity attempt is a delivery attempt, not durable agent identity. A single
+recorded completion is not proof of one external effect, and transcript resume
+is not proof that only one live turn or workspace writer exists. The lab does
+not claim generic exactly-once effects.
 
-See [the experiment](experiments/activity-completion-identity/README.md) and
-[finding 0003](docs/findings/0003-activity-id-completion-is-not-attempt-scoped.md).
+[The architecture hypothesis](docs/architecture.md) describes the current
+component boundaries. Lasting choices are recorded in
+[`docs/decisions/`](docs/decisions/), beginning with
+[evidence before shared abstraction](docs/decisions/0001-evidence-before-abstraction.md)
+and the
+[procedure/authority/effect boundary](docs/decisions/0002-separate-procedure-authority-and-effects.md).
 
-## Fourth result: one Temporal completion can hide two external effects
+## Repository guide
 
-The external-effect experiment kills Worker 1 after a destination confirms its
-mutation and before the Activity returns. Temporal times out attempt 1, retries
-on Worker 2, and records one Activity completion in every run. In all 18 unsafe
-trials the destination nevertheless contains two physical effects.
+- [`docs/progress/`](docs/progress/README.md) contains dated research-status
+  snapshots.
+- [`docs/findings/`](docs/findings/) contains supported, falsifiable findings.
+- [The guarantee ledger](docs/guarantees.md) attributes each property to
+  Temporal, application code, or an external system and links it to evidence.
+- [`docs/plans/`](docs/plans/) contains active experiment and benchmark designs.
+- [`experiments/`](experiments/) contains experiment contracts, harnesses,
+  oracles, and append-only evidence bundles.
+- [`benchmarks/agent-durability/`](benchmarks/agent-durability/) contains the
+  mechanism-neutral cross-system contracts and adapters.
+- [`internal/`](internal/) contains mechanisms shared only after the experiments
+  establish a genuine common boundary.
 
-Six destination-specific protected arms each left one effect across three live
-trials: HTTP idempotency key, correlation lookup before retry, transactional
-unique key, Git marker reconciliation, simulated message-destination ID deduplication, and a
-content-addressed artifact plus stable reference. These are destination and
-application mechanisms, not a Temporal exactly-once guarantee.
+Each experiment README answers the local question, invariant, failure boundary,
+oracle, run command, evidence location, responsibility split, and falsifier.
 
-See [the experiment contract](experiments/external-effects/README.md) and
-[finding 0004](docs/findings/0004-one-temporal-completion-can-hide-two-effects.md).
+## Build and verify
 
-## Fifth result: pending launch state cannot reveal process reality
-
-The post-`exec`, pre-registration experiment kills Worker 1 only after both the
-child and Activity reach independent barriers. At that instant, the application
-store still shows generation 1 as `launch_pending` with PID 0, while the
-preserved boundary snapshot proves a distinct child PID/start identity is alive.
-
-Across three trials per arm, a discovery-backed attach reused that exact child
-without a competitor. Explicit replacement advanced to generation 2; the old
-child remained alive, then its delayed registration was rejected with its exact
-identity and it exited. Combined with the earlier pre-`exec` phantom, this proves
-the same durable state can describe two different external realities.
-
-See [the experiment](experiments/worker-death/post-exec-registration-gap.md) and
-[finding 0005](docs/findings/0005-launch-pending-does-not-identify-process-reality.md).
-
-## Sixth result: cancellation is not detached-process revocation
-
-Across six Temporal-only controls, the Workflow closed as canceled under both
-Activity wait policies, yet its detached agent subsequently committed an effect
-and outcome. Eighteen safe runs added an application-store terminal revocation
-before exact process control; no post-cancel effect or outcome was accepted.
-
-The safe matrix covered a healthy Worker, Worker 1 `SIGKILL` followed by Worker
-2 cleanup, and a frozen leader/tool-child process group. Every safe run recorded
-revocation, delivery, acknowledgement, and both process dispositions
-separately. `WaitForCancellation=true` changed the Event History acknowledgement
-shape, not the application authority result.
-
-See [the cancellation experiment](experiments/cancellation/README.md) and
-[finding 0006](docs/findings/0006-cancellation-requires-application-revocation.md).
-
-## Run it
-
-Prerequisites are Go 1.25.12 or newer and Temporal CLI 1.8.0 or newer (bundling
-Server 1.31.2 or newer for the current Standalone Activity-era APIs).
+The lab requires Go and, for live Temporal experiments, a compatible Temporal
+CLI. Exact versions and additional dependencies are recorded with each
+experiment and evidence population.
 
 ```bash
 make build
-./bin/worker-death-experiment --mode all --run-id local-trial
-./bin/worker-death-experiment --scenario launch-gap --arm all --run-id launch-gap-local
-./bin/worker-death-experiment --scenario post-exec-gap --arm all --trials 3 --run-id post-exec-local
-./bin/activity-completion-identity-experiment --arm all --trials 3 --run-id completion-local
-./bin/external-effect-experiment --destination all --mode all --trials 3 --run-id effects-local
-./bin/cancellation-experiment --scenario all --wait-policy both --trials 3 --run-id cancellation-local
+go test -race ./...
+make coverage
 ```
 
-Each run creates a new directory in its experiment's `evidence/` directory.
-Existing run directories are never overwritten.
-
-The default verification target includes unit, integration, process, replay, and
-live Temporal tests. It starts local dev servers and sends real `SIGKILL`s to
-Worker processes:
-
-```bash
-make test
-```
-
-Use `make coverage` for the enforced 80% aggregate coverage gate over the core
-mechanism packages in `internal/`. Command entry points and the live experiment
-harness are exercised by `make test` but excluded from that percentage because
-their important behavior occurs in separately built subprocesses. The
-Linux-specific process tests skip on other operating systems; the state-machine
-and Workflow tests remain portable.
-
-## Repository map
-
-- `docs/`: questions, architecture hypotheses, methodology, guarantee ledger,
-  decisions, and supported findings.
-- [Gas City field lessons and research plan](docs/briefings/gas-city-field-lessons-and-research-plan.md):
-  shareable synthesis of the field evidence, controlled lab findings, product
-  implications, inherited benchmark method, book framework, and remaining work.
-- `benchmarks/agent-durability/`: the machine-checked, mechanism-neutral contract
-  for the planned Temporal/Restate/DBOS/PostgreSQL comparison.
-- `experiments/worker-death/`: the first experiment, offline oracle, live harness,
-  and preserved evidence.
-- `experiments/activity-completion-identity/`: task-token versus logical-ID
-  completion experiment, durable attempt fence, and preserved evidence.
-- `experiments/external-effects/`: six destination classes at the
-  effect-success/completion-loss boundary, with unsafe controls and preserved
-  repeated evidence.
-- `experiments/cancellation/`: Temporal-only controls and application-revoked
-  cancellation across Worker death, wait policies, and frozen process trees.
-- `internal/workstore/`: atomic session, generation, effect, outcome, and event
-  state used at the application correctness boundary.
-- `internal/failureinject/`: named HTTP barriers; timeouts guard deadlocks but do
-  not choose failure timing.
-- `internal/agentsim/` and `internal/agentprocess/`: deterministic agent behavior
-  and detached OS-process launching.
-- `internal/temporalagent/`: deterministic Workflow and retrying Activity.
-- `cmd/worker/` and `cmd/agent-simulator/`: process entry points.
+Some tests start local services and send real signals to subprocesses. See the
+relevant experiment README before generating evidence; evidence commands require
+explicit output roots and never overwrite an existing run directory.
 
 Read [AGENTS.md](AGENTS.md) before adding a mechanism or claim. A polished demo,
 a healthy Workflow, or a single passing run is not sufficient evidence.
