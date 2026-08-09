@@ -1,0 +1,265 @@
+{
+  "protocol_version": "adl.publication.v2",
+  "phase": "pilot",
+  "pair_id": "pilot-v2-pair/layered-retry-amplification/unsafe/slot-03",
+  "pair_index": 24,
+  "case": "layered-retry-amplification",
+  "probe": "unsafe",
+  "slot": 3,
+  "system_order": [
+    "temporal",
+    "postgresql-queue"
+  ],
+  "admission": "valid",
+  "reason_codes": null,
+  "systems": [
+    {
+      "system_id": "temporal",
+      "order": 1,
+      "measured_start_utc": "2026-08-09T01:57:00.271281296Z",
+      "measured_end_utc": "2026-08-09T01:57:15.907181495Z",
+      "duration_nanoseconds": 15635900880,
+      "harness_return_utc": "2026-08-09T01:57:15.926205272Z",
+      "harness_duration_nanoseconds": 15654923966,
+      "execution_id": "adl-publication-d83cdf1177924bda45b9b7ee308b9a5f/019fe43c-d6ef-7c6c-9769-432407611fad",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-pilot-20260809-v3/systems/temporal/observed-temporal-daa2c3da01ca786185088d4561d83ba1",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-temporal-daa2c3da01ca786185088d4561d83ba1",
+        "case": "layered-retry-amplification",
+        "probe": "unsafe",
+        "trial": 3,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "fail",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": false,
+        "reason_codes": [
+          "retry_budget_exceeded"
+        ],
+        "metrics": {
+          "logical_operation_count": 1,
+          "work_item_count": 1,
+          "accepted_outcome_count": 1,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 16,
+          "amplification_factor": 16,
+          "peak_qps": 100,
+          "peak_retry_concurrency": 1,
+          "queue_latency_ms": 30,
+          "execution_latency_ms": 15586,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 1063,
+          "recovery_latency_ms": 8301,
+          "end_to_end_latency_ms": 15616,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 15616,
+          "throughput_per_second": 0.06415902717217181,
+          "cost_units": 16,
+          "durable_record_count": 258,
+          "durable_bytes": 191212,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "temporal",
+          "pair_id": "pilot-v2-pair/layered-retry-amplification/unsafe/slot-03",
+          "case": "layered-retry-amplification",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:57:00.271313287Z",
+          "elapsed_nanoseconds": 32692,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "temporal",
+          "pair_id": "pilot-v2-pair/layered-retry-amplification/unsafe/slot-03",
+          "case": "layered-retry-amplification",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:57:00.323611062Z",
+          "elapsed_nanoseconds": 52330447,
+          "kind": "barrier_reached",
+          "barrier": "failure-script-after-first-accepted-request",
+          "details": {
+            "controller": "named-transition"
+          }
+        },
+        {
+          "sequence": 3,
+          "system_id": "temporal",
+          "pair_id": "pilot-v2-pair/layered-retry-amplification/unsafe/slot-03",
+          "case": "layered-retry-amplification",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:57:00.323613647Z",
+          "elapsed_nanoseconds": 52333042,
+          "kind": "fault_committed",
+          "barrier": "failure-script-after-first-accepted-request",
+          "details": {
+            "after_event_id": "event-7"
+          }
+        },
+        {
+          "sequence": 4,
+          "system_id": "temporal",
+          "pair_id": "pilot-v2-pair/layered-retry-amplification/unsafe/slot-03",
+          "case": "layered-retry-amplification",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:57:14.849269587Z",
+          "elapsed_nanoseconds": 14577988982,
+          "kind": "recovery_observed",
+          "barrier": "failure-script-after-first-accepted-request",
+          "details": {
+            "before_event_id": "event-64"
+          }
+        },
+        {
+          "sequence": 5,
+          "system_id": "temporal",
+          "pair_id": "pilot-v2-pair/layered-retry-amplification/unsafe/slot-03",
+          "case": "layered-retry-amplification",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:57:15.907181495Z",
+          "elapsed_nanoseconds": 15635900880,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    },
+    {
+      "system_id": "postgresql-queue",
+      "order": 2,
+      "measured_start_utc": "2026-08-09T01:57:15.92637327Z",
+      "measured_end_utc": "2026-08-09T01:57:15.997554837Z",
+      "duration_nanoseconds": 71181768,
+      "harness_return_utc": "2026-08-09T01:57:16.010149769Z",
+      "harness_duration_nanoseconds": 83776509,
+      "execution_id": "observed-postgresql-queue-372b00ea60a579042519ea9de7cb9392",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-pilot-20260809-v3/systems/postgresql-queue/observed-postgresql-queue-372b00ea60a579042519ea9de7cb9392",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-postgresql-queue-372b00ea60a579042519ea9de7cb9392",
+        "case": "layered-retry-amplification",
+        "probe": "unsafe",
+        "trial": 3,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "fail",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": false,
+        "reason_codes": [
+          "retry_budget_exceeded"
+        ],
+        "metrics": {
+          "logical_operation_count": 1,
+          "work_item_count": 1,
+          "accepted_outcome_count": 1,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 16,
+          "amplification_factor": 16,
+          "peak_qps": 300,
+          "peak_retry_concurrency": 1,
+          "queue_latency_ms": 2,
+          "execution_latency_ms": 67,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 5,
+          "recovery_latency_ms": 34,
+          "end_to_end_latency_ms": 69,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 69,
+          "throughput_per_second": 14.773360982761794,
+          "cost_units": 16,
+          "durable_record_count": 126,
+          "durable_bytes": 83733,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "postgresql-queue",
+          "pair_id": "pilot-v2-pair/layered-retry-amplification/unsafe/slot-03",
+          "case": "layered-retry-amplification",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:57:15.926391043Z",
+          "elapsed_nanoseconds": 17984,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "postgresql-queue",
+          "pair_id": "pilot-v2-pair/layered-retry-amplification/unsafe/slot-03",
+          "case": "layered-retry-amplification",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:57:15.931667469Z",
+          "elapsed_nanoseconds": 5294400,
+          "kind": "barrier_reached",
+          "barrier": "failure-script-after-first-accepted-request",
+          "details": {
+            "controller": "named-transition"
+          }
+        },
+        {
+          "sequence": 3,
+          "system_id": "postgresql-queue",
+          "pair_id": "pilot-v2-pair/layered-retry-amplification/unsafe/slot-03",
+          "case": "layered-retry-amplification",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:57:15.931669022Z",
+          "elapsed_nanoseconds": 5295953,
+          "kind": "fault_committed",
+          "barrier": "failure-script-after-first-accepted-request",
+          "details": {
+            "after_event_id": "event-7"
+          }
+        },
+        {
+          "sequence": 4,
+          "system_id": "postgresql-queue",
+          "pair_id": "pilot-v2-pair/layered-retry-amplification/unsafe/slot-03",
+          "case": "layered-retry-amplification",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:57:15.992016426Z",
+          "elapsed_nanoseconds": 65643357,
+          "kind": "recovery_observed",
+          "barrier": "failure-script-after-first-accepted-request",
+          "details": {
+            "before_event_id": "event-64"
+          }
+        },
+        {
+          "sequence": 5,
+          "system_id": "postgresql-queue",
+          "pair_id": "pilot-v2-pair/layered-retry-amplification/unsafe/slot-03",
+          "case": "layered-retry-amplification",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:57:15.997554837Z",
+          "elapsed_nanoseconds": 71181768,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    }
+  ]
+}

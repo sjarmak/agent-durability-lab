@@ -1,0 +1,43 @@
+{
+  "contract_version": "adl.cross-system.v2",
+  "run_id": "observed-postgresql-queue-5060bd8689bf0d536cbe63ab172322f5",
+  "case": "layered-retry-amplification",
+  "probe": "unsafe",
+  "trial": 13,
+  "admission": "valid",
+  "correctness": "pass",
+  "safety": "fail",
+  "liveness": "pass",
+  "diagnosability": "pass",
+  "efficiency_eligible": false,
+  "reason_codes": [
+    "retry_budget_exceeded"
+  ],
+  "metrics": {
+    "logical_operation_count": 1,
+    "work_item_count": 1,
+    "accepted_outcome_count": 1,
+    "stale_action_accept_count": 0,
+    "physical_request_count": 16,
+    "amplification_factor": 16,
+    "peak_qps": 300,
+    "peak_retry_concurrency": 1,
+    "queue_latency_ms": 1,
+    "execution_latency_ms": 65,
+    "failure_detection_latency_ms": 0,
+    "retry_delay_ms": 4,
+    "recovery_latency_ms": 33,
+    "end_to_end_latency_ms": 66,
+    "backlog_integral_ms": 0,
+    "backlog_drain_p50_ms": 0,
+    "backlog_drain_p90_ms": 0,
+    "backlog_drain_p99_ms": 0,
+    "healthy_task_latency_ms": 66,
+    "throughput_per_second": 15.358530692372547,
+    "cost_units": 16,
+    "durable_record_count": 126,
+    "durable_bytes": 83746,
+    "operator_intervention_count": 0
+  },
+  "oracle": "independent-causal-reconstruction-oracle-v2"
+}

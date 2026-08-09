@@ -1,0 +1,261 @@
+{
+  "protocol_version": "adl.publication.v2",
+  "phase": "publication",
+  "pair_id": "publication-v2-pair/silent-progress/protected/slot-14",
+  "pair_index": 251,
+  "case": "silent-progress",
+  "probe": "protected",
+  "slot": 14,
+  "system_order": [
+    "temporal",
+    "postgresql-queue"
+  ],
+  "admission": "valid",
+  "reason_codes": null,
+  "systems": [
+    {
+      "system_id": "temporal",
+      "order": 1,
+      "measured_start_utc": "2026-08-09T02:21:21.860420702Z",
+      "measured_end_utc": "2026-08-09T02:21:22.014834348Z",
+      "duration_nanoseconds": 154414017,
+      "harness_return_utc": "2026-08-09T02:21:22.031144516Z",
+      "harness_duration_nanoseconds": 170723834,
+      "execution_id": "adl-publication-f9090307aef1547ddb352313fa241399/019fe453-2444-7d56-aa5b-96cbbf076905",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-20260809-v1/systems/temporal/observed-temporal-8e298a36200e0658b7042ae939bc4965",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-temporal-8e298a36200e0658b7042ae939bc4965",
+        "case": "silent-progress",
+        "probe": "protected",
+        "trial": 14,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "reason_codes": [],
+        "metrics": {
+          "logical_operation_count": 2,
+          "work_item_count": 2,
+          "accepted_outcome_count": 2,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 1,
+          "amplification_factor": 0.5,
+          "peak_qps": 100,
+          "peak_retry_concurrency": 1,
+          "queue_latency_ms": 131,
+          "execution_latency_ms": 96,
+          "failure_detection_latency_ms": 72,
+          "retry_delay_ms": 0,
+          "recovery_latency_ms": 47,
+          "end_to_end_latency_ms": 132,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 132,
+          "throughput_per_second": 943.0714895342642,
+          "cost_units": 1,
+          "durable_record_count": 58,
+          "durable_bytes": 46071,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/silent-progress/protected/slot-14",
+          "case": "silent-progress",
+          "probe": "protected",
+          "utc": "2026-08-09T02:21:21.860433987Z",
+          "elapsed_nanoseconds": 13666,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/silent-progress/protected/slot-14",
+          "case": "silent-progress",
+          "probe": "protected",
+          "utc": "2026-08-09T02:21:21.921664067Z",
+          "elapsed_nanoseconds": 61243736,
+          "kind": "barrier_reached",
+          "barrier": "silent-progress-after-first-heartbeat",
+          "details": {
+            "controller": "named-transition"
+          }
+        },
+        {
+          "sequence": 3,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/silent-progress/protected/slot-14",
+          "case": "silent-progress",
+          "probe": "protected",
+          "utc": "2026-08-09T02:21:21.921667694Z",
+          "elapsed_nanoseconds": 61247373,
+          "kind": "fault_committed",
+          "barrier": "silent-progress-after-first-heartbeat",
+          "details": {
+            "after_event_id": "event-7"
+          }
+        },
+        {
+          "sequence": 4,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/silent-progress/protected/slot-14",
+          "case": "silent-progress",
+          "probe": "protected",
+          "utc": "2026-08-09T02:21:21.968986872Z",
+          "elapsed_nanoseconds": 108566551,
+          "kind": "recovery_observed",
+          "barrier": "silent-progress-after-first-heartbeat",
+          "details": {
+            "before_event_id": "event-14"
+          }
+        },
+        {
+          "sequence": 5,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/silent-progress/protected/slot-14",
+          "case": "silent-progress",
+          "probe": "protected",
+          "utc": "2026-08-09T02:21:22.014834348Z",
+          "elapsed_nanoseconds": 154414017,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    },
+    {
+      "system_id": "postgresql-queue",
+      "order": 2,
+      "measured_start_utc": "2026-08-09T02:21:22.03132114Z",
+      "measured_end_utc": "2026-08-09T02:21:22.044664779Z",
+      "duration_nanoseconds": 13343950,
+      "harness_return_utc": "2026-08-09T02:21:22.057157991Z",
+      "harness_duration_nanoseconds": 25836851,
+      "execution_id": "observed-postgresql-queue-b3ea6f43ff83c789c453ef27206b73d1",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-20260809-v1/systems/postgresql-queue/observed-postgresql-queue-b3ea6f43ff83c789c453ef27206b73d1",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-postgresql-queue-b3ea6f43ff83c789c453ef27206b73d1",
+        "case": "silent-progress",
+        "probe": "protected",
+        "trial": 14,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "reason_codes": [],
+        "metrics": {
+          "logical_operation_count": 2,
+          "work_item_count": 2,
+          "accepted_outcome_count": 2,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 1,
+          "amplification_factor": 0.5,
+          "peak_qps": 100,
+          "peak_retry_concurrency": 1,
+          "queue_latency_ms": 10,
+          "execution_latency_ms": 9,
+          "failure_detection_latency_ms": 6,
+          "retry_delay_ms": 0,
+          "recovery_latency_ms": 4,
+          "end_to_end_latency_ms": 11,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 11,
+          "throughput_per_second": 942.1545378402238,
+          "cost_units": 1,
+          "durable_record_count": 39,
+          "durable_bytes": 24443,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/silent-progress/protected/slot-14",
+          "case": "silent-progress",
+          "probe": "protected",
+          "utc": "2026-08-09T02:21:22.031334425Z",
+          "elapsed_nanoseconds": 13596,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/silent-progress/protected/slot-14",
+          "case": "silent-progress",
+          "probe": "protected",
+          "utc": "2026-08-09T02:21:22.036387499Z",
+          "elapsed_nanoseconds": 5066670,
+          "kind": "barrier_reached",
+          "barrier": "silent-progress-after-first-heartbeat",
+          "details": {
+            "controller": "named-transition"
+          }
+        },
+        {
+          "sequence": 3,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/silent-progress/protected/slot-14",
+          "case": "silent-progress",
+          "probe": "protected",
+          "utc": "2026-08-09T02:21:22.036390064Z",
+          "elapsed_nanoseconds": 5069235,
+          "kind": "fault_committed",
+          "barrier": "silent-progress-after-first-heartbeat",
+          "details": {
+            "after_event_id": "event-7"
+          }
+        },
+        {
+          "sequence": 4,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/silent-progress/protected/slot-14",
+          "case": "silent-progress",
+          "probe": "protected",
+          "utc": "2026-08-09T02:21:22.040257216Z",
+          "elapsed_nanoseconds": 8936377,
+          "kind": "recovery_observed",
+          "barrier": "silent-progress-after-first-heartbeat",
+          "details": {
+            "before_event_id": "event-14"
+          }
+        },
+        {
+          "sequence": 5,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/silent-progress/protected/slot-14",
+          "case": "silent-progress",
+          "probe": "protected",
+          "utc": "2026-08-09T02:21:22.044664779Z",
+          "elapsed_nanoseconds": 13343950,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    }
+  ]
+}

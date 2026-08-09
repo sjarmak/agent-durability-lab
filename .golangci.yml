@@ -1,0 +1,14 @@
+version: "2"
+
+linters:
+  exclusions:
+    rules:
+      # These exact v2 production files are cryptographically pinned by the
+      # preregistration or post-pilot harness freeze. Their existing lint debt
+      # cannot be changed without invalidating the sealed publication source.
+      - path: ^benchmarks/agent-durability/v2/(abalive/client\.go|abalive/destination\.go|cmd/system-suite/main\.go|evidence/writer\.go|harness_test\.go|oracle/oracle\.go|protocol/protocol\.go|publication/population\.go)$
+        linters:
+          - errcheck
+      - path: ^benchmarks/agent-durability/v2/(calibration/recovery\.go|cmd/system-suite/main\.go|publication/episode_plan\.go|publication/temporal_executor\.go)$
+        linters:
+          - staticcheck

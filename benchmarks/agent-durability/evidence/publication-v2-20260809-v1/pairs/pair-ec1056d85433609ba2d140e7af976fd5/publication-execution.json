@@ -1,0 +1,177 @@
+{
+  "protocol_version": "adl.publication.v2",
+  "phase": "publication",
+  "pair_id": "publication-v2-pair/poison-work-isolation/unfaulted/slot-21",
+  "pair_index": 365,
+  "case": "poison-work-isolation",
+  "probe": "unfaulted",
+  "slot": 21,
+  "system_order": [
+    "temporal",
+    "postgresql-queue"
+  ],
+  "admission": "valid",
+  "reason_codes": null,
+  "systems": [
+    {
+      "system_id": "temporal",
+      "order": 1,
+      "measured_start_utc": "2026-08-09T02:22:38.649367855Z",
+      "measured_end_utc": "2026-08-09T02:22:38.796876065Z",
+      "duration_nanoseconds": 147508641,
+      "harness_return_utc": "2026-08-09T02:22:38.809967968Z",
+      "harness_duration_nanoseconds": 160600123,
+      "execution_id": "adl-publication-ec1056d85433609ba2d140e7af976fd5/019fe454-5039-7cb7-8963-5c962234c778",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-20260809-v1/systems/temporal/observed-temporal-d5c9f3ff6b4b4e98ba1ee64dfdcd5c26",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-temporal-d5c9f3ff6b4b4e98ba1ee64dfdcd5c26",
+        "case": "poison-work-isolation",
+        "probe": "unfaulted",
+        "trial": 21,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "reason_codes": [],
+        "metrics": {
+          "logical_operation_count": 10,
+          "work_item_count": 10,
+          "accepted_outcome_count": 10,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 10,
+          "amplification_factor": 1,
+          "peak_qps": 200,
+          "peak_retry_concurrency": 1,
+          "queue_latency_ms": 112,
+          "execution_latency_ms": 85,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 0,
+          "recovery_latency_ms": 0,
+          "end_to_end_latency_ms": 113,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 104,
+          "throughput_per_second": 117.61365792836786,
+          "cost_units": 10,
+          "durable_record_count": 109,
+          "durable_bytes": 96880,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/poison-work-isolation/unfaulted/slot-21",
+          "case": "poison-work-isolation",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:22:38.649383996Z",
+          "elapsed_nanoseconds": 16582,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/poison-work-isolation/unfaulted/slot-21",
+          "case": "poison-work-isolation",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:22:38.796876065Z",
+          "elapsed_nanoseconds": 147508641,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    },
+    {
+      "system_id": "postgresql-queue",
+      "order": 2,
+      "measured_start_utc": "2026-08-09T02:22:38.810184388Z",
+      "measured_end_utc": "2026-08-09T02:22:38.820133138Z",
+      "duration_nanoseconds": 9948941,
+      "harness_return_utc": "2026-08-09T02:22:38.832791522Z",
+      "harness_duration_nanoseconds": 22607144,
+      "execution_id": "observed-postgresql-queue-8ae45a7380c396b533b03b6aedba9baa",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-20260809-v1/systems/postgresql-queue/observed-postgresql-queue-8ae45a7380c396b533b03b6aedba9baa",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-postgresql-queue-8ae45a7380c396b533b03b6aedba9baa",
+        "case": "poison-work-isolation",
+        "probe": "unfaulted",
+        "trial": 21,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "reason_codes": [],
+        "metrics": {
+          "logical_operation_count": 10,
+          "work_item_count": 10,
+          "accepted_outcome_count": 10,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 10,
+          "amplification_factor": 1,
+          "peak_qps": 1000,
+          "peak_retry_concurrency": 8,
+          "queue_latency_ms": 6,
+          "execution_latency_ms": 5,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 0,
+          "recovery_latency_ms": 0,
+          "end_to_end_latency_ms": 8,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 8,
+          "throughput_per_second": 1840.4126646893274,
+          "cost_units": 10,
+          "durable_record_count": 94,
+          "durable_bytes": 72559,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/poison-work-isolation/unfaulted/slot-21",
+          "case": "poison-work-isolation",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:22:38.810194757Z",
+          "elapsed_nanoseconds": 10560,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/poison-work-isolation/unfaulted/slot-21",
+          "case": "poison-work-isolation",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:22:38.820133138Z",
+          "elapsed_nanoseconds": 9948941,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    }
+  ]
+}

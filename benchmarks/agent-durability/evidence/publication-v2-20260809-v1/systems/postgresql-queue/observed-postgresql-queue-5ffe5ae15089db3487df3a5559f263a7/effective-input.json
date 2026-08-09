@@ -1,0 +1,41 @@
+{
+  "adapter_id": "postgresql-publication-v1",
+  "adapter_version": "source-sha256:6dfce824e66612c8a34771f87198950895b4375078220953a69995fb037e8d60",
+  "agent_binary_sha256": "7969c2e968c70eed32a0ec847cd5410e83b5453f1dcd45589fe15c95b4160b4f",
+  "system_id": "postgresql-queue",
+  "runtime": "linux/amd64",
+  "authority_protocol": "logical-operation-owner-epoch-capability-v2",
+  "dependency_protocol": "scripted-dependency-physical-request-journal-v2",
+  "failure_protocol": "named-transition-controller-v2",
+  "oracle_protocol": "independent-causal-reconstruction-oracle-v2",
+  "destination_id": "observed-destination-observed-postgresql-queue-5ffe5ae15089db3487df3a5559f263a7",
+  "oracle_visibility": [
+    "authority-state.json",
+    "destination-state.json",
+    "dependency-state.json",
+    "workload-state.json",
+    "fault-boundary.json",
+    "process-observations.json"
+  ],
+  "host_limits": {
+    "connections": 8,
+    "queue_capacity": 20,
+    "workers": 8
+  },
+  "settings": {
+    "admission_capacity": "20",
+    "case": "layered-retry-amplification",
+    "claim": "for-update-skip-locked",
+    "clock": "go-monotonic-duration-with-utc-anchors",
+    "healthy_latency_bound_ms": "1000",
+    "lease_fencing": "owner-generation-capability",
+    "outbox": "transactional-acknowledgement",
+    "poison_attempt_budget": "3",
+    "postgresql_server": "16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)",
+    "probe": "protected",
+    "progress_deadline_ms": "25",
+    "retry_budget": "4",
+    "retry_concurrency_limit": "4",
+    "worker_concurrency": "8"
+  }
+}

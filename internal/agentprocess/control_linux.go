@@ -87,7 +87,7 @@ func Signal(request ControlRequest) (ControlResult, error) {
 	if err != nil {
 		return ControlResult{}, fmt.Errorf("open pidfd for leader %d: %w", request.Target.Leader.PID, err)
 	}
-	defer unix.Close(pidfd)
+	defer func() { _ = unix.Close(pidfd) }()
 	if _, err := Probe(request.Target.Leader); err != nil {
 		return ControlResult{}, err
 	}

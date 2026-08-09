@@ -1,0 +1,266 @@
+{
+  "protocol_version": "adl.publication.v1",
+  "phase": "pilot",
+  "pair_id": "pilot-pair/poison-work-isolation/unsafe/slot-02",
+  "pair_index": 10,
+  "case": "poison-work-isolation",
+  "probe": "unsafe",
+  "slot": 2,
+  "system_order": [
+    "temporal",
+    "postgresql-queue"
+  ],
+  "admission": "valid",
+  "reason_codes": null,
+  "systems": [
+    {
+      "system_id": "temporal",
+      "order": 1,
+      "measured_start_utc": "2026-08-09T01:45:33.844350183Z",
+      "measured_end_utc": "2026-08-09T01:45:34.231706143Z",
+      "duration_nanoseconds": 387357163,
+      "harness_return_utc": "2026-08-09T01:45:34.250427871Z",
+      "harness_duration_nanoseconds": 406077688,
+      "execution_id": "adl-publication-e29872012fef6b01ab7a5f213fb2ba78/019fe432-5d94-7f28-9abd-5d756879072a",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-pilot-20260809-v1/systems/temporal/observed-temporal-a1367c94d204147d6cac8033f7a8f808",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-temporal-a1367c94d204147d6cac8033f7a8f808",
+        "case": "poison-work-isolation",
+        "probe": "unsafe",
+        "trial": 2,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "fail",
+        "liveness": "fail",
+        "diagnosability": "pass",
+        "efficiency_eligible": false,
+        "reason_codes": [
+          "healthy_work_starved",
+          "poison_budget_exceeded"
+        ],
+        "metrics": {
+          "logical_operation_count": 10,
+          "work_item_count": 10,
+          "accepted_outcome_count": 8,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 24,
+          "amplification_factor": 2.4,
+          "peak_qps": 200,
+          "peak_retry_concurrency": 1,
+          "queue_latency_ms": 182,
+          "execution_latency_ms": 133,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 105,
+          "recovery_latency_ms": 129,
+          "end_to_end_latency_ms": 183,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 183,
+          "throughput_per_second": 25.322873682374517,
+          "cost_units": 24,
+          "durable_record_count": 238,
+          "durable_bytes": 207017,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "temporal",
+          "pair_id": "pilot-pair/poison-work-isolation/unsafe/slot-02",
+          "case": "poison-work-isolation",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:45:33.844370982Z",
+          "elapsed_nanoseconds": 22002,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "temporal",
+          "pair_id": "pilot-pair/poison-work-isolation/unsafe/slot-02",
+          "case": "poison-work-isolation",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:45:33.872598784Z",
+          "elapsed_nanoseconds": 28249794,
+          "kind": "barrier_reached",
+          "barrier": "registered-poison-failure-release",
+          "details": {
+            "controller": "named-transition"
+          }
+        },
+        {
+          "sequence": 3,
+          "system_id": "temporal",
+          "pair_id": "pilot-pair/poison-work-isolation/unsafe/slot-02",
+          "case": "poison-work-isolation",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:45:33.872602702Z",
+          "elapsed_nanoseconds": 28253722,
+          "kind": "fault_committed",
+          "barrier": "registered-poison-failure-release",
+          "details": {
+            "after_event_id": "event-12"
+          }
+        },
+        {
+          "sequence": 4,
+          "system_id": "temporal",
+          "pair_id": "pilot-pair/poison-work-isolation/unsafe/slot-02",
+          "case": "poison-work-isolation",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:45:33.923962311Z",
+          "elapsed_nanoseconds": 79613321,
+          "kind": "recovery_observed",
+          "barrier": "registered-poison-failure-release",
+          "details": {
+            "before_event_id": "event-21"
+          }
+        },
+        {
+          "sequence": 5,
+          "system_id": "temporal",
+          "pair_id": "pilot-pair/poison-work-isolation/unsafe/slot-02",
+          "case": "poison-work-isolation",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:45:34.231706143Z",
+          "elapsed_nanoseconds": 387357163,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    },
+    {
+      "system_id": "postgresql-queue",
+      "order": 2,
+      "measured_start_utc": "2026-08-09T01:45:34.250664579Z",
+      "measured_end_utc": "2026-08-09T01:45:34.300018305Z",
+      "duration_nanoseconds": 49353987,
+      "harness_return_utc": "2026-08-09T01:45:34.31725198Z",
+      "harness_duration_nanoseconds": 66587411,
+      "execution_id": "observed-postgresql-queue-c01cf9422e26dbb2e85b95d99295a8da",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-pilot-20260809-v1/systems/postgresql-queue/observed-postgresql-queue-c01cf9422e26dbb2e85b95d99295a8da",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-postgresql-queue-c01cf9422e26dbb2e85b95d99295a8da",
+        "case": "poison-work-isolation",
+        "probe": "unsafe",
+        "trial": 2,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "fail",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": false,
+        "reason_codes": [
+          "poison_budget_exceeded"
+        ],
+        "metrics": {
+          "logical_operation_count": 10,
+          "work_item_count": 10,
+          "accepted_outcome_count": 8,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 24,
+          "amplification_factor": 2.4,
+          "peak_qps": 600,
+          "peak_retry_concurrency": 2,
+          "queue_latency_ms": 17,
+          "execution_latency_ms": 13,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 7,
+          "recovery_latency_ms": 12,
+          "end_to_end_latency_ms": 18,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 18,
+          "throughput_per_second": 190.74062965198513,
+          "cost_units": 24,
+          "durable_record_count": 189,
+          "durable_bytes": 135565,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "postgresql-queue",
+          "pair_id": "pilot-pair/poison-work-isolation/unsafe/slot-02",
+          "case": "poison-work-isolation",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:45:34.250682543Z",
+          "elapsed_nanoseconds": 18235,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "postgresql-queue",
+          "pair_id": "pilot-pair/poison-work-isolation/unsafe/slot-02",
+          "case": "poison-work-isolation",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:45:34.252903372Z",
+          "elapsed_nanoseconds": 2239054,
+          "kind": "barrier_reached",
+          "barrier": "registered-poison-failure-release",
+          "details": {
+            "controller": "named-transition"
+          }
+        },
+        {
+          "sequence": 3,
+          "system_id": "postgresql-queue",
+          "pair_id": "pilot-pair/poison-work-isolation/unsafe/slot-02",
+          "case": "poison-work-isolation",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:45:34.252905586Z",
+          "elapsed_nanoseconds": 2241278,
+          "kind": "fault_committed",
+          "barrier": "registered-poison-failure-release",
+          "details": {
+            "after_event_id": "event-12"
+          }
+        },
+        {
+          "sequence": 4,
+          "system_id": "postgresql-queue",
+          "pair_id": "pilot-pair/poison-work-isolation/unsafe/slot-02",
+          "case": "poison-work-isolation",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:45:34.260567834Z",
+          "elapsed_nanoseconds": 9903526,
+          "kind": "recovery_observed",
+          "barrier": "registered-poison-failure-release",
+          "details": {
+            "before_event_id": "event-21"
+          }
+        },
+        {
+          "sequence": 5,
+          "system_id": "postgresql-queue",
+          "pair_id": "pilot-pair/poison-work-isolation/unsafe/slot-02",
+          "case": "poison-work-isolation",
+          "probe": "unsafe",
+          "utc": "2026-08-09T01:45:34.300018305Z",
+          "elapsed_nanoseconds": 49353987,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    }
+  ]
+}

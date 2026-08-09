@@ -1,0 +1,177 @@
+{
+  "protocol_version": "adl.publication.v2",
+  "phase": "publication",
+  "pair_id": "publication-v2-pair/backpressure-overload/unfaulted/slot-06",
+  "pair_index": 379,
+  "case": "backpressure-overload",
+  "probe": "unfaulted",
+  "slot": 6,
+  "system_order": [
+    "postgresql-queue",
+    "temporal"
+  ],
+  "admission": "valid",
+  "reason_codes": null,
+  "systems": [
+    {
+      "system_id": "postgresql-queue",
+      "order": 1,
+      "measured_start_utc": "2026-08-09T02:22:44.890610346Z",
+      "measured_end_utc": "2026-08-09T02:22:44.903193738Z",
+      "duration_nanoseconds": 12583703,
+      "harness_return_utc": "2026-08-09T02:22:44.91855422Z",
+      "harness_duration_nanoseconds": 27943884,
+      "execution_id": "observed-postgresql-queue-3a66188de5a5198d7856f03f20a557f0",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-20260809-v1/systems/postgresql-queue/observed-postgresql-queue-3a66188de5a5198d7856f03f20a557f0",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-postgresql-queue-3a66188de5a5198d7856f03f20a557f0",
+        "case": "backpressure-overload",
+        "probe": "unfaulted",
+        "trial": 6,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "reason_codes": [],
+        "metrics": {
+          "logical_operation_count": 10,
+          "work_item_count": 10,
+          "accepted_outcome_count": 10,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 10,
+          "amplification_factor": 1,
+          "peak_qps": 1000,
+          "peak_retry_concurrency": 8,
+          "queue_latency_ms": 8,
+          "execution_latency_ms": 7,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 0,
+          "recovery_latency_ms": 0,
+          "end_to_end_latency_ms": 10,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 10,
+          "throughput_per_second": 1282.7189537118038,
+          "cost_units": 10,
+          "durable_record_count": 94,
+          "durable_bytes": 72559,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/backpressure-overload/unfaulted/slot-06",
+          "case": "backpressure-overload",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:22:44.890627668Z",
+          "elapsed_nanoseconds": 17634,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/backpressure-overload/unfaulted/slot-06",
+          "case": "backpressure-overload",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:22:44.903193738Z",
+          "elapsed_nanoseconds": 12583703,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    },
+    {
+      "system_id": "temporal",
+      "order": 2,
+      "measured_start_utc": "2026-08-09T02:22:44.918997128Z",
+      "measured_end_utc": "2026-08-09T02:22:45.084989446Z",
+      "duration_nanoseconds": 165993201,
+      "harness_return_utc": "2026-08-09T02:22:45.100306527Z",
+      "harness_duration_nanoseconds": 181309419,
+      "execution_id": "adl-publication-8eb8c2a0fcda1c64731973e848fa2e85/019fe454-68b7-7dcb-bcc0-fc87696f91aa",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-20260809-v1/systems/temporal/observed-temporal-fb47d60482e51b072bf789b815866276",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-temporal-fb47d60482e51b072bf789b815866276",
+        "case": "backpressure-overload",
+        "probe": "unfaulted",
+        "trial": 6,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "reason_codes": [],
+        "metrics": {
+          "logical_operation_count": 10,
+          "work_item_count": 10,
+          "accepted_outcome_count": 10,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 10,
+          "amplification_factor": 1,
+          "peak_qps": 300,
+          "peak_retry_concurrency": 1,
+          "queue_latency_ms": 133,
+          "execution_latency_ms": 80,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 0,
+          "recovery_latency_ms": 0,
+          "end_to_end_latency_ms": 135,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 135,
+          "throughput_per_second": 123.60957613769543,
+          "cost_units": 10,
+          "durable_record_count": 109,
+          "durable_bytes": 96875,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/backpressure-overload/unfaulted/slot-06",
+          "case": "backpressure-overload",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:22:44.919017476Z",
+          "elapsed_nanoseconds": 21230,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/backpressure-overload/unfaulted/slot-06",
+          "case": "backpressure-overload",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:22:45.084989446Z",
+          "elapsed_nanoseconds": 165993201,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    }
+  ]
+}

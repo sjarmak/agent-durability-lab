@@ -22,6 +22,12 @@ const (
 )
 
 const (
+	FaultPointProcessCreatedBeforeVendorRegistration = "process-created-before-vendor-registration"
+	FaultPointToolEffectBeforeActivityCompletion     = "tool-effect-before-activity-completion"
+	FaultPointFinalOutputBeforeActivityCompletion    = "final-output-before-activity-completion"
+)
+
+const (
 	ManifestFile            = "manifest.json"
 	CommonEventsFile        = "common-events.jsonl"
 	AuthorityStateFile      = "authority-state.json"
@@ -361,12 +367,14 @@ func RawEvidenceFiles() []string {
 	}
 }
 
-func FileSHA256(path string) (string, error) {
+func FileSHA256(path string) (digest string, returnErr error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
+	defer func() {
+		returnErr = errors.Join(returnErr, file.Close())
+	}()
 	hash := sha256.New()
 	if _, err := io.Copy(hash, file); err != nil {
 		return "", err

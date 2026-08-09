@@ -11,7 +11,7 @@ application-level correctness.
 | External Storage | Public Preview | Claim-check payload offload, not an artifact publication/acknowledgement protocol. Object-write/reference-history/orphan windows still need experiments. |
 | Serverless Workers | AWS Lambda Public Preview; GCP Cloud Run Pre-release | Hard invocation lifetimes and ephemeral processes change which external agent-session patterns are viable. Not the first-milestone baseline. |
 | Python OpenAI Agents SDK integration | Public Preview; used by the Temporal-reviewed Durable Agentic Harness sample | Makes model calls and selected tools visible as Activities inside a Workflow. It is a useful native baseline, but its Worker-kill demo does not establish external-process ownership, effect deduplication, client-start idempotency, or durable UI delivery. |
-| Sandbox Orchestration Harness | Community Code Exchange sample; Go source reviewed at `e8a8854` | Provides a child-Workflow lifecycle, stable Update IDs, attachable references, explicit cleanup, suspend/resume, and snapshot/fork provider capabilities. These are useful shapes, but provider create and command Activities still need effect-level idempotency or reconciliation; “no orphans” is an experiment hypothesis. |
+| Sandbox Orchestration Harness | Community Code Exchange sample; Go source reviewed and live-tested at `e8a8854` | Provides a child-Workflow lifecycle, stable Update IDs, attachable references, explicit cleanup, suspend/resume, and snapshot/fork provider capabilities. The lab observed that provider calls still need effect-level idempotency, attached writers need destination-enforced fencing, and pre-status creation needs provider reconciliation. |
 | Nexus | Core Nexus GA; Standalone Nexus Operations remain less mature | Stable Nexus start request IDs can deduplicate starts, not arbitrary downstream effects. |
 | CHASM | Internal server architecture, not a public Go application primitive | Versioned transitions and component references are useful analogies for fencing; the lab must not couple application correctness to CHASM internals. |
 
@@ -43,3 +43,11 @@ the Activity returned. Temporal retried and recorded one Activity completion,
 while every unsafe destination recorded two effects. See
 [finding 0004](findings/0004-one-temporal-completion-can-hide-two-effects.md) and
 Temporal's [Activity idempotency guidance](https://docs.temporal.io/activity-definition#idempotency).
+
+The pinned Sandbox Orchestration Harness is now calibrated through 36 live
+trials. Stable outer Update IDs did not deduplicate retried inner provider
+effects; opaque references did not revoke stale writers; and parent close could
+not clean a created resource whose status never reached Workflow state. Atomic
+provider receipts, generation fencing, and an external reconciler closed those
+bounded gaps in the hermetic arms. See
+[finding 0009](findings/0009-sandbox-lifecycle-does-not-close-provider-gaps.md).

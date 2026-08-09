@@ -103,7 +103,7 @@ func verifyFenced(snapshot workstore.Snapshot, verdict *Verdict) {
 	staleCompletion := eventSequence(snapshot.Events, "completion_rejected_stale", 1)
 	if accepted == 0 || staleEffect == 0 || staleCompletion == 0 {
 		verdict.Failures = append(verdict.Failures, "missing replacement outcome or stale rejection evidence")
-	} else if !(accepted < staleEffect && staleEffect < staleCompletion) {
+	} else if accepted >= staleEffect || staleEffect >= staleCompletion {
 		verdict.Failures = append(verdict.Failures, "stale attempts were not delayed until after replacement outcome acceptance")
 	}
 	verdict.InvariantSatisfied = len(verdict.Failures) == 0

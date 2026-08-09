@@ -1,0 +1,261 @@
+{
+  "protocol_version": "adl.publication.v2",
+  "phase": "pilot",
+  "pair_id": "pilot-v2-harness-r2-pair/aba-reacquisition/protected/slot-02",
+  "pair_index": 3,
+  "case": "aba-reacquisition",
+  "probe": "protected",
+  "slot": 2,
+  "system_order": [
+    "postgresql-queue",
+    "temporal"
+  ],
+  "admission": "valid",
+  "reason_codes": null,
+  "systems": [
+    {
+      "system_id": "postgresql-queue",
+      "order": 1,
+      "measured_start_utc": "2026-08-09T02:08:31.758655458Z",
+      "measured_end_utc": "2026-08-09T02:08:31.765217676Z",
+      "duration_nanoseconds": 6562338,
+      "harness_return_utc": "2026-08-09T02:08:31.777303657Z",
+      "harness_duration_nanoseconds": 18648209,
+      "execution_id": "observed-postgresql-queue-9d328cb87400234cdc1adb240e2c8d93",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-pilot-20260809-v4/systems/postgresql-queue/observed-postgresql-queue-9d328cb87400234cdc1adb240e2c8d93",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-postgresql-queue-9d328cb87400234cdc1adb240e2c8d93",
+        "case": "aba-reacquisition",
+        "probe": "protected",
+        "trial": 2,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "reason_codes": [],
+        "metrics": {
+          "logical_operation_count": 1,
+          "work_item_count": 1,
+          "accepted_outcome_count": 1,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 2,
+          "amplification_factor": 2,
+          "peak_qps": 100,
+          "peak_retry_concurrency": 1,
+          "queue_latency_ms": 1,
+          "execution_latency_ms": 2,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 0,
+          "recovery_latency_ms": 0,
+          "end_to_end_latency_ms": 0,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 0,
+          "throughput_per_second": 0,
+          "cost_units": 2,
+          "durable_record_count": 28,
+          "durable_bytes": 24674,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "postgresql-queue",
+          "pair_id": "pilot-v2-harness-r2-pair/aba-reacquisition/protected/slot-02",
+          "case": "aba-reacquisition",
+          "probe": "protected",
+          "utc": "2026-08-09T02:08:31.758662121Z",
+          "elapsed_nanoseconds": 6793,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "postgresql-queue",
+          "pair_id": "pilot-v2-harness-r2-pair/aba-reacquisition/protected/slot-02",
+          "case": "aba-reacquisition",
+          "probe": "protected",
+          "utc": "2026-08-09T02:08:31.760394677Z",
+          "elapsed_nanoseconds": 1739349,
+          "kind": "barrier_reached",
+          "barrier": "g7-delayed-until-g9-current",
+          "details": {
+            "generation": "7"
+          }
+        },
+        {
+          "sequence": 3,
+          "system_id": "postgresql-queue",
+          "pair_id": "pilot-v2-harness-r2-pair/aba-reacquisition/protected/slot-02",
+          "case": "aba-reacquisition",
+          "probe": "protected",
+          "utc": "2026-08-09T02:08:31.760395198Z",
+          "elapsed_nanoseconds": 1739870,
+          "kind": "fault_committed",
+          "barrier": "g7-delayed-until-g9-current",
+          "details": {
+            "authority_change": "A7-to-B8"
+          }
+        },
+        {
+          "sequence": 4,
+          "system_id": "postgresql-queue",
+          "pair_id": "pilot-v2-harness-r2-pair/aba-reacquisition/protected/slot-02",
+          "case": "aba-reacquisition",
+          "probe": "protected",
+          "utc": "2026-08-09T02:08:31.762191364Z",
+          "elapsed_nanoseconds": 3536036,
+          "kind": "recovery_observed",
+          "barrier": "g7-delayed-until-g9-current",
+          "details": {
+            "generation": "9"
+          }
+        },
+        {
+          "sequence": 5,
+          "system_id": "postgresql-queue",
+          "pair_id": "pilot-v2-harness-r2-pair/aba-reacquisition/protected/slot-02",
+          "case": "aba-reacquisition",
+          "probe": "protected",
+          "utc": "2026-08-09T02:08:31.765217676Z",
+          "elapsed_nanoseconds": 6562338,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    },
+    {
+      "system_id": "temporal",
+      "order": 2,
+      "measured_start_utc": "2026-08-09T02:08:31.777499226Z",
+      "measured_end_utc": "2026-08-09T02:08:31.949205604Z",
+      "duration_nanoseconds": 171706588,
+      "harness_return_utc": "2026-08-09T02:08:31.966005208Z",
+      "harness_duration_nanoseconds": 188506002,
+      "execution_id": "adl-publication-a77dc61c82cab31735f8c9a2d9b183f3/019fe447-6421-7e48-bbbd-4943453c87c6",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-pilot-20260809-v4/systems/temporal/observed-temporal-ea3218b51d067087416a7f60561c25ac",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-temporal-ea3218b51d067087416a7f60561c25ac",
+        "case": "aba-reacquisition",
+        "probe": "protected",
+        "trial": 2,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "reason_codes": [],
+        "metrics": {
+          "logical_operation_count": 1,
+          "work_item_count": 1,
+          "accepted_outcome_count": 1,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 2,
+          "amplification_factor": 2,
+          "peak_qps": 100,
+          "peak_retry_concurrency": 1,
+          "queue_latency_ms": 39,
+          "execution_latency_ms": 81,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 25,
+          "recovery_latency_ms": 0,
+          "end_to_end_latency_ms": 0,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 0,
+          "throughput_per_second": 0,
+          "cost_units": 2,
+          "durable_record_count": 59,
+          "durable_bytes": 47909,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "temporal",
+          "pair_id": "pilot-v2-harness-r2-pair/aba-reacquisition/protected/slot-02",
+          "case": "aba-reacquisition",
+          "probe": "protected",
+          "utc": "2026-08-09T02:08:31.777506029Z",
+          "elapsed_nanoseconds": 7013,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "temporal",
+          "pair_id": "pilot-v2-harness-r2-pair/aba-reacquisition/protected/slot-02",
+          "case": "aba-reacquisition",
+          "probe": "protected",
+          "utc": "2026-08-09T02:08:31.816934778Z",
+          "elapsed_nanoseconds": 39435762,
+          "kind": "barrier_reached",
+          "barrier": "g7-delayed-until-g9-current",
+          "details": {
+            "generation": "7"
+          }
+        },
+        {
+          "sequence": 3,
+          "system_id": "temporal",
+          "pair_id": "pilot-v2-harness-r2-pair/aba-reacquisition/protected/slot-02",
+          "case": "aba-reacquisition",
+          "probe": "protected",
+          "utc": "2026-08-09T02:08:31.81694102Z",
+          "elapsed_nanoseconds": 39442004,
+          "kind": "fault_committed",
+          "barrier": "g7-delayed-until-g9-current",
+          "details": {
+            "authority_change": "A7-to-B8"
+          }
+        },
+        {
+          "sequence": 4,
+          "system_id": "temporal",
+          "pair_id": "pilot-v2-harness-r2-pair/aba-reacquisition/protected/slot-02",
+          "case": "aba-reacquisition",
+          "probe": "protected",
+          "utc": "2026-08-09T02:08:31.866442733Z",
+          "elapsed_nanoseconds": 88943717,
+          "kind": "recovery_observed",
+          "barrier": "g7-delayed-until-g9-current",
+          "details": {
+            "generation": "9"
+          }
+        },
+        {
+          "sequence": 5,
+          "system_id": "temporal",
+          "pair_id": "pilot-v2-harness-r2-pair/aba-reacquisition/protected/slot-02",
+          "case": "aba-reacquisition",
+          "probe": "protected",
+          "utc": "2026-08-09T02:08:31.949205604Z",
+          "elapsed_nanoseconds": 171706588,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    }
+  ]
+}

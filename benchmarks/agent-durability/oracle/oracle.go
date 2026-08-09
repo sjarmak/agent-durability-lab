@@ -304,7 +304,7 @@ func faultIsBracketed(loaded evidence) bool {
 	}
 	after := loaded.events[fault.AfterSequence-1]
 	before := loaded.events[fault.BeforeSequence-1]
-	expectedPoint, afterKind, beforeKinds := expectedBoundary(loaded.manifest.Case)
+	expectedPoint, afterKind, beforeKinds := expectedBoundary(loaded)
 	if fault.Point != expectedPoint || after.Kind != afterKind || !slices.Contains(beforeKinds, before.Kind) {
 		return false
 	}
@@ -314,12 +314,23 @@ func faultIsBracketed(loaded evidence) bool {
 	return afterErr == nil && beforeErr == nil && faultErr == nil && faultTime.After(afterTime) && faultTime.Before(beforeTime)
 }
 
-func expectedBoundary(benchmarkCase protocol.CaseID) (string, string, []string) {
-	switch benchmarkCase {
+func expectedBoundary(loaded evidence) (string, string, []string) {
+	switch loaded.manifest.Case {
 	case protocol.CaseSurvivingExecutor:
 		return "worker-died-after-agent-registration", protocol.EventBarrierReached, []string{protocol.EventExecutorAttached, protocol.EventExecutorRegistered}
 	case protocol.CaseAmbiguousEffect:
-		return "effect-confirmed-before-step-completion", protocol.EventEffectAccepted, []string{protocol.EventEffectAccepted, protocol.EventEffectRejected}
+		switch boundary := loaded.input.Settings["fault_boundary"]; boundary {
+		case protocol.FaultPointProcessCreatedBeforeVendorRegistration:
+			return boundary, protocol.EventBarrierReached, []string{protocol.EventEffectAccepted}
+		case protocol.FaultPointToolEffectBeforeActivityCompletion,
+			protocol.FaultPointFinalOutputBeforeActivityCompletion:
+			return boundary, protocol.EventBarrierReached, []string{protocol.EventExecutorRegistered}
+		case "", "unfaulted":
+			return "effect-confirmed-before-step-completion", protocol.EventEffectAccepted,
+				[]string{protocol.EventEffectAccepted, protocol.EventEffectRejected}
+		default:
+			return "", "", nil
+		}
 	case protocol.CaseStaleGeneration:
 		return "replacement-committed-before-stale-actions", protocol.EventOwnerReplaced, []string{protocol.EventEffectAccepted, protocol.EventEffectRejected}
 	case protocol.CaseCancellationUnreachable:
@@ -429,12 +440,14 @@ func caseFailures(loaded evidence, metrics protocol.Metrics) []string {
 	return uniqueSorted(reasons)
 }
 
-func readJSON(path string, destination any) error {
+func readJSON(path string, destination any) (returnErr error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		returnErr = errors.Join(returnErr, file.Close())
+	}()
 	decoder := json.NewDecoder(file)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(destination); err != nil {
@@ -447,12 +460,14 @@ func readJSON(path string, destination any) error {
 	return nil
 }
 
-func readEvents(path string, destination *[]protocol.Event) error {
+func readEvents(path string, destination *[]protocol.Event) (returnErr error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		returnErr = errors.Join(returnErr, file.Close())
+	}()
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		var event protocol.Event

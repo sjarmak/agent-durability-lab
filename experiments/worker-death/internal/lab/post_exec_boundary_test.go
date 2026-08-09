@@ -42,7 +42,11 @@ func TestCapturePostExecBoundaryPreservesPendingStoreAndLiveChild(t *testing.T) 
 	if err != nil {
 		t.Fatalf("open boundary evidence: %v", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			t.Errorf("close boundary evidence: %v", err)
+		}
+	}()
 	var evidence PostExecBoundaryEvidence
 	if err := json.NewDecoder(file).Decode(&evidence); err != nil {
 		t.Fatalf("decode boundary evidence: %v", err)

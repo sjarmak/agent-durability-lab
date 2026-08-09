@@ -1,0 +1,261 @@
+{
+  "protocol_version": "adl.publication.v2",
+  "phase": "publication",
+  "pair_id": "publication-v2-pair/backpressure-overload/protected/slot-27",
+  "pair_index": 579,
+  "case": "backpressure-overload",
+  "probe": "protected",
+  "slot": 27,
+  "system_order": [
+    "postgresql-queue",
+    "temporal"
+  ],
+  "admission": "valid",
+  "reason_codes": null,
+  "systems": [
+    {
+      "system_id": "postgresql-queue",
+      "order": 1,
+      "measured_start_utc": "2026-08-09T02:26:27.450021506Z",
+      "measured_end_utc": "2026-08-09T02:26:27.501378539Z",
+      "duration_nanoseconds": 51357223,
+      "harness_return_utc": "2026-08-09T02:26:27.516427764Z",
+      "harness_duration_nanoseconds": 66406268,
+      "execution_id": "observed-postgresql-queue-12198380e931c806ce0f33fc27957c96",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-20260809-v1/systems/postgresql-queue/observed-postgresql-queue-12198380e931c806ce0f33fc27957c96",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-postgresql-queue-12198380e931c806ce0f33fc27957c96",
+        "case": "backpressure-overload",
+        "probe": "protected",
+        "trial": 27,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "reason_codes": [],
+        "metrics": {
+          "logical_operation_count": 100,
+          "work_item_count": 100,
+          "accepted_outcome_count": 20,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 20,
+          "amplification_factor": 0.2,
+          "peak_qps": 1900,
+          "peak_retry_concurrency": 8,
+          "queue_latency_ms": 44,
+          "execution_latency_ms": 12,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 0,
+          "recovery_latency_ms": 21,
+          "end_to_end_latency_ms": 47,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 47,
+          "throughput_per_second": 1634.9862199273919,
+          "cost_units": 20,
+          "durable_record_count": 512,
+          "durable_bytes": 274353,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/backpressure-overload/protected/slot-27",
+          "case": "backpressure-overload",
+          "probe": "protected",
+          "utc": "2026-08-09T02:26:27.450054629Z",
+          "elapsed_nanoseconds": 33323,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/backpressure-overload/protected/slot-27",
+          "case": "backpressure-overload",
+          "probe": "protected",
+          "utc": "2026-08-09T02:26:27.451895149Z",
+          "elapsed_nanoseconds": 1873843,
+          "kind": "barrier_reached",
+          "barrier": "offered-load-gate-release",
+          "details": {
+            "controller": "named-transition"
+          }
+        },
+        {
+          "sequence": 3,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/backpressure-overload/protected/slot-27",
+          "case": "backpressure-overload",
+          "probe": "protected",
+          "utc": "2026-08-09T02:26:27.451897934Z",
+          "elapsed_nanoseconds": 1876628,
+          "kind": "fault_committed",
+          "barrier": "offered-load-gate-release",
+          "details": {
+            "after_event_id": "event-102"
+          }
+        },
+        {
+          "sequence": 4,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/backpressure-overload/protected/slot-27",
+          "case": "backpressure-overload",
+          "probe": "protected",
+          "utc": "2026-08-09T02:26:27.499848677Z",
+          "elapsed_nanoseconds": 49827361,
+          "kind": "recovery_observed",
+          "barrier": "offered-load-gate-release",
+          "details": {
+            "before_event_id": "event-303"
+          }
+        },
+        {
+          "sequence": 5,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/backpressure-overload/protected/slot-27",
+          "case": "backpressure-overload",
+          "probe": "protected",
+          "utc": "2026-08-09T02:26:27.501378539Z",
+          "elapsed_nanoseconds": 51357223,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    },
+    {
+      "system_id": "temporal",
+      "order": 2,
+      "measured_start_utc": "2026-08-09T02:26:27.516751456Z",
+      "measured_end_utc": "2026-08-09T02:26:28.480804894Z",
+      "duration_nanoseconds": 964053860,
+      "harness_return_utc": "2026-08-09T02:26:28.522554302Z",
+      "harness_duration_nanoseconds": 1005802866,
+      "execution_id": "adl-publication-3de596fb1e9c52a99a4efdf1fefc5aa2/019fe457-ce3d-76e0-ae41-acf3a46e70c4",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-20260809-v1/systems/temporal/observed-temporal-ef7eac346419e44bc78d24ad09ed737f",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-temporal-ef7eac346419e44bc78d24ad09ed737f",
+        "case": "backpressure-overload",
+        "probe": "protected",
+        "trial": 27,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "reason_codes": [],
+        "metrics": {
+          "logical_operation_count": 100,
+          "work_item_count": 100,
+          "accepted_outcome_count": 20,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 20,
+          "amplification_factor": 0.2,
+          "peak_qps": 200,
+          "peak_retry_concurrency": 1,
+          "queue_latency_ms": 910,
+          "execution_latency_ms": 856,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 0,
+          "recovery_latency_ms": 426,
+          "end_to_end_latency_ms": 916,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 912,
+          "throughput_per_second": 23.361576182370342,
+          "cost_units": 20,
+          "durable_record_count": 755,
+          "durable_bytes": 545354,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/backpressure-overload/protected/slot-27",
+          "case": "backpressure-overload",
+          "probe": "protected",
+          "utc": "2026-08-09T02:26:27.516786422Z",
+          "elapsed_nanoseconds": 35387,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/backpressure-overload/protected/slot-27",
+          "case": "backpressure-overload",
+          "probe": "protected",
+          "utc": "2026-08-09T02:26:27.544405222Z",
+          "elapsed_nanoseconds": 27654187,
+          "kind": "barrier_reached",
+          "barrier": "offered-load-gate-release",
+          "details": {
+            "controller": "named-transition"
+          }
+        },
+        {
+          "sequence": 3,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/backpressure-overload/protected/slot-27",
+          "case": "backpressure-overload",
+          "probe": "protected",
+          "utc": "2026-08-09T02:26:27.544408638Z",
+          "elapsed_nanoseconds": 27657603,
+          "kind": "fault_committed",
+          "barrier": "offered-load-gate-release",
+          "details": {
+            "after_event_id": "event-102"
+          }
+        },
+        {
+          "sequence": 4,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/backpressure-overload/protected/slot-27",
+          "case": "backpressure-overload",
+          "probe": "protected",
+          "utc": "2026-08-09T02:26:28.463099488Z",
+          "elapsed_nanoseconds": 946348453,
+          "kind": "recovery_observed",
+          "barrier": "offered-load-gate-release",
+          "details": {
+            "before_event_id": "event-303"
+          }
+        },
+        {
+          "sequence": 5,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/backpressure-overload/protected/slot-27",
+          "case": "backpressure-overload",
+          "probe": "protected",
+          "utc": "2026-08-09T02:26:28.480804894Z",
+          "elapsed_nanoseconds": 964053860,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    }
+  ]
+}

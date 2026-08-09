@@ -1,0 +1,267 @@
+{
+  "protocol_version": "adl.publication.v2",
+  "phase": "publication",
+  "pair_id": "publication-v2-pair/aba-reacquisition/unsafe/slot-06",
+  "pair_index": 16,
+  "case": "aba-reacquisition",
+  "probe": "unsafe",
+  "slot": 6,
+  "system_order": [
+    "postgresql-queue",
+    "temporal"
+  ],
+  "admission": "valid",
+  "reason_codes": null,
+  "systems": [
+    {
+      "system_id": "postgresql-queue",
+      "order": 1,
+      "measured_start_utc": "2026-08-09T02:16:50.750780916Z",
+      "measured_end_utc": "2026-08-09T02:16:50.757000656Z",
+      "duration_nanoseconds": 6220020,
+      "harness_return_utc": "2026-08-09T02:16:50.769242913Z",
+      "harness_duration_nanoseconds": 18462007,
+      "execution_id": "observed-postgresql-queue-9e31b2bb1a673b0fb6a618c361fae251",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-20260809-v1/systems/postgresql-queue/observed-postgresql-queue-9e31b2bb1a673b0fb6a618c361fae251",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-postgresql-queue-9e31b2bb1a673b0fb6a618c361fae251",
+        "case": "aba-reacquisition",
+        "probe": "unsafe",
+        "trial": 6,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "fail",
+        "liveness": "fail",
+        "diagnosability": "pass",
+        "efficiency_eligible": false,
+        "reason_codes": [
+          "current_owner_stopped",
+          "stale_action_accepted"
+        ],
+        "metrics": {
+          "logical_operation_count": 1,
+          "work_item_count": 1,
+          "accepted_outcome_count": 1,
+          "stale_action_accept_count": 4,
+          "physical_request_count": 2,
+          "amplification_factor": 2,
+          "peak_qps": 100,
+          "peak_retry_concurrency": 1,
+          "queue_latency_ms": 1,
+          "execution_latency_ms": 2,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 0,
+          "recovery_latency_ms": 0,
+          "end_to_end_latency_ms": 0,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 0,
+          "throughput_per_second": 0,
+          "cost_units": 2,
+          "durable_record_count": 28,
+          "durable_bytes": 25492,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/aba-reacquisition/unsafe/slot-06",
+          "case": "aba-reacquisition",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:16:50.75078826Z",
+          "elapsed_nanoseconds": 7634,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/aba-reacquisition/unsafe/slot-06",
+          "case": "aba-reacquisition",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:16:50.752511208Z",
+          "elapsed_nanoseconds": 1730572,
+          "kind": "barrier_reached",
+          "barrier": "g7-delayed-until-g9-current",
+          "details": {
+            "generation": "7"
+          }
+        },
+        {
+          "sequence": 3,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/aba-reacquisition/unsafe/slot-06",
+          "case": "aba-reacquisition",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:16:50.752512039Z",
+          "elapsed_nanoseconds": 1731413,
+          "kind": "fault_committed",
+          "barrier": "g7-delayed-until-g9-current",
+          "details": {
+            "authority_change": "A7-to-B8"
+          }
+        },
+        {
+          "sequence": 4,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/aba-reacquisition/unsafe/slot-06",
+          "case": "aba-reacquisition",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:16:50.754133585Z",
+          "elapsed_nanoseconds": 3352959,
+          "kind": "recovery_observed",
+          "barrier": "g7-delayed-until-g9-current",
+          "details": {
+            "generation": "9"
+          }
+        },
+        {
+          "sequence": 5,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/aba-reacquisition/unsafe/slot-06",
+          "case": "aba-reacquisition",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:16:50.757000656Z",
+          "elapsed_nanoseconds": 6220020,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    },
+    {
+      "system_id": "temporal",
+      "order": 2,
+      "measured_start_utc": "2026-08-09T02:16:50.769499699Z",
+      "measured_end_utc": "2026-08-09T02:16:50.933988704Z",
+      "duration_nanoseconds": 164489116,
+      "harness_return_utc": "2026-08-09T02:16:50.950256872Z",
+      "harness_duration_nanoseconds": 180757194,
+      "execution_id": "adl-publication-7d6ee17df0212247ef2b82cdd8543150/019fe44f-0152-7073-ac2f-1c6d0150ff07",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-20260809-v1/systems/temporal/observed-temporal-e4b6fd7e9969d3d114728fd940b33a03",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-temporal-e4b6fd7e9969d3d114728fd940b33a03",
+        "case": "aba-reacquisition",
+        "probe": "unsafe",
+        "trial": 6,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "fail",
+        "liveness": "fail",
+        "diagnosability": "pass",
+        "efficiency_eligible": false,
+        "reason_codes": [
+          "current_owner_stopped",
+          "stale_action_accepted"
+        ],
+        "metrics": {
+          "logical_operation_count": 1,
+          "work_item_count": 1,
+          "accepted_outcome_count": 1,
+          "stale_action_accept_count": 4,
+          "physical_request_count": 2,
+          "amplification_factor": 2,
+          "peak_qps": 100,
+          "peak_retry_concurrency": 1,
+          "queue_latency_ms": 34,
+          "execution_latency_ms": 80,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 32,
+          "recovery_latency_ms": 0,
+          "end_to_end_latency_ms": 0,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 0,
+          "throughput_per_second": 0,
+          "cost_units": 2,
+          "durable_record_count": 59,
+          "durable_bytes": 48765,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/aba-reacquisition/unsafe/slot-06",
+          "case": "aba-reacquisition",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:16:50.769506361Z",
+          "elapsed_nanoseconds": 6773,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/aba-reacquisition/unsafe/slot-06",
+          "case": "aba-reacquisition",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:16:50.803530913Z",
+          "elapsed_nanoseconds": 34031325,
+          "kind": "barrier_reached",
+          "barrier": "g7-delayed-until-g9-current",
+          "details": {
+            "generation": "7"
+          }
+        },
+        {
+          "sequence": 3,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/aba-reacquisition/unsafe/slot-06",
+          "case": "aba-reacquisition",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:16:50.803531644Z",
+          "elapsed_nanoseconds": 34032046,
+          "kind": "fault_committed",
+          "barrier": "g7-delayed-until-g9-current",
+          "details": {
+            "authority_change": "A7-to-B8"
+          }
+        },
+        {
+          "sequence": 4,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/aba-reacquisition/unsafe/slot-06",
+          "case": "aba-reacquisition",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:16:50.859726944Z",
+          "elapsed_nanoseconds": 90227356,
+          "kind": "recovery_observed",
+          "barrier": "g7-delayed-until-g9-current",
+          "details": {
+            "generation": "9"
+          }
+        },
+        {
+          "sequence": 5,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/aba-reacquisition/unsafe/slot-06",
+          "case": "aba-reacquisition",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:16:50.933988704Z",
+          "elapsed_nanoseconds": 164489116,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    }
+  ]
+}

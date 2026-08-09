@@ -1,0 +1,43 @@
+{
+  "adapter_id": "temporal-v2",
+  "adapter_version": "source-sha256:91f48baa240e3483653ca8fc4aa2d175a2f8972bf07abc1e7d2c492ef23b2227",
+  "agent_binary_sha256": "8c0a37718194c8e27036a8d3fdca8f391c3bc7711e44457e5a762e32e5d8c3fe",
+  "system_id": "temporal",
+  "runtime": "linux/amd64",
+  "authority_protocol": "logical-operation-owner-epoch-capability-v2",
+  "dependency_protocol": "scripted-dependency-physical-request-journal-v2",
+  "failure_protocol": "named-transition-controller-v2",
+  "oracle_protocol": "independent-causal-reconstruction-oracle-v2",
+  "destination_id": "recovery-calibration-destination",
+  "oracle_visibility": [
+    "authority-state.json",
+    "destination-state.json",
+    "dependency-state.json",
+    "workload-state.json",
+    "fault-boundary.json",
+    "process-observations.json"
+  ],
+  "host_limits": {
+    "connections": 8,
+    "queue_capacity": 20,
+    "workers": 4
+  },
+  "settings": {
+    "activity_retry_max_attempts": "2",
+    "admission_capacity": "20",
+    "case": "layered-retry-amplification",
+    "healthy_latency_bound_ms": "50",
+    "history_replay": "passed",
+    "poison_attempt_budget": "3",
+    "probe": "unfaulted",
+    "progress_deadline_ms": "25",
+    "qps_window_ms": "10",
+    "retry_budget": "4",
+    "retry_concurrency_limit": "4",
+    "system_execution_id": "adl-v2/layered-retry-amplification/unfaulted/1/e4613a8233241455/019fe3b4-29f6-773d-867b-6bc46b4d7f5a",
+    "temporal_cli": "temporal version 1.8.0 (Server 1.31.2, UI 2.50.1)",
+    "temporal_sdk": "v1.47.0",
+    "track": "native-minimum",
+    "workflow": "AgentDurabilityBenchmarkV2"
+  }
+}

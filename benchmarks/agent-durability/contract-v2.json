@@ -1,0 +1,237 @@
+{
+  "contract_version": "adl.cross-system.v2",
+  "preserves_contract": "adl.cross-system.v1",
+  "question": "After authority changes or recovery pressure, is the complete agent application correct, safe, live, diagnosable, and efficient at parity, and which layer supplied each mechanism?",
+  "non_goals": [
+    "replace or reinterpret contract-v1 evidence",
+    "produce a scalar system winner",
+    "infer exactly-once external effects from durable procedure recovery",
+    "treat work items inside one outage episode as independent trials"
+  ],
+  "tracks": [
+    {
+      "id": "native-minimum",
+      "purpose": "Expose native recovery and retry behavior without silently adding application fencing, retry budgets, admission control, or destination deduplication."
+    },
+    {
+      "id": "portable-safety",
+      "purpose": "Apply the same generation capability, retry budget, concurrency limit, jitter, cancellation, and destination protocol to each required system."
+    },
+    {
+      "id": "native-optimized",
+      "purpose": "Report an optional system-specific transactional or scheduling mechanism separately from the two required tracks."
+    }
+  ],
+  "suites": [
+    {
+      "id": "authority",
+      "purpose": "Distinguish an immutable authority epoch from a recurring owner label."
+    },
+    {
+      "id": "recovery-dynamics",
+      "purpose": "Measure correctness, safety, liveness, and parity-gated cost while failures accumulate work or consume shared capacity."
+    }
+  ],
+  "cases": [
+    {
+      "id": "aba-reacquisition",
+      "suite": "authority",
+      "decision": "Whether owner identity alone is safe or every accepting boundary needs a monotonic generation and opaque capability.",
+      "invariant": "A request authorized for A generation 7 remains obsolete after B generation 8 and after owner label A becomes current again at generation 9; no generation-7 registration, mutation, completion, acknowledgement, or stop is accepted, and generation 9 remains live.",
+      "failure_boundary": "Block a generation-7 request at the destination before authorization, commit generation 8 and then generation 9, and release the delayed generation-7 request only after generation 9 is independently observed current.",
+      "oracle": [
+        "authority epochs and capability hashes are reconstructed from common state rather than adapter logs",
+        "every accepted authoritative action names generation 9 and its current capability",
+        "generation 7 has zero accepted actions after its delay barrier",
+        "generation 9 remains live after the delayed generation-7 stop"
+      ],
+      "negative_control": "Authorize by recurring owner label A; the delayed generation-7 request must be accepted after A generation 9 becomes current.",
+      "protected_mechanism": "Atomically validate logical operation, monotonic generation, and opaque owner capability at every accepting application or destination boundary.",
+      "responsibility": {
+        "durability_system": "Preserve the ordered procedure that performs replacement and reacquisition.",
+        "application": "Allocate immutable generations and capabilities and make current authority independently observable.",
+        "destination": "Reject an obsolete generation and capability atomically with mutation acceptance."
+      },
+      "falsifier": "Any generation-7 authoritative action is accepted, generation 9 is stopped, the unsafe label-only control does not fail, or the evidence cannot distinguish the two A incarnations.",
+      "statistical_unit": "one independent authority-transition run"
+    },
+    {
+      "id": "layered-retry-amplification",
+      "suite": "recovery-dynamics",
+      "decision": "Which layer owns retries and whether a propagated budget prevents Workflow, Activity, client, and agent retries from multiplying downstream calls.",
+      "invariant": "One logical operation reaches a terminal outcome or explicit bounded failure without exceeding the arm's preregistered downstream request and cost budgets.",
+      "failure_boundary": "After the dependency accepts the first request, atomically activate a scripted sequence of timeouts, 500 responses, and 429 responses before allowing recovery.",
+      "oracle": [
+        "every physical request has one retry layer, ordinal, parent attempt, cause, and logical operation",
+        "the independent request journal derives total amplification and cost",
+        "the accepted outcome agrees with dependency state"
+      ],
+      "negative_control": "Enable independent retry budgets at multiple layers; the physical request count must exceed the declared protected bound.",
+      "protected_mechanism": "Declare one retry owner per boundary and propagate a shared attempt, elapsed-time, and cost budget through nested calls.",
+      "responsibility": {
+        "durability_system": "Apply its configured durable retry policy and record durable attempts.",
+        "application": "Choose retry ownership, propagate the shared budget, and classify terminal ambiguity.",
+        "dependency": "Return the exact scripted outcome and retain the physical request journal."
+      },
+      "falsifier": "A physical request lacks causal parentage, the protected budget is exceeded, the accepted outcome contradicts dependency state, or the unsafe control does not amplify.",
+      "statistical_unit": "one independent logical-operation run"
+    },
+    {
+      "id": "outage-backlog-recovery",
+      "suite": "recovery-dynamics",
+      "decision": "Whether retry scheduling, jitter, and concurrency limits drain an outage backlog without a synchronized second outage.",
+      "invariant": "After dependency restoration every admitted healthy work item reaches one accepted terminal state, no prohibited effect is accepted, and retry QPS and concurrency remain within preregistered bounds.",
+      "failure_boundary": "Commit dependency outage after a steady-state barrier, admit the fixed cohort until the exact backlog target is observed, then commit restoration before releasing retry eligibility.",
+      "oracle": [
+        "input ledger, queue state, dependency journal, outcomes, and acknowledgements reconcile by work-item identity",
+        "fixed-width request windows derive peak QPS and concurrency",
+        "backlog samples derive drain curve and integral"
+      ],
+      "negative_control": "Release a synchronized cohort with no jitter and no global retry concurrency limit; it must exceed at least one preregistered storm bound.",
+      "protected_mechanism": "Use deterministic seeded jitter, bounded retry concurrency, admission control, and a shared recovery budget.",
+      "responsibility": {
+        "durability_system": "Persist queued procedure and configured retry timers through the outage.",
+        "application": "Bound admission and retry concurrency and retain stable work/effect identities.",
+        "dependency": "Expose exact outage and restoration transitions plus the request journal."
+      },
+      "falsifier": "Work is lost, a prohibited duplicate or stale effect is accepted, a protected storm bound is exceeded, the unsafe control cannot storm, or restoration is not exactly bracketed.",
+      "statistical_unit": "one independent outage-and-recovery cohort episode"
+    },
+    {
+      "id": "backpressure-overload",
+      "suite": "recovery-dynamics",
+      "decision": "Whether the system sheds, queues, or processes overload predictably instead of exhausting capacity and losing accepted work.",
+      "invariant": "At each declared 1x, 10x, and 100x offered-load level, every admitted item remains accounted for and the protected arm respects its queue, concurrency, and resource bounds.",
+      "failure_boundary": "After workers and the dependency report ready, release the preregistered fixed or normalized offered-load cohort through the common admission gate.",
+      "oracle": [
+        "submitted, admitted, rejected, started, completed, and acknowledged counts reconcile",
+        "schedule-to-start and queue age are derived from common event anchors",
+        "throughput and resource-bound violations are reported separately from correctness"
+      ],
+      "negative_control": "Admit all work without a queue or concurrency bound; it must violate a preregistered resource, queue-age, or healthy-progress bound at overload.",
+      "protected_mechanism": "Apply bounded admission, queue capacity, worker concurrency, and explicit overload rejection while preserving accepted work durably.",
+      "responsibility": {
+        "durability_system": "Persist admitted procedure and expose scheduling behavior.",
+        "application": "Define admission, overload rejection, queue age, and concurrency policy.",
+        "host": "Enforce the identical CPU, memory, process, and connection envelope."
+      },
+      "falsifier": "Accepted work disappears, counters do not reconcile, a protected bound is exceeded, or normalized load is reported as absolute throughput superiority.",
+      "statistical_unit": "one independent cohort episode at one preregistered load level"
+    },
+    {
+      "id": "poison-work-isolation",
+      "suite": "recovery-dynamics",
+      "decision": "Whether deterministic permanent failures consume bounded capacity without starving healthy work.",
+      "invariant": "Each poison item consumes no more than its declared retry and cost budget, reaches an explicit terminal disposition, and does not push healthy-task latency or completion below preregistered bounds.",
+      "failure_boundary": "After the mixed cohort is admitted, release the exact poison items to return their deterministic failure while healthy items remain runnable.",
+      "oracle": [
+        "poison and healthy identities originate in the immutable input ledger",
+        "attempt and cost totals are derived per item and class",
+        "healthy latency and completion are measured independently of poison disposition"
+      ],
+      "negative_control": "Retry poison work indefinitely or in an unisolated shared pool; it must violate a capacity or healthy-progress bound.",
+      "protected_mechanism": "Use bounded attempts, explicit terminal quarantine, and concurrency isolation or fair scheduling for healthy work.",
+      "responsibility": {
+        "durability_system": "Persist retry and terminal procedure according to configured policies.",
+        "application": "Classify deterministic failure, impose budgets, and isolate shared capacity.",
+        "dependency": "Return the same registered deterministic failure for each poison identity."
+      },
+      "falsifier": "A poison item retries beyond budget, lacks terminal disposition, healthy work starves, or the unsafe control cannot consume excess capacity.",
+      "statistical_unit": "one independent mixed healthy-and-poison cohort episode"
+    },
+    {
+      "id": "silent-progress",
+      "suite": "recovery-dynamics",
+      "decision": "Whether lack of expected progress is detected and recovered without confusing a legitimate durable wait with a wedged executor.",
+      "invariant": "A registered but deliberately wedged executor is detected within the preregistered progress bound, loses authority before replacement, and cannot publish after resuming; a legitimate wait produces no false positive.",
+      "failure_boundary": "After executor registration and one accepted progress event, block the exact executor at the silent-progress barrier while leaving its Worker/process health surface available.",
+      "oracle": [
+        "last accepted progress, detection, revocation, replacement, resumed stale action, and accepted outcome form one causal chain",
+        "detection latency is derived from exact progress and detection events",
+        "the matched legitimate-wait control remains authorized and unrevoked"
+      ],
+      "negative_control": "Use process or Worker existence as the only liveness signal; the wedged operation must remain unresolved past the protected detection bound.",
+      "protected_mechanism": "Use a durable progress deadline tied to the current generation, then atomically revoke before fenced replacement.",
+      "responsibility": {
+        "durability_system": "Persist the progress timer and recovery procedure.",
+        "application": "Define expected progress, distinguish declared waits, and fence replacement.",
+        "executor": "Emit causally identified progress and obey or be rejected after revocation."
+      },
+      "falsifier": "Detection exceeds the bound, a legitimate wait is revoked, the stale executor publishes after resuming, or process existence is reported as progress evidence.",
+      "statistical_unit": "one independent wedged-or-legitimate-wait operation run"
+    }
+  ],
+  "systems": [
+    {
+      "id": "temporal",
+      "required": true,
+      "status": "development-conformant-three-trials"
+    },
+    {
+      "id": "postgresql-queue",
+      "required": true,
+      "status": "development-conformant-three-trials"
+    },
+    {
+      "id": "restate",
+      "required": false,
+      "status": "follow-up-after-v1-conformance"
+    },
+    {
+      "id": "dbos-go",
+      "required": false,
+      "status": "follow-up-after-v1-conformance"
+    }
+  ],
+  "trial_policy": {
+    "development_trials_per_arm": 3,
+    "publication_trials_per_arm": 30,
+    "timing": "Fault and state transitions are exact-barrier driven; deadlines bound liveness and wedged runs but never select the failure window.",
+    "ordering": "Randomize system, track, case, and profile order with a recorded seed after both required adapters conform.",
+    "inference": "The independent run or cohort episode is the statistical unit; work items within an episode are correlated observations."
+  },
+  "required_evidence": [
+    "manifest.json",
+    "causal-events.jsonl",
+    "authority-state.json",
+    "destination-state.json",
+    "dependency-state.json",
+    "workload-state.json",
+    "fault-boundary.json",
+    "native-history-or-journal-export.json",
+    "process-observations.json",
+    "effective-input.json",
+    "verdict.json"
+  ],
+  "outcome_dimensions": [
+    "correctness",
+    "safety",
+    "liveness",
+    "diagnosability"
+  ],
+  "latency_metrics": [
+    "queue_latency_ms",
+    "execution_latency_ms",
+    "failure_detection_latency_ms",
+    "retry_delay_ms",
+    "recovery_latency_ms",
+    "end_to_end_latency_ms"
+  ],
+  "load_metrics": [
+    "amplification_factor",
+    "physical_request_count",
+    "peak_qps",
+    "peak_retry_concurrency",
+    "backlog_integral_ms",
+    "backlog_drain_p50_ms",
+    "backlog_drain_p90_ms",
+    "backlog_drain_p99_ms",
+    "healthy_task_latency_ms",
+    "throughput_per_second",
+    "cost_units",
+    "durable_record_count",
+    "durable_bytes",
+    "operator_intervention_count"
+  ],
+  "efficiency_gate": "Compare latency, throughput, durable growth, requests, or cost only when correctness, safety, liveness, and diagnosability all pass on the matched population."
+}

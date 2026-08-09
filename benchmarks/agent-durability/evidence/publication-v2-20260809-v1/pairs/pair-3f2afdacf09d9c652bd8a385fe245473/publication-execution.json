@@ -1,0 +1,177 @@
+{
+  "protocol_version": "adl.publication.v2",
+  "phase": "publication",
+  "pair_id": "publication-v2-pair/layered-retry-amplification/unfaulted/slot-05",
+  "pair_index": 459,
+  "case": "layered-retry-amplification",
+  "probe": "unfaulted",
+  "slot": 5,
+  "system_order": [
+    "postgresql-queue",
+    "temporal"
+  ],
+  "admission": "valid",
+  "reason_codes": null,
+  "systems": [
+    {
+      "system_id": "postgresql-queue",
+      "order": 1,
+      "measured_start_utc": "2026-08-09T02:24:12.169890582Z",
+      "measured_end_utc": "2026-08-09T02:24:12.174699284Z",
+      "duration_nanoseconds": 4808983,
+      "harness_return_utc": "2026-08-09T02:24:12.187602611Z",
+      "harness_duration_nanoseconds": 17712049,
+      "execution_id": "observed-postgresql-queue-dcf2704f5716ecb63544c2f81352f174",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-20260809-v1/systems/postgresql-queue/observed-postgresql-queue-dcf2704f5716ecb63544c2f81352f174",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-postgresql-queue-dcf2704f5716ecb63544c2f81352f174",
+        "case": "layered-retry-amplification",
+        "probe": "unfaulted",
+        "trial": 5,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "reason_codes": [],
+        "metrics": {
+          "logical_operation_count": 1,
+          "work_item_count": 1,
+          "accepted_outcome_count": 1,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 1,
+          "amplification_factor": 1,
+          "peak_qps": 100,
+          "peak_retry_concurrency": 1,
+          "queue_latency_ms": 2,
+          "execution_latency_ms": 1,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 0,
+          "recovery_latency_ms": 0,
+          "end_to_end_latency_ms": 3,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 3,
+          "throughput_per_second": 942.6536643304566,
+          "cost_units": 1,
+          "durable_record_count": 13,
+          "durable_bytes": 11759,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/layered-retry-amplification/unfaulted/slot-05",
+          "case": "layered-retry-amplification",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:24:12.16990539Z",
+          "elapsed_nanoseconds": 15089,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/layered-retry-amplification/unfaulted/slot-05",
+          "case": "layered-retry-amplification",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:24:12.174699284Z",
+          "elapsed_nanoseconds": 4808983,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    },
+    {
+      "system_id": "temporal",
+      "order": 2,
+      "measured_start_utc": "2026-08-09T02:24:12.187955318Z",
+      "measured_end_utc": "2026-08-09T02:24:12.246117457Z",
+      "duration_nanoseconds": 58162380,
+      "harness_return_utc": "2026-08-09T02:24:12.258132895Z",
+      "harness_duration_nanoseconds": 70177587,
+      "execution_id": "adl-publication-3f2afdacf09d9c652bd8a385fe245473/019fe455-bd9c-796e-b44d-0dff5009a32d",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-20260809-v1/systems/temporal/observed-temporal-ba7200736e0656c3b6d30e28860798b0",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-temporal-ba7200736e0656c3b6d30e28860798b0",
+        "case": "layered-retry-amplification",
+        "probe": "unfaulted",
+        "trial": 5,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "reason_codes": [],
+        "metrics": {
+          "logical_operation_count": 1,
+          "work_item_count": 1,
+          "accepted_outcome_count": 1,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 1,
+          "amplification_factor": 1,
+          "peak_qps": 100,
+          "peak_retry_concurrency": 1,
+          "queue_latency_ms": 30,
+          "execution_latency_ms": 1,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 0,
+          "recovery_latency_ms": 0,
+          "end_to_end_latency_ms": 31,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 31,
+          "throughput_per_second": 938.5229900591644,
+          "cost_units": 1,
+          "durable_record_count": 19,
+          "durable_bytes": 18233,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/layered-retry-amplification/unfaulted/slot-05",
+          "case": "layered-retry-amplification",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:24:12.187962862Z",
+          "elapsed_nanoseconds": 7785,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/layered-retry-amplification/unfaulted/slot-05",
+          "case": "layered-retry-amplification",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:24:12.246117457Z",
+          "elapsed_nanoseconds": 58162380,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    }
+  ]
+}

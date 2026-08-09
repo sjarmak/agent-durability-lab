@@ -43,7 +43,7 @@ func (c *Client) Arrive(ctx context.Context, arrival Arrival) error {
 	if err != nil {
 		return fmt.Errorf("send barrier arrival: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode != http.StatusNoContent {
 		message, readErr := io.ReadAll(io.LimitReader(response.Body, 4<<10))
 		if readErr != nil {

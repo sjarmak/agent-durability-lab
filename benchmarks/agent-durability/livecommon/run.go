@@ -28,7 +28,11 @@ type Config struct {
 	Probe          protocol.Probe
 	Trial          int
 	AgentBinary    string
+	AdapterID      string
 	AdapterVersion string
+	SystemID       string
+	Native         []protocol.NativeRecord
+	Settings       map[string]string
 }
 
 type harness struct {
@@ -181,8 +185,22 @@ func (h *harness) effectiveInput() (protocol.EffectiveInput, error) {
 	if err != nil {
 		return protocol.EffectiveInput{}, fmt.Errorf("hash agent binary: %w", err)
 	}
+	adapterID := h.config.AdapterID
+	if adapterID == "" {
+		adapterID = "live-common"
+	}
+	settings := map[string]string{
+		"fault_selection": "named-barrier", "process_identity": "pid-start-process-group",
+		"probe": string(h.config.Probe), "store": "bbolt-live-common-v1",
+	}
+	if h.config.SystemID != "" {
+		settings["system_id"] = h.config.SystemID
+	}
+	for name, value := range h.config.Settings {
+		settings[name] = value
+	}
 	return protocol.EffectiveInput{
-		AdapterID: "live-common", AdapterVersion: h.config.AdapterVersion, AgentProtocol: protocol.AgentProtocol,
+		AdapterID: adapterID, AdapterVersion: h.config.AdapterVersion, AgentProtocol: protocol.AgentProtocol,
 		AgentBinarySHA256: hash, AuthorityProtocol: protocol.AuthorityProtocol,
 		DestinationProtocol: protocol.DestinationProtocol, DestinationID: h.recorder.destination.DestinationID,
 		FailureProtocol: protocol.FailureProtocol, OracleProtocol: protocol.OracleProtocol,
@@ -190,16 +208,16 @@ func (h *harness) effectiveInput() (protocol.EffectiveInput, error) {
 			protocol.AuthorityStateFile, protocol.DestinationStateFile,
 			protocol.FaultBoundaryFile, protocol.ProcessObservationsFile,
 		},
-		Runtime: runtime.GOOS + "/" + runtime.GOARCH,
-		Settings: map[string]string{
-			"fault_selection": "named-barrier", "process_identity": "pid-start-process-group",
-			"probe": string(h.config.Probe), "store": "bbolt-live-common-v1",
-		},
+		Runtime:  runtime.GOOS + "/" + runtime.GOARCH,
+		Settings: settings,
 	}, nil
 }
 
 func (h *harness) nativeRecords(snapshot workstore.Snapshot) ([]protocol.NativeRecord, error) {
-	records := make([]protocol.NativeRecord, 0, len(snapshot.Events)+len(h.controls))
+	records := append([]protocol.NativeRecord(nil), h.config.Native...)
+	for index := range records {
+		records[index].Sequence = uint64(index + 1)
+	}
 	for _, event := range snapshot.Events {
 		data, err := json.Marshal(event)
 		if err != nil {

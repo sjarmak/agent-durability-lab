@@ -201,7 +201,7 @@ func reconcileHTTP(ctx context.Context, baseURL, effectID, payload string) (Effe
 	if err != nil {
 		return EffectResult{}, false, fmt.Errorf("query non-idempotent API: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode == http.StatusNotFound {
 		return EffectResult{}, false, nil
 	}
@@ -225,7 +225,7 @@ func executeEffectRequest(request *http.Request) (EffectResult, error) {
 	if err != nil {
 		return EffectResult{}, fmt.Errorf("perform HTTP effect: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode != http.StatusOK {
 		return EffectResult{}, readHTTPError("perform HTTP effect", response)
 	}
@@ -245,7 +245,7 @@ func snapshotHTTPDestination(ctx context.Context, baseURL string, destination De
 	if err != nil {
 		return DestinationState{}, fmt.Errorf("read HTTP destination state: %w", err)
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode != http.StatusOK {
 		return DestinationState{}, readHTTPError("read HTTP destination state", response)
 	}
@@ -258,7 +258,7 @@ func snapshotHTTPDestination(ctx context.Context, baseURL string, destination De
 
 func decodeHTTPJSON(response http.ResponseWriter, request *http.Request, value any) error {
 	request.Body = http.MaxBytesReader(response, request.Body, maxDestinationRequestBytes)
-	defer request.Body.Close()
+	defer func() { _ = request.Body.Close() }()
 	decoder := json.NewDecoder(request.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(value); err != nil {

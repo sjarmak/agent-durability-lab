@@ -75,5 +75,13 @@ durability-system adapter is conformant yet. Durable Task and AWS Step Functions
 remain deferred until the first wave identifies a decision that their
 architecture could change.
 
+The active [v2 authority and recovery-dynamics plan](plans/agent-durability-benchmark-v2.md)
+is versioned beside v1 rather than changing it. Its required arms are Temporal
+and PostgreSQL after their v1 conformance. It adds owner-label ABA reacquisition,
+layered retry amplification, outage/backlog/herd recovery, backpressure, poison
+isolation, and silent-progress detection. Restate, DBOS, and orchestration
+topology are explicit later adoption work, so the expanded question does not
+silently enlarge the frozen first-wave result.
+
 The ordering changes when evidence exposes a higher-risk boundary. Changes and
 their rationale are recorded in a decision or finding, not silently applied.

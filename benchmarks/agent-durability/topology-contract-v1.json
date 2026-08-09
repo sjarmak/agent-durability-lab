@@ -1,0 +1,549 @@
+{
+  "contract_version": "adl.temporal-topology.v1",
+  "question": "When the same fixed agent workload is orchestrated directly as parallel Activities or through one Child Workflow per item, do both Temporal topologies preserve the same logical safety and liveness through orchestration and recovery failures, and what parity-gated latency, retry, load, and history cost does the additional durable layer impose?",
+  "decision": "Choose between direct per-item Activities and per-item Child Workflows using observed semantic behavior, recovery isolation, diagnosability, and scale-dependent cost rather than happy-path latency alone.",
+  "non_goals": [
+    "compare Temporal with PostgreSQL, Restate, DBOS, or another durability substrate",
+    "compare Standalone Activity durability",
+    "run live model providers or score model output quality",
+    "evaluate dynamic fan-out, quorum joins, optional members, or unbounded Workflow graphs",
+    "evaluate Worker deployment compatibility or Workflow version migration",
+    "claim exactly-once external effects from Temporal Activity or Child Workflow semantics",
+    "produce a scalar topology winner or extrapolate beyond the pinned host and fan-out ladder"
+  ],
+  "topologies": [
+    {
+      "id": "direct-activity",
+      "parent_schedules": "one hermetic-agent-work Activity per logical item",
+      "work_activity": "hermetic-agent-work",
+      "additional_retries": false,
+      "purpose": "Measure parent-controlled parallel Activities without another Workflow execution per item."
+    },
+    {
+      "id": "child-workflow",
+      "parent_schedules": "one Child Workflow per logical item; each child schedules one hermetic-agent-work Activity",
+      "work_activity": "hermetic-agent-work",
+      "additional_retries": false,
+      "purpose": "Measure the recovery isolation, visibility, and cost of one additional durable Workflow execution per item without changing external work."
+    }
+  ],
+  "matched_controls": [
+    "same parent Workflow behavior except the direct-Activity versus Child-Workflow scheduling edge",
+    "same immutable item ledger, logical item IDs, effect IDs, generations, and owner capabilities",
+    "same hermetic agent-process binary, deterministic inputs, service-time script, and destination",
+    "same Activity implementation and Activity retry, timeout, heartbeat, and cancellation options",
+    "no Child Workflow retry policy, Continue-As-New, or child-only business behavior",
+    "same task queues, Worker counts, Activity concurrency, host limits, dependency state, and exact barriers",
+    "same independent oracle, evidence schema, liveness ceiling, and cleanup checks"
+  ],
+  "workload": {
+    "fixed_fanout": true,
+    "dynamic_fanout": false,
+    "fanout_sizes": [
+      8,
+      32,
+      128
+    ],
+    "canonical_fanout": 32,
+    "worker_activity_concurrency": 8,
+    "scale_interpretation": "one, four, and sixteen times the pinned Activity concurrency",
+    "membership": "The parent receives an immutable ordered item ledger at start; membership cannot be added, removed, or inferred from physical attempts.",
+    "agent_process": "A hermetic real process emits deterministic checkpoints, contributions, effects, progress, and results under exact controller barriers; no model provider is called.",
+    "reduction_algebra": "Checked integer addition over each unique item's preregistered ordinal, with expected final value N*(N+1)/2; contributions are keyed by logical item identity and are order-independent.",
+    "partial_reduction_thresholds": "Accept checkpoints after 1, ceil(N/4), ceil(N/2), ceil(3N/4), and N unique contributions."
+  },
+  "suites": [
+    {
+      "id": "orchestration-semantics",
+      "purpose": "Test joins, incremental reduction, supersession, and destructive transitions where orchestration topology can change the failure surface."
+    },
+    {
+      "id": "recovery-dynamics",
+      "purpose": "Carry the topology comparison through crash boundaries, layered retries, outage/backlog catch-up, overload, poison work, and silent progress."
+    }
+  ],
+  "cases": [
+    {
+      "id": "join-barrier",
+      "suite": "orchestration-semantics",
+      "decision": "Whether the topology reaches one downstream continuation only after every required logical item, including retried items, has one accepted successful result.",
+      "invariant": "The accepted continuation count is exactly one and its acceptance occurs after all and only the immutable required item IDs have accepted successful results; physical retries never satisfy missing membership, and a terminal required-item failure produces explicit group failure with no continuation.",
+      "primary_boundary": "A designated item result is externally observed, then its Worker is killed before durable Activity completion while a different required item remains blocked.",
+      "failure_boundaries": [
+        "designated-item-result-observed-before-activity-completion",
+        "required-item-terminal-failure-before-join"
+      ],
+      "oracle": [
+        "reconstruct the immutable required set and one accepted result per logical item independently of Activity attempts",
+        "prove the continuation acceptance event follows every required accepted-result event",
+        "require one continuation effect ID and no second accepted delivery",
+        "reconcile the parent outcome, destination continuation receipt, and acknowledgement"
+      ],
+      "negative_control": "Count physical attempt results instead of unique logical item IDs; release a retried designated item twice while another required item is blocked, and require the control to continue prematurely.",
+      "protected_mechanism": "Track completion by stable logical item identity, evaluate the deterministic required-set predicate, and conditionally accept one stable continuation ID at the destination.",
+      "metrics": [
+        "premature_continuation_count",
+        "accepted_continuation_count",
+        "join_lag_after_last_required_result_ms",
+        "schedule_to_start_ms",
+        "recovery_delay_ms",
+        "end_to_end_latency_ms",
+        "activity_attempt_count",
+        "history_event_count",
+        "history_bytes"
+      ],
+      "responsibility": {
+        "temporal": "Durably schedule parent, child when present, and Activity tasks; preserve their recorded results and replay the join procedure.",
+        "application": "Define immutable membership, stable item identity, terminal failure semantics, and the deterministic join predicate.",
+        "destination": "Conditionally accept one stable continuation ID and retain its receipt.",
+        "harness": "Hold exact designated and missing-item barriers and independently order result and continuation events."
+      },
+      "falsifier": "A continuation is accepted before every required logical item, more than one continuation is accepted, a terminal required failure still continues, the unsafe control cannot continue prematurely, or the causal order cannot be reconstructed.",
+      "statistical_unit": "one independent matched topology episode"
+    },
+    {
+      "id": "incremental-partial-reduction",
+      "suite": "orchestration-semantics",
+      "decision": "Whether incremental aggregation exposes useful partial progress without double-counting retries or imposing an unnecessary global barrier.",
+      "invariant": "Every accepted checkpoint contains exactly the unique contributions named by its membership evidence, checkpoint cardinality increases monotonically, the final value equals N*(N+1)/2, and the final continuation is accepted once only after N unique contributions.",
+      "primary_boundary": "A reduction checkpoint is accepted by the destination and the checkpoint Activity Worker is killed before Temporal records completion.",
+      "failure_boundaries": [
+        "contribution-observed-before-work-activity-completion",
+        "partial-checkpoint-accepted-before-checkpoint-activity-completion"
+      ],
+      "oracle": [
+        "derive each expected ordinal contribution from the immutable input ledger",
+        "recompute every checkpoint from its sorted unique item membership rather than trusting the Workflow aggregate",
+        "require checkpoint thresholds 1, ceil(N/4), ceil(N/2), ceil(3N/4), and N without cardinality regression",
+        "compare time to first accepted reduction separately from final makespan and join lag"
+      ],
+      "negative_control": "Aggregate by physical attempt result and use attempt-specific checkpoint IDs; a forced retry must double-count one contribution or duplicate a checkpoint.",
+      "protected_mechanism": "Deduplicate contributions by stable item ID, use an associative and commutative checked reduction, and idempotently publish stable reduction/checkpoint IDs with explicit membership.",
+      "metrics": [
+        "incorrect_reduction_count",
+        "duplicate_checkpoint_apply_count",
+        "time_to_first_reduction_ms",
+        "checkpoint_latency_ms",
+        "final_makespan_ms",
+        "recovery_delay_ms",
+        "history_event_count",
+        "history_bytes"
+      ],
+      "responsibility": {
+        "temporal": "Preserve durable item results, deterministic Workflow decisions, and checkpoint Activity retries.",
+        "application": "Define the algebra, unique membership, threshold schedule, stable checkpoint IDs, and final readiness predicate.",
+        "destination": "Atomically deduplicate checkpoint IDs and retain membership, aggregate, and receipt evidence.",
+        "harness": "Recompute reductions from immutable inputs and release exact contribution and checkpoint boundaries."
+      },
+      "falsifier": "A retry changes the final reduction, checkpoint membership and value disagree, checkpoints regress or duplicate, partial progress waits unnecessarily for all items, the unsafe control does not misreduce, or history cannot reconstruct the aggregate.",
+      "statistical_unit": "one independent matched topology episode"
+    },
+    {
+      "id": "queued-executing-supersession",
+      "suite": "orchestration-semantics",
+      "decision": "Whether obsolete expensive work stops before wasting more capacity and is unable to publish after either queued or executing supersession.",
+      "invariant": "Once supersession is committed, the obsolete generation has zero accepted progress, result, effect, continuation, or acknowledgement events; queued obsolete work does not start, executing obsolete work is targeted for cancellation or fenced rejection, and the replacement remains live.",
+      "primary_boundary": "An executing old-generation process reaches the pre-effect barrier, supersession and replacement are committed, then the old process is released.",
+      "failure_boundaries": [
+        "queued-before-activity-start",
+        "executing-after-process-start-before-effect"
+      ],
+      "oracle": [
+        "order supersession commit, cancellation request, exact process disposition, stale release, replacement output, and acknowledgement",
+        "count obsolete starts separately for work already queued and work already executing",
+        "derive wasted process time and cost after supersession",
+        "require every destination acceptance to name the current generation and capability"
+      ],
+      "negative_control": "Cancel only the orchestration handle without atomically revoking destination authority; release the old queued or executing request and require at least one stale start or accepted stale output.",
+      "protected_mechanism": "Atomically revoke the current generation, target cancellation to its stable logical and process identity, fence every accepting boundary, and conditionally create the replacement generation.",
+      "metrics": [
+        "obsolete_start_count",
+        "stale_action_accept_count",
+        "cancellation_propagation_ms",
+        "supersession_to_process_disposition_ms",
+        "replacement_recovery_ms",
+        "wasted_compute_ms",
+        "wasted_cost_units",
+        "history_event_count",
+        "history_bytes"
+      ],
+      "responsibility": {
+        "temporal": "Record cancellation and parent/child close propagation and schedule replacement procedure.",
+        "application": "Commit supersession, retain stable owner/process identity, target cancellation, and fence replacement.",
+        "destination": "Reject the obsolete generation and capability atomically with every mutation or publication.",
+        "executor": "Observe cooperative cancellation when reachable; otherwise be rejected after revocation."
+      },
+      "falsifier": "Queued obsolete work starts after committed cancellation, an executing obsolete action is accepted, the replacement is stopped or starves, the unsafe control remains safe, or wasted work cannot be attributed.",
+      "statistical_unit": "one independent matched topology episode"
+    },
+    {
+      "id": "destructive-transition",
+      "suite": "orchestration-semantics",
+      "decision": "Whether retry and recovery around publish, merge, delete, or deploy-like state transitions can repeat an unsafe destination apply.",
+      "invariant": "For one stable destructive operation ID and expected prior version, the hermetic destination records exactly one accepted state transition, all redeliveries return or reconcile the same receipt, only current authority may apply it, and Workflow outcome plus acknowledgement agree with destination state.",
+      "primary_boundary": "The destination accepts the destructive transition and blocks the response before the Activity can complete.",
+      "failure_boundaries": [
+        "before-destination-acceptance",
+        "destination-accepted-before-activity-completion",
+        "activity-result-recorded-before-outcome-acknowledgement"
+      ],
+      "oracle": [
+        "compare the destination's physical delivery journal with its accepted state-transition journal",
+        "require one stable operation ID, expected prior version, resulting version, and immutable receipt",
+        "reconcile Activity attempts, parent result, final destination state, and acknowledgement",
+        "report duplicate deliveries separately from duplicate destructive applies"
+      ],
+      "negative_control": "Use an attempt-specific mutation ID with no version precondition or reconciliation; crash after destination acceptance and require retry to apply a second destructive transition.",
+      "protected_mechanism": "Use a stable operation ID, atomic current-authority and expected-version validation, idempotent receipt retention, and bounded reconciliation before any repeat.",
+      "metrics": [
+        "physical_delivery_count",
+        "accepted_destructive_apply_count",
+        "invariant_violation_count",
+        "reconciliation_count",
+        "recovery_delay_ms",
+        "end_to_end_latency_ms",
+        "history_event_count",
+        "history_bytes"
+      ],
+      "responsibility": {
+        "temporal": "Redeliver incomplete Activities and preserve recorded procedure and results.",
+        "application": "Retain a stable destructive operation ID, authority, version precondition, and reconciliation policy across retries.",
+        "destination": "Atomically validate authority and version, apply once per operation ID, and return the retained receipt.",
+        "harness": "Stop at exact request, acceptance, completion, and acknowledgement boundaries and inspect destination state independently."
+      },
+      "falsifier": "More than one destructive apply is accepted, stale authority mutates state, result and receipt disagree, the unsafe control cannot repeat the effect, or the verdict infers safety from one Temporal completion alone.",
+      "statistical_unit": "one independent matched topology episode"
+    },
+    {
+      "id": "crash-recovery-boundaries",
+      "suite": "recovery-dynamics",
+      "decision": "Whether each topology resumes the durable logical procedure without incorrectly restarting external work across every claim-to-acknowledgement crash boundary.",
+      "invariant": "After a real Worker kill at the selected exact boundary, every admitted item reaches one accepted terminal disposition, stable agent identity is retained or replacement is fenced, accepted effects and results are not duplicated, and the parent outcome is acknowledged once.",
+      "primary_boundary": "The agent result is externally recorded and the Worker is killed before durable Activity completion.",
+      "failure_boundaries": [
+        "claim-accepted-before-process-launch",
+        "process-launched-before-durable-registration",
+        "checkpoint-accepted-before-activity-completion",
+        "result-observed-before-activity-completion",
+        "parent-outcome-recorded-before-acknowledgement"
+      ],
+      "oracle": [
+        "correlate logical item, generation, Activity attempt, Worker PID, process PID/start identity, checkpoint, result, effect, and acknowledgement",
+        "distinguish reattachment from fenced replacement instead of treating a new process as the same agent",
+        "require one accepted terminal item state and one parent acknowledgement",
+        "replay every captured parent and Child Workflow history with the frozen Worker code"
+      ],
+      "negative_control": "Blindly launch a new process on every Activity delivery with attempt-scoped identity; a post-launch or post-result kill must create a duplicate agent, effect, or result.",
+      "protected_mechanism": "Use stable operation/session identity, durable start-or-attach evidence where trustworthy, generation-fenced replacement where ambiguous, destination-safe effects, and conditional terminal transitions.",
+      "metrics": [
+        "agent_process_count",
+        "duplicate_effect_count",
+        "duplicate_result_count",
+        "time_to_recovery_ms",
+        "schedule_to_start_ms",
+        "activity_attempt_count",
+        "workflow_task_count",
+        "history_event_count",
+        "history_bytes"
+      ],
+      "responsibility": {
+        "temporal": "Detect Worker loss through configured timeouts, redeliver incomplete work, preserve Event History, and replay compatible Workflow code.",
+        "application": "Retain logical identity, classify launch ambiguity, attach or fence replacement, and make retry bodies safe.",
+        "destination": "Deduplicate, fence, or support bounded reconciliation of external effects and results.",
+        "host": "Deliver a real targeted Worker kill and expose trustworthy PID/start evidence."
+      },
+      "falsifier": "Logical work is lost, an unsafe duplicate is accepted, the protected identity forks, a history fails replay, the negative control does not duplicate, or the selected kill is not bracketed by named events.",
+      "statistical_unit": "one independent matched topology episode"
+    },
+    {
+      "id": "layered-retry-amplification",
+      "suite": "recovery-dynamics",
+      "decision": "Whether inserting Child Workflows changes retry amplification when Workflow, Activity, client, and agent layers face the same timeout, 500, and 429 script.",
+      "invariant": "Each logical item reaches a terminal outcome or explicit bounded failure without exceeding its preregistered request, elapsed-time, and cost budgets, and every physical request names exactly one retry owner and causal parent.",
+      "primary_boundary": "After the dependency observes the first request, activate the fixed timeout, 500, and 429 sequence before allowing a successful response.",
+      "failure_boundaries": [
+        "dependency-first-request-before-scripted-timeout-500-429-sequence"
+      ],
+      "oracle": [
+        "derive total requests and amplification from the independent dependency journal",
+        "attribute each request to logical item, retry layer, ordinal, Activity attempt, and parent causal event",
+        "reconcile the accepted result with the dependency response sequence",
+        "report retry wait separately from active dependency service time"
+      ],
+      "negative_control": "Enable independent retry budgets in Workflow/application, Activity, client, and agent layers; the control must exceed the protected request or cost bound.",
+      "protected_mechanism": "Assign one retry owner per boundary and propagate a shared attempt, elapsed-time, and cost budget across the topology.",
+      "metrics": [
+        "physical_request_count",
+        "amplification_factor",
+        "retry_delay_ms",
+        "active_execution_ms",
+        "recovery_delay_ms",
+        "cost_units",
+        "history_event_count",
+        "history_bytes"
+      ],
+      "responsibility": {
+        "temporal": "Apply only the identically configured Activity delivery policy and record durable attempts and timers.",
+        "application": "Choose retry ownership and propagate the common budget without adding a child-only retry layer.",
+        "dependency": "Return and journal the exact scripted outcomes for every physical request.",
+        "oracle": "Reject requests without complete causal retry attribution."
+      },
+      "falsifier": "The protected budget is exceeded, the two arms use different retry owners, a request lacks causal identity, accepted outcome contradicts dependency state, or the unsafe control does not amplify.",
+      "statistical_unit": "one independent matched topology episode"
+    },
+    {
+      "id": "outage-backlog-herd-recovery",
+      "suite": "recovery-dynamics",
+      "decision": "Whether either topology turns a dependency outage and accumulated fan-out into a synchronized retry storm or a second failure during catch-up.",
+      "invariant": "After exact restoration, every admitted healthy item reaches one accepted terminal state, no prohibited duplicate or stale effect is accepted, retry concurrency and QPS remain within protected bounds, and a Worker crash during drain does not lose or restart logical work incorrectly.",
+      "primary_boundary": "Commit outage after steady state, accumulate the exact fan-out backlog, restore the dependency, then kill one Worker after the first accepted post-restoration request while the backlog is draining.",
+      "failure_boundaries": [
+        "outage-backlog-restoration-and-catchup-worker-crash"
+      ],
+      "exact_barrier_events": [
+        "steady-state-before-dependency-outage",
+        "exact-backlog-target-before-restoration",
+        "first-post-restoration-acceptance-before-worker-crash"
+      ],
+      "oracle": [
+        "reconcile immutable input, queued or waiting work, dependency requests, destination effects, outcomes, and acknowledgements by item ID",
+        "derive peak QPS and retry concurrency from fixed-width raw request windows",
+        "derive backlog area and drain quantiles from exact outage, restoration, and completion anchors",
+        "require recovery after the catch-up Worker crash without a second storm"
+      ],
+      "negative_control": "Release synchronized retries with no deterministic jitter and no global retry concurrency limit; the control must exceed at least one preregistered storm bound.",
+      "protected_mechanism": "Use deterministic seeded jitter, global retry concurrency and request budgets, stable item identity, and fenced recovery during backlog drain.",
+      "metrics": [
+        "peak_qps",
+        "peak_retry_concurrency",
+        "backlog_integral_ms",
+        "backlog_drain_p50_ms",
+        "backlog_drain_p90_ms",
+        "recovery_delay_ms",
+        "duplicate_effect_count",
+        "history_event_count",
+        "history_bytes"
+      ],
+      "responsibility": {
+        "temporal": "Persist queued procedure and timers across outage and Worker loss.",
+        "application": "Bound recovery load, seed jitter reproducibly, retain identity, and fence replacement.",
+        "dependency": "Expose exact outage/restoration state and the complete physical request journal.",
+        "host": "Keep the same Worker and resource envelope and target the catch-up Worker exactly."
+      },
+      "falsifier": "Work is lost, a protected storm bound is exceeded, recovery causes another outage, a stale or duplicate effect is accepted, the unsafe control cannot storm, or restoration/catch-up crash is not exactly bracketed.",
+      "statistical_unit": "one independent matched topology episode"
+    },
+    {
+      "id": "backpressure-overload",
+      "suite": "recovery-dynamics",
+      "decision": "How each topology queues and drains fixed fan-out at one, four, and sixteen times Worker Activity concurrency under the same admission and in-flight limits.",
+      "invariant": "Every submitted item has exactly one admitted or rejected decision, every admitted item remains accounted for, protected execution respects the common in-flight and resource bounds, and healthy work reaches its terminal state without infrastructure collapse.",
+      "primary_boundary": "After Worker and dependency readiness, release the complete preregistered fan-out through the common admission gate.",
+      "failure_boundaries": [
+        "ready-workers-before-fixed-cohort-release"
+      ],
+      "oracle": [
+        "reconcile submitted, admitted, rejected, scheduled, started, completed, failed, and acknowledged counts",
+        "derive schedule-to-start and queue age from common event anchors rather than adapter summaries",
+        "report throughput and history growth only after accepted-work correctness and liveness pass",
+        "retain host CPU, memory, process, connection, and Worker-concurrency observations"
+      ],
+      "negative_control": "Schedule all work without the common in-flight or queue bound; at canonical fan-out it must violate a preregistered queue-age, resource, or healthy-progress bound.",
+      "protected_mechanism": "Use the same deterministic bounded in-flight window, admission accounting, explicit overload disposition, and Worker concurrency in both topologies.",
+      "metrics": [
+        "schedule_to_start_ms",
+        "queue_age_ms",
+        "end_to_end_latency_ms",
+        "throughput_per_second",
+        "admission_rejection_fraction",
+        "peak_in_flight_count",
+        "history_events_per_item",
+        "history_bytes_per_item"
+      ],
+      "responsibility": {
+        "temporal": "Persist admitted procedure and expose Workflow, Child Workflow, and Activity scheduling behavior.",
+        "application": "Apply the identical admission and in-flight policy and account for every item.",
+        "host": "Enforce and record the same CPU, memory, process, connection, and Worker envelope.",
+        "oracle": "Separate overload disposition and queueing from logical correctness."
+      },
+      "falsifier": "Accepted work disappears, counters fail to reconcile, a protected resource bound is exceeded, the negative control does not overload, or absolute throughput is generalized beyond the pinned host and ladder.",
+      "statistical_unit": "one independent matched topology episode"
+    },
+    {
+      "id": "poison-work-isolation",
+      "suite": "recovery-dynamics",
+      "decision": "Whether one deterministic poison item consumes bounded shared capacity without delaying or starving healthy branches differently across topologies.",
+      "invariant": "The registered poison item consumes no more than its declared request and cost budget, reaches explicit terminal quarantine, healthy items each reach one accepted result, and healthy latency and completion remain within the preregistered protected bound.",
+      "primary_boundary": "After the mixed cohort is admitted and healthy work is runnable, release the registered poison item to return its deterministic permanent failure.",
+      "failure_boundaries": [
+        "mixed-cohort-admitted-before-poison-failure-release"
+      ],
+      "oracle": [
+        "derive poison and healthy membership from the immutable input ledger",
+        "count attempts, requests, cost, terminal disposition, and capacity occupancy per item and class",
+        "measure healthy schedule-to-start and completion independently of poison disposition",
+        "require one explicit poison quarantine and no group continuation that treats poison as success"
+      ],
+      "negative_control": "Retry poison work without a terminal budget in the same shared capacity; it must exceed the poison budget or protected healthy-progress bound.",
+      "protected_mechanism": "Use identical bounded Activity attempts, explicit poison classification and quarantine, and fair or isolated capacity for healthy items.",
+      "metrics": [
+        "poison_attempt_count",
+        "poison_cost_units",
+        "poison_capacity_ms",
+        "healthy_schedule_to_start_ms",
+        "healthy_task_latency_ms",
+        "healthy_completion_fraction",
+        "history_event_count",
+        "history_bytes"
+      ],
+      "responsibility": {
+        "temporal": "Persist configured retry and terminal procedure without inventing application poison classification.",
+        "application": "Classify deterministic failure, impose budgets, quarantine terminally, and isolate or fairly schedule capacity.",
+        "dependency": "Return the same registered permanent failure for the poison identity.",
+        "oracle": "Keep item-level observations correlated within one cohort episode."
+      },
+      "falsifier": "Poison exceeds budget, lacks terminal quarantine, healthy work starves, an arm silently treats poison as success, or the negative control cannot consume excess capacity.",
+      "statistical_unit": "one independent matched topology episode"
+    },
+    {
+      "id": "silent-progress",
+      "suite": "recovery-dynamics",
+      "decision": "Whether each topology detects a live Worker and process that stop making expected progress without falsely revoking a declared durable wait.",
+      "invariant": "A registered executor that emits one progress event and then wedges is detected within the common progress bound, loses authority before replacement, and cannot publish after release; a matched declared wait is not revoked and both operations reach the expected terminal disposition.",
+      "primary_boundary": "After process registration and one accepted progress event, block the exact process while leaving Worker and process health surfaces available.",
+      "failure_boundaries": [
+        "accepted-progress-before-executor-wedge",
+        "declared-legitimate-wait-control"
+      ],
+      "oracle": [
+        "order last accepted progress, deadline creation, detection, revocation, replacement, stale release, outcome, and acknowledgement",
+        "derive detection latency from exact progress and detection events",
+        "require the matched declared-wait operation to retain authority with zero false-positive revocations",
+        "reject process or Worker existence as evidence of application progress"
+      ],
+      "negative_control": "Use Worker and process existence as the only liveness signal; the wedged item must remain unresolved beyond the protected progress bound.",
+      "protected_mechanism": "Use a durable generation-scoped progress deadline, exempt explicit durable waits, atomically revoke on expiry, and fence replacement before releasing the stale executor.",
+      "metrics": [
+        "failure_detection_latency_ms",
+        "false_positive_revocation_count",
+        "stale_action_accept_count",
+        "replacement_recovery_ms",
+        "healthy_task_latency_ms",
+        "end_to_end_latency_ms",
+        "history_event_count",
+        "history_bytes"
+      ],
+      "responsibility": {
+        "temporal": "Persist the Workflow timer and recovery procedure and resume it after Worker loss.",
+        "application": "Define expected progress, declare legitimate waits, revoke authority, and fence replacement.",
+        "executor": "Emit causally identified progress and cooperate with cancellation or be rejected after revocation.",
+        "oracle": "Distinguish liveness surfaces from accepted logical progress."
+      },
+      "falsifier": "Detection exceeds the bound, a legitimate wait is revoked, a stale executor publishes, healthy work starves, or the negative control detects the wedge without a progress signal.",
+      "statistical_unit": "one independent matched topology episode"
+    }
+  ],
+  "full_recovery_dynamics": [
+    "crash-recovery-boundaries",
+    "layered-retry-amplification",
+    "outage-backlog-herd-recovery",
+    "backpressure-overload",
+    "poison-work-isolation",
+    "silent-progress"
+  ],
+  "outcome_dimensions": [
+    "correctness",
+    "safety",
+    "liveness",
+    "diagnosability",
+    "efficiency"
+  ],
+  "latency_decomposition": [
+    "schedule_to_start_ms",
+    "active_execution_ms",
+    "failure_detection_ms",
+    "retry_delay_ms",
+    "recovery_delay_ms",
+    "end_to_end_latency_ms"
+  ],
+  "topology_metrics": [
+    "workflow_task_count",
+    "activity_attempt_count",
+    "child_workflow_count",
+    "history_event_count",
+    "history_bytes",
+    "history_events_per_item",
+    "history_bytes_per_item",
+    "worker_task_queue_poll_count",
+    "operator_intervention_count"
+  ],
+  "diagnosability": {
+    "required_chain": "tracker Bead and preregistered schedule block -> parent Workflow ID and Run ID -> logical item -> optional Child Workflow ID and Run ID -> Activity attempts -> Worker and process/session identity -> dependency requests and destination receipts -> outcome -> acknowledgement",
+    "oracle": "Every accepted or rejected authoritative event must be reachable in the causal graph from the immutable input and fault record; lineage_gap_count must be zero.",
+    "score": "A run fails diagnosability admission if any required identity or causal edge is missing, even when its logical outcome appears correct."
+  },
+  "required_identity_fields": [
+    "protocol_version",
+    "run_id",
+    "pair_id",
+    "schedule_block_id",
+    "tracker_bead_id",
+    "topology",
+    "case_id",
+    "boundary_id",
+    "probe",
+    "fanout",
+    "logical_operation_id",
+    "work_item_id",
+    "generation",
+    "capability_hash",
+    "parent_workflow_id",
+    "parent_run_id",
+    "child_workflow_id",
+    "child_run_id",
+    "activity_id",
+    "activity_attempt",
+    "worker_id",
+    "worker_pid",
+    "process_identity",
+    "event_id",
+    "parent_event_ids",
+    "timestamp_utc",
+    "monotonic_offset_ns"
+  ],
+  "required_evidence": [
+    "manifest.json",
+    "causal-events.jsonl",
+    "lineage.json",
+    "authority-state.json",
+    "destination-state.json",
+    "dependency-state.json",
+    "workload-state.json",
+    "fault-boundary.json",
+    "native-history-or-journal-export.json",
+    "process-observations.json",
+    "effective-input.json",
+    "verdict.json",
+    "publication-timing.jsonl",
+    "publication-execution.json",
+    "publication-inventory.json"
+  ],
+  "trial_policy": {
+    "development_trials_per_stratum": 3,
+    "publication_valid_pairs_per_stratum": 30,
+    "maximum_attempted_pairs_per_stratum": 40,
+    "statistical_unit": "one matched direct-activity and child-workflow episode under the same case, boundary, probe, fan-out, input, seed, and host envelope",
+    "timing": "Named exact barriers select faults; monotonic durations measure intervals; wall-clock deadlines bound liveness only.",
+    "ordering": "Randomize stratum order and within-pair topology order with recorded frozen seeds; execute arms sequentially within a pair after condition-based idle readiness.",
+    "inference": "Items, attempts, and children within one episode are correlated observations and are never treated as independent samples."
+  },
+  "responsibility_split": {
+    "temporal": "Durable Workflow and Activity scheduling, Event History, replay, durable timers, cancellation requests, and parent/child lifecycle semantics as configured.",
+    "application": "Stable identity, fixed membership, deterministic orchestration and reduction, authority fencing, retry budgets, admission, progress policy, supersession, reconciliation, and evidence emission.",
+    "destination": "Atomic idempotency, version preconditions, authority validation, receipts, and queryable final state for external effects.",
+    "executor_and_host": "Hermetic agent process, real Worker/process failure delivery, resource envelope, and trustworthy process observations.",
+    "oracle": "Independent reconstruction and verdict from common raw evidence plus captured Temporal histories; adapter logs are explanatory only."
+  },
+  "efficiency_gate": "Compare latency, throughput, requests, compute, and history growth only for a matched stratum in which both topology arms pass correctness, safety, liveness, and diagnosability.",
+  "claim_boundary": "A result may describe only the pinned Temporal Server, Go SDK, Worker configuration, host envelope, hermetic workload, case boundary, and fan-out stratum. It may not infer exactly-once effects, model quality, deployment compatibility, dynamic-DAG behavior, or a universal topology winner."
+}

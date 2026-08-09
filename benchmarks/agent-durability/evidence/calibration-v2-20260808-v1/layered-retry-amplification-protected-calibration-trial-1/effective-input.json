@@ -1,0 +1,36 @@
+{
+  "adapter_id": "recovery-calibration-v2",
+  "adapter_version": "source-sha256:fca5b92c75e80674d670984fa942950e8c98bccd75eb8ce2cadaa1f15551367c",
+  "agent_binary_sha256": "ee3bcdc27986fa12e499d87cffa33eb3519c973fe79fec910df616017865fce7",
+  "system_id": "calibration",
+  "runtime": "linux/amd64",
+  "authority_protocol": "logical-operation-owner-epoch-capability-v2",
+  "dependency_protocol": "scripted-dependency-physical-request-journal-v2",
+  "failure_protocol": "named-transition-controller-v2",
+  "oracle_protocol": "independent-causal-reconstruction-oracle-v2",
+  "destination_id": "recovery-calibration-destination",
+  "oracle_visibility": [
+    "authority-state.json",
+    "destination-state.json",
+    "dependency-state.json",
+    "workload-state.json",
+    "fault-boundary.json",
+    "process-observations.json"
+  ],
+  "host_limits": {
+    "connections": 8,
+    "queue_capacity": 20,
+    "workers": 4
+  },
+  "settings": {
+    "admission_capacity": "20",
+    "case": "layered-retry-amplification",
+    "healthy_latency_bound_ms": "50",
+    "poison_attempt_budget": "3",
+    "probe": "protected",
+    "progress_deadline_ms": "25",
+    "qps_window_ms": "10",
+    "retry_budget": "4",
+    "retry_concurrency_limit": "4"
+  }
+}

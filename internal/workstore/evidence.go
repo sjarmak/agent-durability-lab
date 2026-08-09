@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -65,12 +66,14 @@ func (s *Store) ExportJSONL(ctx context.Context, sessionID, destination string) 
 	return syncDirectory(filepath.Dir(destination))
 }
 
-func syncDirectory(path string) error {
+func syncDirectory(path string) (returnErr error) {
 	directory, err := os.Open(path)
 	if err != nil {
 		return fmt.Errorf("open evidence directory: %w", err)
 	}
-	defer directory.Close()
+	defer func() {
+		returnErr = errors.Join(returnErr, directory.Close())
+	}()
 	if err := directory.Sync(); err != nil {
 		return fmt.Errorf("sync evidence directory: %w", err)
 	}

@@ -12,7 +12,7 @@ import (
 
 var attemptsBucket = []byte("attempts")
 
-func recordAttemptStart(path string, observation AttemptObservation) error {
+func recordAttemptStart(path string, observation AttemptObservation) (returnErr error) {
 	if observation.Attempt < 1 || observation.WorkerID == "" || observation.PID <= 0 || observation.StartedAt.IsZero() {
 		return errors.New("attempt start requires attempt, Worker ID, PID, and timestamp")
 	}
@@ -20,7 +20,9 @@ func recordAttemptStart(path string, observation AttemptObservation) error {
 	if err != nil {
 		return fmt.Errorf("open observation store: %w", err)
 	}
-	defer database.Close()
+	defer func() {
+		returnErr = errors.Join(returnErr, database.Close())
+	}()
 	return database.Update(func(transaction *bolt.Tx) error {
 		bucket, err := transaction.CreateBucketIfNotExists(attemptsBucket)
 		if err != nil {
@@ -47,12 +49,14 @@ func recordAttemptFinish(
 	requestedAt, respondedAt time.Time,
 	result EffectResult,
 	effectErr error,
-) error {
+) (returnErr error) {
 	database, err := bolt.Open(path, 0o600, &bolt.Options{Timeout: time.Second})
 	if err != nil {
 		return fmt.Errorf("open observation store: %w", err)
 	}
-	defer database.Close()
+	defer func() {
+		returnErr = errors.Join(returnErr, database.Close())
+	}()
 	return database.Update(func(transaction *bolt.Tx) error {
 		bucket := transaction.Bucket(attemptsBucket)
 		if bucket == nil {
@@ -88,13 +92,15 @@ func recordAttemptFinish(
 	})
 }
 
-func readAttempts(path string) ([]AttemptObservation, error) {
+func readAttempts(path string) (attempts []AttemptObservation, returnErr error) {
 	database, err := bolt.Open(path, 0o600, &bolt.Options{ReadOnly: true, Timeout: time.Second})
 	if err != nil {
 		return nil, fmt.Errorf("open observation snapshot: %w", err)
 	}
-	defer database.Close()
-	attempts := make([]AttemptObservation, 0, 2)
+	defer func() {
+		returnErr = errors.Join(returnErr, database.Close())
+	}()
+	attempts = make([]AttemptObservation, 0, 2)
 	err = database.View(func(transaction *bolt.Tx) error {
 		bucket := transaction.Bucket(attemptsBucket)
 		if bucket == nil {

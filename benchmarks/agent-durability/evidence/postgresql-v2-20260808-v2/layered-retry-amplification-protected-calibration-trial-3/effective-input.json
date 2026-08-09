@@ -1,0 +1,43 @@
+{
+  "adapter_id": "postgresql-queue-v2",
+  "adapter_version": "source-sha256:066797e9b33d55897ee1afeb76c4ba029cc68d4ab94933d1ce6e3b06d1cf20b2",
+  "agent_binary_sha256": "8c0a37718194c8e27036a8d3fdca8f391c3bc7711e44457e5a762e32e5d8c3fe",
+  "system_id": "postgresql-queue",
+  "runtime": "linux/amd64",
+  "authority_protocol": "logical-operation-owner-epoch-capability-v2",
+  "dependency_protocol": "scripted-dependency-physical-request-journal-v2",
+  "failure_protocol": "named-transition-controller-v2",
+  "oracle_protocol": "independent-causal-reconstruction-oracle-v2",
+  "destination_id": "recovery-calibration-destination",
+  "oracle_visibility": [
+    "authority-state.json",
+    "destination-state.json",
+    "dependency-state.json",
+    "workload-state.json",
+    "fault-boundary.json",
+    "process-observations.json"
+  ],
+  "host_limits": {
+    "connections": 8,
+    "queue_capacity": 20,
+    "workers": 4
+  },
+  "settings": {
+    "admission_capacity": "20",
+    "case": "layered-retry-amplification",
+    "claim": "for-update-skip-locked",
+    "healthy_latency_bound_ms": "50",
+    "lease_recovery": "generation-checked-expiry",
+    "migration_sha256": "7349dce948959f861a4fb61df778d75c1763e8413276d74804586a52fbf61104",
+    "outbox": "transactional-outcome-row",
+    "poison_attempt_budget": "3",
+    "postgresql_server": "18.4 (Debian 18.4-1.pgdg12+1)",
+    "probe": "protected",
+    "progress_deadline_ms": "25",
+    "qps_window_ms": "10",
+    "retry_budget": "4",
+    "retry_concurrency_limit": "4",
+    "system_execution_id": "adl-v2-layered-retry-amplification-protected-3-57c0b38f90ce9d36",
+    "track": "portable-safety"
+  }
+}

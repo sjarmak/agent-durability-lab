@@ -36,6 +36,13 @@ contain one Activity-canceled event. Safe runs under both policies schedule and
 complete the disconnected cleanup Activity before the Workflow closes as
 canceled.
 
+That zero-versus-one count describes the preserved population, not a required
+absence guarantee. On 2026-08-09, a race-instrumented maintenance gate observed
+one prompt Activity-canceled event in a `false` healthy-safe arm. The corrected
+oracle permits zero or one when the Workflow does not wait and continues to
+require exactly one when it does. This correction changes no preserved run or
+application-safety conclusion.
+
 This changes what Temporal waits to observe. It does not change whether the
 detached process retains application authority. The six controls violate the
 invariant under both policies; the eighteen safe runs satisfy it under both.

@@ -42,10 +42,13 @@ func VerifyHistory(scenario Scenario, waitForCancellation bool, history *history
 	}
 	expectCount("Activity schedules", observation.ActivityScheduled, expectedActivities)
 	expectCount("Activity completions", observation.ActivityCompleted, expectedCompletions)
-	expectedCanceled := 0
 	if waitForCancellation {
-		expectedCanceled = 1
+		expectCount("Activity canceled events", observation.ActivityCanceled, 1)
+	} else if observation.ActivityCanceled > 1 {
+		failures = append(failures, fmt.Sprintf(
+			"Temporal history Activity canceled events = %d; want at most 1 when cancellation acknowledgement is not awaited",
+			observation.ActivityCanceled,
+		))
 	}
-	expectCount("Activity canceled events", observation.ActivityCanceled, expectedCanceled)
 	return observation, failures
 }

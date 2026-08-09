@@ -1,0 +1,208 @@
+{
+  "protocol_version": "adl.publication.v2",
+  "phase": "pilot",
+  "pair_id": "pilot-pair/aba-reacquisition/protected/slot-01",
+  "pair_index": 26,
+  "case": "aba-reacquisition",
+  "probe": "protected",
+  "slot": 1,
+  "system_order": [
+    "temporal",
+    "postgresql-queue"
+  ],
+  "admission": "invalid",
+  "reason_codes": [
+    "postgresql-queue:execution_failed"
+  ],
+  "systems": [
+    {
+      "system_id": "temporal",
+      "order": 1,
+      "measured_start_utc": "2026-08-09T01:54:36.873117553Z",
+      "measured_end_utc": "2026-08-09T01:54:37.009375208Z",
+      "duration_nanoseconds": 136257805,
+      "harness_return_utc": "2026-08-09T01:54:37.022342073Z",
+      "harness_duration_nanoseconds": 149224520,
+      "execution_id": "adl-publication-fb73f1a5ca46484a5ceba5031c3a7fc6/019fe43a-a6c9-783b-9450-2f2ea9d3dd8d",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-pilot-20260809-v2/systems/temporal/observed-temporal-59b9d32aec8f7248ee1d6d7a0cf16ca8",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-temporal-59b9d32aec8f7248ee1d6d7a0cf16ca8",
+        "case": "aba-reacquisition",
+        "probe": "protected",
+        "trial": 1,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "reason_codes": [],
+        "metrics": {
+          "logical_operation_count": 1,
+          "work_item_count": 1,
+          "accepted_outcome_count": 1,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 2,
+          "amplification_factor": 2,
+          "peak_qps": 100,
+          "peak_retry_concurrency": 1,
+          "queue_latency_ms": 31,
+          "execution_latency_ms": 59,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 19,
+          "recovery_latency_ms": 0,
+          "end_to_end_latency_ms": 0,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 0,
+          "throughput_per_second": 0,
+          "cost_units": 2,
+          "durable_record_count": 59,
+          "durable_bytes": 47529,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "temporal",
+          "pair_id": "pilot-pair/aba-reacquisition/protected/slot-01",
+          "case": "aba-reacquisition",
+          "probe": "protected",
+          "utc": "2026-08-09T01:54:36.873124547Z",
+          "elapsed_nanoseconds": 7134,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "temporal",
+          "pair_id": "pilot-pair/aba-reacquisition/protected/slot-01",
+          "case": "aba-reacquisition",
+          "probe": "protected",
+          "utc": "2026-08-09T01:54:36.904176032Z",
+          "elapsed_nanoseconds": 31058619,
+          "kind": "barrier_reached",
+          "barrier": "g7-delayed-until-g9-current",
+          "details": {
+            "generation": "7"
+          }
+        },
+        {
+          "sequence": 3,
+          "system_id": "temporal",
+          "pair_id": "pilot-pair/aba-reacquisition/protected/slot-01",
+          "case": "aba-reacquisition",
+          "probe": "protected",
+          "utc": "2026-08-09T01:54:36.904176833Z",
+          "elapsed_nanoseconds": 31059430,
+          "kind": "fault_committed",
+          "barrier": "g7-delayed-until-g9-current",
+          "details": {
+            "authority_change": "A7-to-B8"
+          }
+        },
+        {
+          "sequence": 4,
+          "system_id": "temporal",
+          "pair_id": "pilot-pair/aba-reacquisition/protected/slot-01",
+          "case": "aba-reacquisition",
+          "probe": "protected",
+          "utc": "2026-08-09T01:54:36.942464579Z",
+          "elapsed_nanoseconds": 69347166,
+          "kind": "recovery_observed",
+          "barrier": "g7-delayed-until-g9-current",
+          "details": {
+            "generation": "9"
+          }
+        },
+        {
+          "sequence": 5,
+          "system_id": "temporal",
+          "pair_id": "pilot-pair/aba-reacquisition/protected/slot-01",
+          "case": "aba-reacquisition",
+          "probe": "protected",
+          "utc": "2026-08-09T01:54:37.009375208Z",
+          "elapsed_nanoseconds": 136257805,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    },
+    {
+      "system_id": "postgresql-queue",
+      "order": 2,
+      "measured_start_utc": "2026-08-09T01:54:37.022501775Z",
+      "measured_end_utc": "2026-08-09T01:54:37.022512525Z",
+      "duration_nanoseconds": 11000,
+      "harness_return_utc": "2026-08-09T01:54:37.022729085Z",
+      "harness_duration_nanoseconds": 227300,
+      "execution_id": "observed-postgresql-queue-8ec01b1bb59f3f01205c1648326f82cb",
+      "verdict": {
+        "contract_version": "",
+        "run_id": "",
+        "case": "",
+        "probe": "",
+        "trial": 0,
+        "admission": "",
+        "correctness": "",
+        "safety": "",
+        "liveness": "",
+        "diagnosability": "",
+        "efficiency_eligible": false,
+        "reason_codes": null,
+        "metrics": {
+          "logical_operation_count": 0,
+          "work_item_count": 0,
+          "accepted_outcome_count": 0,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 0,
+          "amplification_factor": 0,
+          "peak_qps": 0,
+          "peak_retry_concurrency": 0,
+          "queue_latency_ms": 0,
+          "execution_latency_ms": 0,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 0,
+          "recovery_latency_ms": 0,
+          "end_to_end_latency_ms": 0,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 0,
+          "throughput_per_second": 0,
+          "cost_units": 0,
+          "durable_record_count": 0,
+          "durable_bytes": 0,
+          "operator_intervention_count": 0
+        },
+        "oracle": ""
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "postgresql-queue",
+          "pair_id": "pilot-pair/aba-reacquisition/protected/slot-01",
+          "case": "aba-reacquisition",
+          "probe": "protected",
+          "utc": "2026-08-09T01:54:37.022512525Z",
+          "elapsed_nanoseconds": 11000,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        }
+      ],
+      "error": "ERROR: duplicate key value violates unique constraint \"runs_pkey\" (SQLSTATE 23505)"
+    }
+  ]
+}

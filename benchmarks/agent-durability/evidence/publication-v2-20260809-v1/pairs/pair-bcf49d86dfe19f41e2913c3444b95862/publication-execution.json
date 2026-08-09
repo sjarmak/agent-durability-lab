@@ -1,0 +1,265 @@
+{
+  "protocol_version": "adl.publication.v2",
+  "phase": "publication",
+  "pair_id": "publication-v2-pair/outage-backlog-recovery/unsafe/slot-20",
+  "pair_index": 302,
+  "case": "outage-backlog-recovery",
+  "probe": "unsafe",
+  "slot": 20,
+  "system_order": [
+    "postgresql-queue",
+    "temporal"
+  ],
+  "admission": "valid",
+  "reason_codes": null,
+  "systems": [
+    {
+      "system_id": "postgresql-queue",
+      "order": 1,
+      "measured_start_utc": "2026-08-09T02:21:42.532742524Z",
+      "measured_end_utc": "2026-08-09T02:21:42.764414215Z",
+      "duration_nanoseconds": 231671962,
+      "harness_return_utc": "2026-08-09T02:21:42.782970079Z",
+      "harness_duration_nanoseconds": 250227576,
+      "execution_id": "observed-postgresql-queue-2d97091ee4af6bfa1131cc5fecefd701",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-20260809-v1/systems/postgresql-queue/observed-postgresql-queue-2d97091ee4af6bfa1131cc5fecefd701",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-postgresql-queue-2d97091ee4af6bfa1131cc5fecefd701",
+        "case": "outage-backlog-recovery",
+        "probe": "unsafe",
+        "trial": 20,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "fail",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": false,
+        "reason_codes": [
+          "recovery_storm_bound_exceeded"
+        ],
+        "metrics": {
+          "logical_operation_count": 12,
+          "work_item_count": 12,
+          "accepted_outcome_count": 12,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 23,
+          "amplification_factor": 1.9166666666666667,
+          "peak_qps": 800,
+          "peak_retry_concurrency": 8,
+          "queue_latency_ms": 15,
+          "execution_latency_ms": 226,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 110,
+          "recovery_latency_ms": 214,
+          "end_to_end_latency_ms": 228,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 104,
+          "backlog_drain_p90_ms": 207,
+          "backlog_drain_p99_ms": 207,
+          "healthy_task_latency_ms": 228,
+          "throughput_per_second": 53.08006217055362,
+          "cost_units": 23,
+          "durable_record_count": 188,
+          "durable_bytes": 139837,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/outage-backlog-recovery/unsafe/slot-20",
+          "case": "outage-backlog-recovery",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:21:42.532768864Z",
+          "elapsed_nanoseconds": 26621,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/outage-backlog-recovery/unsafe/slot-20",
+          "case": "outage-backlog-recovery",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:21:42.539535157Z",
+          "elapsed_nanoseconds": 6792914,
+          "kind": "barrier_reached",
+          "barrier": "outage-backlog-target-before-restoration",
+          "details": {
+            "controller": "named-transition"
+          }
+        },
+        {
+          "sequence": 3,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/outage-backlog-recovery/unsafe/slot-20",
+          "case": "outage-backlog-recovery",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:21:42.539538954Z",
+          "elapsed_nanoseconds": 6796701,
+          "kind": "fault_committed",
+          "barrier": "outage-backlog-target-before-restoration",
+          "details": {
+            "after_event_id": "event-20"
+          }
+        },
+        {
+          "sequence": 4,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/outage-backlog-recovery/unsafe/slot-20",
+          "case": "outage-backlog-recovery",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:21:42.553546529Z",
+          "elapsed_nanoseconds": 20804286,
+          "kind": "recovery_observed",
+          "barrier": "outage-backlog-target-before-restoration",
+          "details": {
+            "before_event_id": "event-65"
+          }
+        },
+        {
+          "sequence": 5,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/outage-backlog-recovery/unsafe/slot-20",
+          "case": "outage-backlog-recovery",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:21:42.764414215Z",
+          "elapsed_nanoseconds": 231671962,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    },
+    {
+      "system_id": "temporal",
+      "order": 2,
+      "measured_start_utc": "2026-08-09T02:21:42.783380576Z",
+      "measured_end_utc": "2026-08-09T02:21:43.394584905Z",
+      "duration_nanoseconds": 611204610,
+      "harness_return_utc": "2026-08-09T02:21:43.418053057Z",
+      "harness_duration_nanoseconds": 634672491,
+      "execution_id": "adl-publication-bcf49d86dfe19f41e2913c3444b95862/019fe453-7600-733a-8c76-e286a0c55661",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-20260809-v1/systems/temporal/observed-temporal-70bdd3844b34d6127cc12fcef3e22e5a",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-temporal-70bdd3844b34d6127cc12fcef3e22e5a",
+        "case": "outage-backlog-recovery",
+        "probe": "unsafe",
+        "trial": 20,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "fail",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": false,
+        "reason_codes": [
+          "recovery_storm_bound_exceeded"
+        ],
+        "metrics": {
+          "logical_operation_count": 12,
+          "work_item_count": 12,
+          "accepted_outcome_count": 12,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 23,
+          "amplification_factor": 1.9166666666666667,
+          "peak_qps": 300,
+          "peak_retry_concurrency": 8,
+          "queue_latency_ms": 222,
+          "execution_latency_ms": 540,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 351,
+          "recovery_latency_ms": 413,
+          "end_to_end_latency_ms": 575,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 171,
+          "backlog_drain_p90_ms": 297,
+          "backlog_drain_p99_ms": 297,
+          "healthy_task_latency_ms": 575,
+          "throughput_per_second": 22.182728421174176,
+          "cost_units": 23,
+          "durable_record_count": 238,
+          "durable_bytes": 208303,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/outage-backlog-recovery/unsafe/slot-20",
+          "case": "outage-backlog-recovery",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:21:42.783410973Z",
+          "elapsed_nanoseconds": 30688,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/outage-backlog-recovery/unsafe/slot-20",
+          "case": "outage-backlog-recovery",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:21:42.844585528Z",
+          "elapsed_nanoseconds": 61205243,
+          "kind": "barrier_reached",
+          "barrier": "outage-backlog-target-before-restoration",
+          "details": {
+            "controller": "named-transition"
+          }
+        },
+        {
+          "sequence": 3,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/outage-backlog-recovery/unsafe/slot-20",
+          "case": "outage-backlog-recovery",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:21:42.844590137Z",
+          "elapsed_nanoseconds": 61209842,
+          "kind": "fault_committed",
+          "barrier": "outage-backlog-target-before-restoration",
+          "details": {
+            "after_event_id": "event-20"
+          }
+        },
+        {
+          "sequence": 4,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/outage-backlog-recovery/unsafe/slot-20",
+          "case": "outage-backlog-recovery",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:21:43.044471561Z",
+          "elapsed_nanoseconds": 261091276,
+          "kind": "recovery_observed",
+          "barrier": "outage-backlog-target-before-restoration",
+          "details": {
+            "before_event_id": "event-65"
+          }
+        },
+        {
+          "sequence": 5,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/outage-backlog-recovery/unsafe/slot-20",
+          "case": "outage-backlog-recovery",
+          "probe": "unsafe",
+          "utc": "2026-08-09T02:21:43.394584905Z",
+          "elapsed_nanoseconds": 611204610,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    }
+  ]
+}

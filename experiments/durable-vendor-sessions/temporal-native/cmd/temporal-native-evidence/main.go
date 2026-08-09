@@ -65,13 +65,14 @@ func run(ctx context.Context, args []string, output io.Writer) error {
 	return json.NewEncoder(output).Encode(summary{RunDirectory: runDir, Class: verdict.Class, ReasonCodes: verdict.ReasonCodes})
 }
 
-func readCapture(path string) (evidenceadapter.Capture, error) {
+func readCapture(path string) (capture evidenceadapter.Capture, returnErr error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return evidenceadapter.Capture{}, fmt.Errorf("open capture: %w", err)
 	}
-	defer file.Close()
-	var capture evidenceadapter.Capture
+	defer func() {
+		returnErr = errors.Join(returnErr, file.Close())
+	}()
 	decoder := json.NewDecoder(file)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&capture); err != nil {

@@ -4,6 +4,7 @@
 *.db
 .beads-credential-key
 .beads/proxieddb/
+*.gate.lock*
 /.agents/
 /.beads/
 /.claude/
@@ -12,4 +13,10 @@
 # Local build and coverage output
 /bin/
 /coverage*.out
+**/.coverage
+**/__pycache__/
+*.py[cod]
 /experiments/external-effects/evidence/**/runtime/
+
+# Mutable service state is not sealed benchmark evidence
+/benchmarks/agent-durability/evidence/*-system-work/

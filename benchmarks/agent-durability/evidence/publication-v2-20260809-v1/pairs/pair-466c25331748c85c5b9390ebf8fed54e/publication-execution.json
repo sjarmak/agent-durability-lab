@@ -1,0 +1,177 @@
+{
+  "protocol_version": "adl.publication.v2",
+  "phase": "publication",
+  "pair_id": "publication-v2-pair/outage-backlog-recovery/unfaulted/slot-08",
+  "pair_index": 177,
+  "case": "outage-backlog-recovery",
+  "probe": "unfaulted",
+  "slot": 8,
+  "system_order": [
+    "postgresql-queue",
+    "temporal"
+  ],
+  "admission": "valid",
+  "reason_codes": null,
+  "systems": [
+    {
+      "system_id": "postgresql-queue",
+      "order": 1,
+      "measured_start_utc": "2026-08-09T02:20:26.565420716Z",
+      "measured_end_utc": "2026-08-09T02:20:26.591148179Z",
+      "duration_nanoseconds": 25727674,
+      "harness_return_utc": "2026-08-09T02:20:26.602634186Z",
+      "harness_duration_nanoseconds": 37213470,
+      "execution_id": "observed-postgresql-queue-d527fe538f095ae83e8a9eb12240772f",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-20260809-v1/systems/postgresql-queue/observed-postgresql-queue-d527fe538f095ae83e8a9eb12240772f",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-postgresql-queue-d527fe538f095ae83e8a9eb12240772f",
+        "case": "outage-backlog-recovery",
+        "probe": "unfaulted",
+        "trial": 8,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "reason_codes": [],
+        "metrics": {
+          "logical_operation_count": 8,
+          "work_item_count": 8,
+          "accepted_outcome_count": 8,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 8,
+          "amplification_factor": 1,
+          "peak_qps": 400,
+          "peak_retry_concurrency": 1,
+          "queue_latency_ms": 23,
+          "execution_latency_ms": 22,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 0,
+          "recovery_latency_ms": 0,
+          "end_to_end_latency_ms": 24,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 24,
+          "throughput_per_second": 359.29366279184916,
+          "cost_units": 8,
+          "durable_record_count": 76,
+          "durable_bytes": 59055,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/outage-backlog-recovery/unfaulted/slot-08",
+          "case": "outage-backlog-recovery",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:20:26.565432748Z",
+          "elapsed_nanoseconds": 12243,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/outage-backlog-recovery/unfaulted/slot-08",
+          "case": "outage-backlog-recovery",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:20:26.591148179Z",
+          "elapsed_nanoseconds": 25727674,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    },
+    {
+      "system_id": "temporal",
+      "order": 2,
+      "measured_start_utc": "2026-08-09T02:20:26.602885682Z",
+      "measured_end_utc": "2026-08-09T02:20:27.730914832Z",
+      "duration_nanoseconds": 1128029380,
+      "harness_return_utc": "2026-08-09T02:20:27.743287846Z",
+      "harness_duration_nanoseconds": 1140402164,
+      "execution_id": "adl-publication-466c25331748c85c5b9390ebf8fed54e/019fe452-4c6b-76d8-9dd1-f12c728a504f",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-20260809-v1/systems/temporal/observed-temporal-669ecad95ef57c3772e190d0ad58ee2b",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-temporal-669ecad95ef57c3772e190d0ad58ee2b",
+        "case": "outage-backlog-recovery",
+        "probe": "unfaulted",
+        "trial": 8,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "reason_codes": [],
+        "metrics": {
+          "logical_operation_count": 8,
+          "work_item_count": 8,
+          "accepted_outcome_count": 8,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 8,
+          "amplification_factor": 1,
+          "peak_qps": 200,
+          "peak_retry_concurrency": 1,
+          "queue_latency_ms": 1097,
+          "execution_latency_ms": 1069,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 0,
+          "recovery_latency_ms": 0,
+          "end_to_end_latency_ms": 1099,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 1099,
+          "throughput_per_second": 7.483312895096237,
+          "cost_units": 8,
+          "durable_record_count": 112,
+          "durable_bytes": 90722,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/outage-backlog-recovery/unfaulted/slot-08",
+          "case": "outage-backlog-recovery",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:20:26.60289503Z",
+          "elapsed_nanoseconds": 9578,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/outage-backlog-recovery/unfaulted/slot-08",
+          "case": "outage-backlog-recovery",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:20:27.730914832Z",
+          "elapsed_nanoseconds": 1128029380,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    }
+  ]
+}

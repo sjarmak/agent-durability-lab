@@ -2,6 +2,7 @@ package lab
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -11,13 +12,14 @@ import (
 
 var databaseEffectsBucket = []byte("effects")
 
-func applyDatabaseEffect(path string, request EffectRequest) (EffectResult, error) {
+func applyDatabaseEffect(path string, request EffectRequest) (result EffectResult, returnErr error) {
 	database, err := bolt.Open(path, 0o600, &bolt.Options{Timeout: time.Second})
 	if err != nil {
 		return EffectResult{}, fmt.Errorf("open effect database: %w", err)
 	}
-	defer database.Close()
-	var result EffectResult
+	defer func() {
+		returnErr = errors.Join(returnErr, database.Close())
+	}()
 	err = database.Update(func(transaction *bolt.Tx) error {
 		bucket, err := transaction.CreateBucketIfNotExists(databaseEffectsBucket)
 		if err != nil {
@@ -58,13 +60,15 @@ func applyDatabaseEffect(path string, request EffectRequest) (EffectResult, erro
 	return result, nil
 }
 
-func snapshotDatabaseDestination(path string) (DestinationState, error) {
+func snapshotDatabaseDestination(path string) (state DestinationState, returnErr error) {
 	database, err := bolt.Open(path, 0o600, &bolt.Options{ReadOnly: true, Timeout: time.Second})
 	if err != nil {
 		return DestinationState{}, fmt.Errorf("open effect database snapshot: %w", err)
 	}
-	defer database.Close()
-	state := DestinationState{PhysicalEffects: make([]PhysicalEffect, 0)}
+	defer func() {
+		returnErr = errors.Join(returnErr, database.Close())
+	}()
+	state = DestinationState{PhysicalEffects: make([]PhysicalEffect, 0)}
 	err = database.View(func(transaction *bolt.Tx) error {
 		bucket := transaction.Bucket(databaseEffectsBucket)
 		if bucket == nil {

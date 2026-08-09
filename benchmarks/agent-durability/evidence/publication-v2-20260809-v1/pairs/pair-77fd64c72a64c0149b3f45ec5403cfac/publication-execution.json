@@ -1,0 +1,177 @@
+{
+  "protocol_version": "adl.publication.v2",
+  "phase": "publication",
+  "pair_id": "publication-v2-pair/silent-progress/unfaulted/slot-30",
+  "pair_index": 548,
+  "case": "silent-progress",
+  "probe": "unfaulted",
+  "slot": 30,
+  "system_order": [
+    "postgresql-queue",
+    "temporal"
+  ],
+  "admission": "valid",
+  "reason_codes": null,
+  "systems": [
+    {
+      "system_id": "postgresql-queue",
+      "order": 1,
+      "measured_start_utc": "2026-08-09T02:25:56.836763376Z",
+      "measured_end_utc": "2026-08-09T02:25:56.842487489Z",
+      "duration_nanoseconds": 5724273,
+      "harness_return_utc": "2026-08-09T02:25:56.854758751Z",
+      "harness_duration_nanoseconds": 17995385,
+      "execution_id": "observed-postgresql-queue-16cba2b31d5c20a271bbde44b9b90672",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-20260809-v1/systems/postgresql-queue/observed-postgresql-queue-16cba2b31d5c20a271bbde44b9b90672",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-postgresql-queue-16cba2b31d5c20a271bbde44b9b90672",
+        "case": "silent-progress",
+        "probe": "unfaulted",
+        "trial": 30,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "reason_codes": [],
+        "metrics": {
+          "logical_operation_count": 2,
+          "work_item_count": 2,
+          "accepted_outcome_count": 2,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 2,
+          "amplification_factor": 1,
+          "peak_qps": 200,
+          "peak_retry_concurrency": 2,
+          "queue_latency_ms": 2,
+          "execution_latency_ms": 1,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 0,
+          "recovery_latency_ms": 0,
+          "end_to_end_latency_ms": 3,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 3,
+          "throughput_per_second": 1421.858226516234,
+          "cost_units": 2,
+          "durable_record_count": 22,
+          "durable_bytes": 18480,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/silent-progress/unfaulted/slot-30",
+          "case": "silent-progress",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:25:56.836771652Z",
+          "elapsed_nanoseconds": 8446,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "postgresql-queue",
+          "pair_id": "publication-v2-pair/silent-progress/unfaulted/slot-30",
+          "case": "silent-progress",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:25:56.842487489Z",
+          "elapsed_nanoseconds": 5724273,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    },
+    {
+      "system_id": "temporal",
+      "order": 2,
+      "measured_start_utc": "2026-08-09T02:25:56.854928532Z",
+      "measured_end_utc": "2026-08-09T02:25:57.021381432Z",
+      "duration_nanoseconds": 166453020,
+      "harness_return_utc": "2026-08-09T02:25:57.033853002Z",
+      "harness_duration_nanoseconds": 178924470,
+      "execution_id": "adl-publication-77fd64c72a64c0149b3f45ec5403cfac/019fe457-5677-75fa-8025-e9eee4addd84",
+      "evidence_dir": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/evidence/publication-v2-20260809-v1/systems/temporal/observed-temporal-630f12dccc79c71588514b8308ace84b",
+      "verdict": {
+        "contract_version": "adl.cross-system.v2",
+        "run_id": "observed-temporal-630f12dccc79c71588514b8308ace84b",
+        "case": "silent-progress",
+        "probe": "unfaulted",
+        "trial": 30,
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "reason_codes": [],
+        "metrics": {
+          "logical_operation_count": 2,
+          "work_item_count": 2,
+          "accepted_outcome_count": 2,
+          "stale_action_accept_count": 0,
+          "physical_request_count": 2,
+          "amplification_factor": 1,
+          "peak_qps": 200,
+          "peak_retry_concurrency": 1,
+          "queue_latency_ms": 105,
+          "execution_latency_ms": 3,
+          "failure_detection_latency_ms": 0,
+          "retry_delay_ms": 0,
+          "recovery_latency_ms": 0,
+          "end_to_end_latency_ms": 106,
+          "backlog_integral_ms": 0,
+          "backlog_drain_p50_ms": 0,
+          "backlog_drain_p90_ms": 0,
+          "backlog_drain_p99_ms": 0,
+          "healthy_task_latency_ms": 106,
+          "throughput_per_second": 612.2560810039286,
+          "cost_units": 2,
+          "durable_record_count": 29,
+          "durable_bytes": 26940,
+          "operator_intervention_count": 0
+        },
+        "oracle": "independent-causal-reconstruction-oracle-v2"
+      },
+      "timing": [
+        {
+          "sequence": 1,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/silent-progress/unfaulted/slot-30",
+          "case": "silent-progress",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:25:56.854935375Z",
+          "elapsed_nanoseconds": 6963,
+          "kind": "operation_ready",
+          "details": {
+            "source": "system_submission"
+          }
+        },
+        {
+          "sequence": 2,
+          "system_id": "temporal",
+          "pair_id": "publication-v2-pair/silent-progress/unfaulted/slot-30",
+          "case": "silent-progress",
+          "probe": "unfaulted",
+          "utc": "2026-08-09T02:25:57.021381432Z",
+          "elapsed_nanoseconds": 166453020,
+          "kind": "acknowledged",
+          "details": {
+            "source": "system_outcome"
+          }
+        }
+      ]
+    }
+  ]
+}

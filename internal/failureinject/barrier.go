@@ -101,7 +101,7 @@ func (c *Coordinator) Release(point string) error {
 
 func (c *Coordinator) handleArrival(response http.ResponseWriter, request *http.Request) {
 	request.Body = http.MaxBytesReader(response, request.Body, 64<<10)
-	defer request.Body.Close()
+	defer func() { _ = request.Body.Close() }()
 
 	var arrival Arrival
 	decoder := json.NewDecoder(request.Body)

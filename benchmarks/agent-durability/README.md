@@ -4,14 +4,86 @@ This benchmark asks which parts of reliable external-agent execution come from
 a durability system and which still require application or destination
 mechanisms. It is not a feature checklist or a throughput leaderboard.
 
-The initial comparison is Temporal, Restate, DBOS Go, and a deliberately small
-PostgreSQL queue/lease/outbox implementation. Temporal has related evidence in
-this repository, but none of the four implementations is yet declared conformant
-with this contract. Durable Task and AWS Step Functions are deferred until this
-first wave exposes where an additional architecture would change a decision.
+The initial required comparison is Temporal and a deliberately small PostgreSQL
+queue/lease/outbox implementation; Restate and DBOS Go remain follow-up
+adapters. Temporal and PostgreSQL pass both the development-conformance gate and
+the 30-pair-per-stratum v2 publication population. The report makes no scalar
+winner claim. Durable Task and AWS Step Functions are deferred until this first
+wave exposes where an additional architecture would change a decision.
 
 The machine-checked case list and evidence requirements are in
 [`contract-v1.json`](contract-v1.json).
+
+Contract v1 remains frozen. The active, side-by-side
+[`contract-v2.json`](contract-v2.json) and
+[v2 research plan](../../docs/plans/agent-durability-benchmark-v2.md) add an ABA
+authority case and recovery-dynamics profiles for retry amplification,
+outage/backlog recovery, backpressure, poison work, and silent progress. They do
+not reinterpret v1 evidence or expand the v1 publication population.
+
+The separate, frozen
+[`topology-contract-v1.json`](topology-contract-v1.json) and
+[`topology-preregistration-v1.json`](topology-preregistration-v1.json) define a
+future within-Temporal comparison: one parent Workflow scheduling the common
+work Activity directly versus one parent scheduling a Child Workflow per item,
+where every child schedules that identical Activity. The fixed 8/32/128 fan-out
+ladder covers joins, partial reduction, queued/executing supersession,
+destructive transitions, and the full crash, retry, outage, backpressure,
+poison, and silent-progress recovery suite. These files are design and preregistration, not
+implementation, pilot, performance evidence, or a supported topology claim.
+
+The v2 apparatus is executable. Generate all six cases, three probes, and three
+development trials without overwriting prior evidence:
+
+```bash
+go run ./benchmarks/agent-durability/v2/cmd/calibrate \
+  --evidence-root benchmarks/agent-durability/evidence/<new-v2-suite-id> \
+  --trials 3
+```
+
+The current preserved apparatus suite is
+[`calibration-v2-20260808-v1`](evidence/calibration-v2-20260808-v1): 36 expected
+passes, 18 distinguishing valid failures, and zero invalid runs. The preserved
+real-process ABA suite is
+[`live-aba-v2-20260808-v1`](evidence/live-aba-v2-20260808-v1): three label-only
+failures and three generation/capability-fenced passes. These establish case and
+oracle behavior only; neither directory is evidence about a durability system.
+
+The required-system development populations are preserved at
+[`temporal-v1-20260808-v1`](evidence/temporal-v1-20260808-v1),
+[`postgresql-v1-20260808-v1`](evidence/postgresql-v1-20260808-v1),
+[`temporal-v2-20260808-v3`](evidence/temporal-v2-20260808-v3), and
+[`postgresql-v2-20260808-v2`](evidence/postgresql-v2-20260808-v2). Temporal v2
+contains replayed Event Histories; PostgreSQL v2 contains transactional queue,
+lease-expiry, reacquisition, and acknowledgement journals. See
+[finding 0012](../../docs/findings/0012-temporal-and-postgresql-pass-development-conformance-not-performance.md)
+for the earlier development boundary. The fresh system-timed population is
+[`publication-v2-20260809-v1`](evidence/publication-v2-20260809-v1), with the
+corrected preregistered uncertainty report in
+[`analysis v5`](evidence/publication-v2-20260809-v1-analysis-v5.json). [Finding
+0013](../../docs/findings/0013-application-policy-equalizes-safety-not-recovery-cost.md)
+states the supported result and its single-host limits.
+
+## Credential-safe publication invocation
+
+Publication and live adapter targets accept a libpq service name, not a raw
+connection string. Put connection parameters in `pg_service.conf` and keep the
+password in `.pgpass` or a mode-0600 file named by `PGPASSFILE`. This keeps
+credentials out of the runner and `psql` process arguments. For a new
+append-only pilot or publication root, run:
+
+```bash
+make publication-v2 \
+  PHASE=pilot \
+  EVIDENCE_ROOT=benchmarks/agent-durability/evidence/<new-population-id> \
+  TEMPORAL_WORK_ROOT=benchmarks/agent-durability/evidence/<new-population-id>-system-work \
+  TEMPORAL_CLI_PATH="$(command -v temporal)" \
+  POSTGRES_SERVICE=agent_durability_v2
+```
+
+The post-pilot runner is cryptographically frozen, so its lower-level
+`--postgres-dsn` flag remains for source replay. Pass only a non-secret
+`service=<name>` reference to that flag; never place a password in it.
 
 ## Comparison unit
 
@@ -182,8 +254,9 @@ Before measurements count, an adapter must:
 7. document every non-default retry, timeout, retention, recovery, and
    deployment setting.
 
-Only after all four adapters pass this gate should the project publish a result
-table.
+Only adapters that pass this gate enter a result table. The completed v2
+required-system table covers Temporal and PostgreSQL; later Restate or DBOS
+results must pass independently and may not reinterpret this frozen population.
 
 ## Common harness status
 

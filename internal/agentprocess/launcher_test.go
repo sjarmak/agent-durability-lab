@@ -170,7 +170,11 @@ func TestLauncherPublishesPrivateRequestAndDetachedProcess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open request: %v", err)
 	}
-	defer requestFile.Close()
+	defer func() {
+		if err := requestFile.Close(); err != nil {
+			t.Errorf("close request: %v", err)
+		}
+	}()
 	var decoded LaunchRequest
 	if err := json.NewDecoder(requestFile).Decode(&decoded); err != nil {
 		t.Fatalf("decode request: %v", err)

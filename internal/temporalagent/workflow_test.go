@@ -190,7 +190,11 @@ func TestCapturedHistoryShowsCompactedActivityRetry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open captured history: %v", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			t.Errorf("close captured history: %v", err)
+		}
+	}()
 	var history struct {
 		Events []struct {
 			EventType                     string `json:"event_type"`

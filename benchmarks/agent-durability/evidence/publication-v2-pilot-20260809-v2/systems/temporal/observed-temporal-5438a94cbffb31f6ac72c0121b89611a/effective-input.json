@@ -1,0 +1,41 @@
+{
+  "adapter_id": "temporal-publication-v1",
+  "adapter_version": "source-sha256:6dfce824e66612c8a34771f87198950895b4375078220953a69995fb037e8d60",
+  "agent_binary_sha256": "7bb6519fc6e46bd6cad9981d51c2c0346deb0a43bb18b5ad0b5529c3ca36dbdd",
+  "system_id": "temporal",
+  "runtime": "linux/amd64",
+  "authority_protocol": "logical-operation-owner-epoch-capability-v2",
+  "dependency_protocol": "scripted-dependency-physical-request-journal-v2",
+  "failure_protocol": "named-transition-controller-v2",
+  "oracle_protocol": "independent-causal-reconstruction-oracle-v2",
+  "destination_id": "observed-destination-observed-temporal-5438a94cbffb31f6ac72c0121b89611a",
+  "oracle_visibility": [
+    "authority-state.json",
+    "destination-state.json",
+    "dependency-state.json",
+    "workload-state.json",
+    "fault-boundary.json",
+    "process-observations.json"
+  ],
+  "host_limits": {
+    "connections": 8,
+    "queue_capacity": 20,
+    "workers": 8
+  },
+  "settings": {
+    "activity_concurrency": "8",
+    "admission_capacity": "20",
+    "case": "silent-progress",
+    "clock": "go-monotonic-duration-with-utc-anchors",
+    "healthy_latency_bound_ms": "1000",
+    "history_replay": "passed-before-evidence-admission",
+    "poison_attempt_budget": "3",
+    "probe": "unfaulted",
+    "progress_deadline_ms": "25",
+    "retry_budget": "4",
+    "retry_concurrency_limit": "4",
+    "temporal_cli": "temporal version 1.8.0 (Server 1.31.2, UI 2.50.1)",
+    "temporal_sdk": "v1.47.0",
+    "workflow": "AgentDurabilityPublicationV1"
+  }
+}

@@ -29,6 +29,11 @@ func TestVerifyHistoryDistinguishesWaitPolicyAndCleanup(t *testing.T) {
 	if len(failures) != 0 || observation.ActivityCanceled != 1 || observation.ActivityScheduled != 2 {
 		t.Fatalf("safe history = %+v failures=%v", observation, failures)
 	}
+
+	observation, failures = VerifyHistory(ScenarioHealthySafe, false, historyWithTypes(safeTypes...))
+	if len(failures) != 0 || observation.ActivityCanceled != 1 {
+		t.Fatalf("non-waiting safe history with prompt cancellation = %+v failures=%v", observation, failures)
+	}
 }
 
 func TestVerifyHistoryRejectsMissingCancellationEvidence(t *testing.T) {

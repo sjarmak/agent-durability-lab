@@ -1,6 +1,6 @@
 # Durable vendor coding-agent sessions
 
-**Status:** planned experiment, 2026-08-07
+**Status:** active experiment; unsafe direct-Claude arm complete, 2026-08-08
 **Tracking:** `temporal_projects-5im`
 **Vendors in the first study:** Claude Code and Codex
 
@@ -48,7 +48,8 @@ from collapsing into one claim.
 
 ### Claude Code surface
 
-Locally observed with Claude Code 2.1.224 on 2026-08-07:
+Locally re-verified with Claude Code 2.1.226 on 2026-08-08 (the earlier plan
+inspection used 2.1.224 on 2026-08-07):
 
 - `claude -p` runs a non-interactive turn;
 - `--output-format stream-json` exposes structured output;
@@ -447,14 +448,30 @@ their own verdict or evidence format.
    Reproduce provider-create and command-effect completion loss, attached-handle
    concurrency, parent-close cleanup, and snapshot-reference loss before using a
    paid or remote sandbox backend. Track this as `temporal_projects-5im.2`.
+   **Completed:** 36 admitted live trials at pinned commit `e8a8854` separated
+   outer Update deduplication from inner provider idempotency, rejected stale
+   attached writers with provider fencing, restored exact snapshot prefixes,
+   and showed that parent-close cleanup needs provider reconciliation when
+   status was never accepted. See [Finding 0009](../findings/0009-sandbox-lifecycle-does-not-close-provider-gaps.md).
 4. Implement the unsafe direct-subprocess arm for Claude Code and prove the
-   negative control fails.
+   negative control fails. **Complete:** `temporal_projects-5im.5` produced 12
+   admitted authenticated Claude Code 2.1.226 trials at the three declared
+   direct-CLI boundaries. Three unfaulted trials passed. All nine Worker-loss
+   trials launched two distinct Claude sessions, applied the stable logical
+   effect twice, and still produced one accepted Temporal outcome. Exact
+   barriers, independent workspace and destination evidence, raw provider
+   streams, and manifest-bound inventories distinguish the observed vendor
+   result from the hermetic calibration. See [Finding 0010](../findings/0010-direct-claude-activity-retry-duplicates-turns-and-effects.md)
+   and the [unsafe direct-Claude control](../../experiments/durable-vendor-sessions/claude-direct/README.md).
 5. Add caller-selected Claude session identity and the resume-only arm.
 6. Add the fenced start-or-attach supervisor and cancellation revocation.
 7. Repeat the matched CLI experiment with `codex exec`, including the
    pre-registration gap.
 8. Add Codex App Server and Claude Agent SDK/`SessionStore` protocol-native arms
    only where they distinguish a recovery guarantee.
+   Evaluate Claude Code 2.1.226's background-session daemon (`--bg`, `attach`,
+   `respawn`, `stop`, and daemon restart/keep-workers) separately under
+   `temporal_projects-5im.6`; do not conflate it with transcript resume.
 9. Test true interactive PTY attachment only after structured headless recovery
    has a supported invariant and oracle.
 10. Add a Continue-As-New boundary only after the single-run identity and

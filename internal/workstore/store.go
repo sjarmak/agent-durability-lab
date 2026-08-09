@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -457,7 +458,7 @@ func (s *Store) changeExecutor(
 	return domainErr
 }
 
-func (s *Store) update(ctx context.Context, fn func(*bolt.Tx) error) error {
+func (s *Store) update(ctx context.Context, fn func(*bolt.Tx) error) (returnErr error) {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -465,7 +466,9 @@ func (s *Store) update(ctx context.Context, fn func(*bolt.Tx) error) error {
 	if err != nil {
 		return fmt.Errorf("open work store: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		returnErr = errors.Join(returnErr, db.Close())
+	}()
 	if err := db.Update(func(tx *bolt.Tx) error {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -477,7 +480,7 @@ func (s *Store) update(ctx context.Context, fn func(*bolt.Tx) error) error {
 	return nil
 }
 
-func (s *Store) view(ctx context.Context, fn func(*bolt.Tx) error) error {
+func (s *Store) view(ctx context.Context, fn func(*bolt.Tx) error) (returnErr error) {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -485,7 +488,9 @@ func (s *Store) view(ctx context.Context, fn func(*bolt.Tx) error) error {
 	if err != nil {
 		return fmt.Errorf("open work store: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		returnErr = errors.Join(returnErr, db.Close())
+	}()
 	if err := db.View(fn); err != nil {
 		return fmt.Errorf("view work store: %w", err)
 	}

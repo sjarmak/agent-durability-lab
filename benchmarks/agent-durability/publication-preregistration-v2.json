@@ -1,0 +1,159 @@
+{
+  "protocol_version": "adl.publication.v2",
+  "contract_version": "adl.cross-system.v2",
+  "frozen_at_utc": "2026-08-09T02:07:45Z",
+  "required_systems": [
+    "temporal",
+    "postgresql-queue"
+  ],
+  "cases": [
+    "aba-reacquisition",
+    "layered-retry-amplification",
+    "outage-backlog-recovery",
+    "backpressure-overload",
+    "poison-work-isolation",
+    "silent-progress"
+  ],
+  "probes": [
+    "unfaulted",
+    "unsafe",
+    "protected"
+  ],
+  "track_by_probe": {
+    "unfaulted": "native-minimum-baseline",
+    "unsafe": "native-minimum-negative-control",
+    "protected": "portable-safety"
+  },
+  "population": {
+    "minimum_valid_pairs_per_stratum": 30,
+    "maximum_attempted_pairs_per_stratum": 40,
+    "pilot_pairs_per_stratum": 3,
+    "publication_seed": 3262183258,
+    "pilot_seed": 929737241,
+    "pilot_namespace": "pilot-v2-harness-r2-pair",
+    "schedule_algorithm": "balanced-splitmix64-fisher-yates-v2-namespaced-ids",
+    "pairing": "matched-case-probe-slot",
+    "statistical_unit": "independent-paired-episode",
+    "system_execution": "sequential-within-pair",
+    "reserve_policy": "use-next-predetermined-slot-only-after-invalid-pair"
+  },
+  "timing": {
+    "clock": "go-monotonic-duration-with-utc-anchors",
+    "utc_anchors": true,
+    "exact_barriers": true,
+    "setup_excluded": true,
+    "teardown_excluded": true,
+    "liveness_deadlines_only": true,
+    "peak_qps_window_ms": 10
+  },
+  "admission": {
+    "required_outcome_dimensions": [
+      "correctness",
+      "safety",
+      "liveness",
+      "diagnosability"
+    ],
+    "invalid_policy": "retain-and-use-next-predetermined-reserve-slot",
+    "exclusion_policy": "preregistered-infrastructure-only-never-outcome-based",
+    "stop_rule": "stop-at-thirty-valid-pairs-or-after-forty-attempted-pairs"
+  },
+  "analysis": {
+    "confidence_level": 0.95,
+    "bootstrap_resamples": 20000,
+    "bootstrap_method": "paired-percentile-bootstrap-median-difference",
+    "analysis_seed": 2718281828,
+    "paired": true,
+    "scalar_winner": false,
+    "multiplicity_policy": "descriptive-families-no-null-hypothesis-winner-claims",
+    "efficiency_gate": "all-thirty-matched-pairs-valid-and-both-arms-pass-four-outcomes",
+    "binary_interval": "wilson-95-percent",
+    "ratio_rule": "report-ratio-only-when-both-paired-values-are-positive"
+  },
+  "liveness": {
+    "healthy_task_latency_bound_ms": 1000,
+    "bound_role": "infrastructure-liveness-gate-not-efficiency-estimand"
+  },
+  "primary_estimands": {
+    "aba-reacquisition": [
+      "stale_action_accept_count",
+      "recovery_latency_ms",
+      "end_to_end_latency_ms"
+    ],
+    "layered-retry-amplification": [
+      "physical_request_count",
+      "amplification_factor",
+      "retry_delay_ms",
+      "recovery_latency_ms",
+      "cost_units"
+    ],
+    "outage-backlog-recovery": [
+      "peak_qps",
+      "peak_retry_concurrency",
+      "recovery_latency_ms",
+      "backlog_integral_ms",
+      "backlog_drain_p90_ms"
+    ],
+    "backpressure-overload": [
+      "queue_latency_ms",
+      "end_to_end_latency_ms",
+      "throughput_per_second",
+      "admission_rejection_fraction"
+    ],
+    "poison-work-isolation": [
+      "physical_request_count",
+      "healthy_task_latency_ms",
+      "recovery_latency_ms",
+      "cost_units"
+    ],
+    "silent-progress": [
+      "failure_detection_latency_ms",
+      "recovery_latency_ms",
+      "legitimate_wait_revocation_count",
+      "stale_action_accept_count"
+    ]
+  },
+  "required_evidence": [
+    "manifest.json",
+    "causal-events.jsonl",
+    "authority-state.json",
+    "destination-state.json",
+    "dependency-state.json",
+    "workload-state.json",
+    "fault-boundary.json",
+    "native-history-or-journal-export.json",
+    "process-observations.json",
+    "effective-input.json",
+    "verdict.json",
+    "publication-timing.jsonl",
+    "publication-execution.json",
+    "publication-inventory.json"
+  ],
+  "host_controls": [
+    "same-host-and-runtime-envelope",
+    "prewarmed-system-session",
+    "condition-based-idle-readiness-before-pair",
+    "adapter-setup-and-teardown-outside-measured-interval",
+    "sequential-system-execution-within-randomized-pair",
+    "pinned-worker-and-database-concurrency",
+    "recorded-runtime-versions-and-source-hashes"
+  ],
+  "hashes": {
+    "contract_v2_sha256": "239a90770ad40d131467d9e85b4c21ee7d8b6bb1cc9253093eeebf7215b14a6a",
+    "adapter_baseline_sha256": "6dfce824e66612c8a34771f87198950895b4375078220953a69995fb037e8d60",
+    "population_config_sha256": "e9dc3b24a9e25eb6e8633dd0424d7e30ef7e69e25e8ea37aa0dcc0b0eb74ff36"
+  },
+  "change_policy": "no-post-publication-result-changes",
+  "supersedes": "adl.publication.v1",
+  "pilot_lineage": "publication-v2-pilot-20260809-v1 (50 ms calibration-bound failure); publication-v2-pilot-20260809-v2 (durable identity namespace collision); publication-v2-pilot-20260809-v3 (pair admission failed open on one invalid system verdict and outage unsafe control was not scheduler-robust)",
+  "falsifiers": [
+    "a fault is selected by elapsed time rather than an exact named barrier",
+    "system order or reserve-slot use differs from the frozen schedule",
+    "a failed, invalid, or excluded episode is deleted or overwritten",
+    "work items inside one cohort are treated as independent samples",
+    "efficiency is compared after either matched arm fails parity",
+    "pilot or publication results change an estimand, admission rule, or analysis method",
+    "Temporal replay or PostgreSQL generation-fencing evidence fails",
+    "the system-timed runner cannot reconstruct a primary metric from raw anchors",
+    "the 1000 ms healthy-task liveness gate is used as an efficiency result rather than an infrastructure validity bound"
+  ]
+}

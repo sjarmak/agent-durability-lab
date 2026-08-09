@@ -1,0 +1,63 @@
+{
+  "dependency_id": "scripted-recovery-dependency",
+  "transitions": [
+    {
+      "sequence": 1,
+      "time": "2026-08-08T04:02:00Z",
+      "state": "healthy"
+    }
+  ],
+  "requests": [
+    {
+      "request_id": "request-attempt-item-001-layered-retry-amplification-protected-calibration-trial-2-01",
+      "logical_operation_id": "operation-001-layered-retry-amplification-protected-calibration-trial-2",
+      "work_item_id": "item-001-layered-retry-amplification-protected-calibration-trial-2",
+      "attempt_id": "attempt-item-001-layered-retry-amplification-protected-calibration-trial-2-01",
+      "retry_layer": "workflow",
+      "retry_ordinal": 1,
+      "started_at": "2026-08-08T04:02:00.001Z",
+      "finished_at": "2026-08-08T04:02:00.002Z",
+      "outcome": "accepted_then_timeout_script_activated",
+      "cost_units": 1
+    },
+    {
+      "request_id": "request-attempt-item-001-layered-retry-amplification-protected-calibration-trial-2-02",
+      "logical_operation_id": "operation-001-layered-retry-amplification-protected-calibration-trial-2",
+      "work_item_id": "item-001-layered-retry-amplification-protected-calibration-trial-2",
+      "attempt_id": "attempt-item-001-layered-retry-amplification-protected-calibration-trial-2-02",
+      "parent_attempt_id": "attempt-item-001-layered-retry-amplification-protected-calibration-trial-2-01",
+      "retry_layer": "activity",
+      "retry_ordinal": 2,
+      "started_at": "2026-08-08T04:02:00.002Z",
+      "finished_at": "2026-08-08T04:02:00.003Z",
+      "outcome": "timeout",
+      "cost_units": 1
+    },
+    {
+      "request_id": "request-attempt-item-001-layered-retry-amplification-protected-calibration-trial-2-03",
+      "logical_operation_id": "operation-001-layered-retry-amplification-protected-calibration-trial-2",
+      "work_item_id": "item-001-layered-retry-amplification-protected-calibration-trial-2",
+      "attempt_id": "attempt-item-001-layered-retry-amplification-protected-calibration-trial-2-03",
+      "parent_attempt_id": "attempt-item-001-layered-retry-amplification-protected-calibration-trial-2-02",
+      "retry_layer": "client",
+      "retry_ordinal": 3,
+      "started_at": "2026-08-08T04:02:00.003Z",
+      "finished_at": "2026-08-08T04:02:00.004Z",
+      "outcome": "429",
+      "cost_units": 1
+    },
+    {
+      "request_id": "request-attempt-item-001-layered-retry-amplification-protected-calibration-trial-2-04",
+      "logical_operation_id": "operation-001-layered-retry-amplification-protected-calibration-trial-2",
+      "work_item_id": "item-001-layered-retry-amplification-protected-calibration-trial-2",
+      "attempt_id": "attempt-item-001-layered-retry-amplification-protected-calibration-trial-2-04",
+      "parent_attempt_id": "attempt-item-001-layered-retry-amplification-protected-calibration-trial-2-03",
+      "retry_layer": "agent",
+      "retry_ordinal": 4,
+      "started_at": "2026-08-08T04:02:00.004Z",
+      "finished_at": "2026-08-08T04:02:00.005Z",
+      "outcome": "ok",
+      "cost_units": 1
+    }
+  ]
+}

@@ -157,9 +157,14 @@ trials for four scenarios under both `WaitForCancellation` policies.
 | Worker-death safe | 6 | 0 / 0 | Yes, acknowledged by surviving child | Yes, from Worker 2 cleanup |
 | Frozen safe | 6 | 0 / 0 | Yes before resume | Yes, after exact resume and pending stop delivery |
 
-Every `WaitForCancellation=false` history contains the Activity cancel request
-but no Activity-canceled event; disconnected cleanup still completes. Every
-`true` history contains the Activity-canceled event before cleanup. The
+In the preserved matrix, every `WaitForCancellation=false` history contains the
+Activity cancel request but no Activity-canceled event; disconnected cleanup
+still completes. Every `true` history contains the Activity-canceled event
+before cleanup. A later race-instrumented gate observed one prompt
+Activity-canceled event in a `false` arm. The maintained oracle therefore
+allows zero or one for `false` and still requires exactly one for `true`:
+`false` means the Workflow does not await the event, not that Temporal cannot
+record it. The
 application invariant has the same result in both policies because it is
 linearized in the work store, not inferred from the Temporal policy.
 

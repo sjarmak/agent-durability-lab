@@ -1,0 +1,63 @@
+{
+  "dependency_id": "observed-dependency-observed-postgresql-queue-c56ad6dd10544b7d9f17a5f8b24086ba",
+  "transitions": [
+    {
+      "sequence": 1,
+      "time": "2026-08-09T02:09:46.998646496Z",
+      "state": "healthy"
+    }
+  ],
+  "requests": [
+    {
+      "request_id": "request-attempt-001-01",
+      "logical_operation_id": "operation-001-observed-postgresql-queue-c56ad6dd10544b7d9f17a5f8b24086ba",
+      "work_item_id": "item-001-observed-postgresql-queue-c56ad6dd10544b7d9f17a5f8b24086ba",
+      "attempt_id": "attempt-001-01",
+      "retry_layer": "activity",
+      "retry_ordinal": 1,
+      "started_at": "2026-08-09T02:09:47.000540547Z",
+      "finished_at": "2026-08-09T02:09:47.001597235Z",
+      "outcome": "accepted_then_timeout_script_activated",
+      "cost_units": 1
+    },
+    {
+      "request_id": "request-attempt-001-02",
+      "logical_operation_id": "operation-001-observed-postgresql-queue-c56ad6dd10544b7d9f17a5f8b24086ba",
+      "work_item_id": "item-001-observed-postgresql-queue-c56ad6dd10544b7d9f17a5f8b24086ba",
+      "attempt_id": "attempt-001-02",
+      "parent_attempt_id": "attempt-001-01",
+      "retry_layer": "activity",
+      "retry_ordinal": 2,
+      "started_at": "2026-08-09T02:09:47.006549749Z",
+      "finished_at": "2026-08-09T02:09:47.007604734Z",
+      "outcome": "timeout",
+      "cost_units": 1
+    },
+    {
+      "request_id": "request-attempt-001-03",
+      "logical_operation_id": "operation-001-observed-postgresql-queue-c56ad6dd10544b7d9f17a5f8b24086ba",
+      "work_item_id": "item-001-observed-postgresql-queue-c56ad6dd10544b7d9f17a5f8b24086ba",
+      "attempt_id": "attempt-001-03",
+      "parent_attempt_id": "attempt-001-02",
+      "retry_layer": "activity",
+      "retry_ordinal": 3,
+      "started_at": "2026-08-09T02:09:47.010861101Z",
+      "finished_at": "2026-08-09T02:09:47.011921816Z",
+      "outcome": "429",
+      "cost_units": 1
+    },
+    {
+      "request_id": "request-attempt-001-04",
+      "logical_operation_id": "operation-001-observed-postgresql-queue-c56ad6dd10544b7d9f17a5f8b24086ba",
+      "work_item_id": "item-001-observed-postgresql-queue-c56ad6dd10544b7d9f17a5f8b24086ba",
+      "attempt_id": "attempt-001-04",
+      "parent_attempt_id": "attempt-001-03",
+      "retry_layer": "activity",
+      "retry_ordinal": 4,
+      "started_at": "2026-08-09T02:09:47.016894889Z",
+      "finished_at": "2026-08-09T02:09:47.017951236Z",
+      "outcome": "ok",
+      "cost_units": 1
+    }
+  ]
+}

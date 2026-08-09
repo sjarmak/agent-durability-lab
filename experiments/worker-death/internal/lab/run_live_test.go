@@ -158,7 +158,11 @@ func assertPostExecBoundaryEvidence(t *testing.T, path string) {
 	if err != nil {
 		t.Fatalf("open post-exec boundary evidence: %v", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			t.Errorf("close post-exec boundary evidence: %v", err)
+		}
+	}()
 	var evidence PostExecBoundaryEvidence
 	if err := json.NewDecoder(file).Decode(&evidence); err != nil {
 		t.Fatalf("decode post-exec boundary evidence: %v", err)

@@ -64,6 +64,11 @@ Workflow" demos.
 - Write supported claims in `docs/findings/`; keep unresolved questions explicit.
   Architectural choices with lasting consequences go in `docs/decisions/`.
 
+## Failure-mode preventions
+
+- Do not stop after reporting review findings: a request to review authorizes fixing in-scope findings and rerunning gates; ask approval only for commits, pushes, publication, destructive actions, or scope expansion.
+- Do not infer that `WaitForCancellation=false` forbids an `ActivityTaskCanceled` event; it only means the Workflow does not await that event, and prompt cancellation may still record it.
+
 ## Default commands
 
 ```bash

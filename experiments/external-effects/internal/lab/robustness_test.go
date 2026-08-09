@@ -40,7 +40,11 @@ func TestDestinationBoundaryRejectsMalformedRequests(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get invalid state: %v", err)
 	}
-	defer response.Body.Close()
+	defer func() {
+		if err := response.Body.Close(); err != nil {
+			t.Errorf("close invalid-state response: %v", err)
+		}
+	}()
 	if response.StatusCode != http.StatusBadRequest {
 		t.Fatalf("invalid state status = %d, want %d", response.StatusCode, http.StatusBadRequest)
 	}

@@ -1,0 +1,40 @@
+{
+  "adapter_id": "postgresql-publication-v1",
+  "adapter_version": "source-sha256:82a041b85a0e20f02ca426b54560c224db2e09c924a86b558893e67fc3d74f70",
+  "agent_binary_sha256": "80df662000007d48a25f1a10318c1d3af82e74da167c5f33f558af615390905a",
+  "system_id": "postgresql-queue",
+  "runtime": "linux/amd64",
+  "authority_protocol": "logical-operation-owner-epoch-capability-v2",
+  "dependency_protocol": "scripted-dependency-physical-request-journal-v2",
+  "failure_protocol": "named-transition-controller-v2",
+  "oracle_protocol": "independent-causal-reconstruction-oracle-v2",
+  "destination_id": "observed-destination-observed-postgresql-queue-0adb61f961210547a685a47d5c145dad",
+  "oracle_visibility": [
+    "authority-state.json",
+    "destination-state.json",
+    "dependency-state.json",
+    "workload-state.json",
+    "fault-boundary.json",
+    "process-observations.json"
+  ],
+  "host_limits": {
+    "connections": 8,
+    "queue_capacity": 20,
+    "workers": 8
+  },
+  "settings": {
+    "admission_capacity": "20",
+    "case": "aba-reacquisition",
+    "claim": "for-update-skip-locked",
+    "clock": "go-monotonic-duration-with-utc-anchors",
+    "lease_fencing": "owner-generation-capability",
+    "outbox": "transactional-acknowledgement",
+    "poison_attempt_budget": "3",
+    "postgresql_server": "16.14 (Ubuntu 16.14-0ubuntu0.24.04.1)",
+    "probe": "protected",
+    "progress_deadline_ms": "25",
+    "retry_budget": "4",
+    "retry_concurrency_limit": "4",
+    "worker_concurrency": "8"
+  }
+}

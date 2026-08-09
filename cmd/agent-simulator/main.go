@@ -238,15 +238,16 @@ func acknowledgeCommittedCancellation(
 	return true, nil
 }
 
-func readRequest(path string) (agentprocess.LaunchRequest, error) {
+func readRequest(path string) (request agentprocess.LaunchRequest, returnErr error) {
 	file, err := os.Open(path)
 	if err != nil {
 		return agentprocess.LaunchRequest{}, fmt.Errorf("open launch request: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		returnErr = errors.Join(returnErr, file.Close())
+	}()
 	decoder := json.NewDecoder(io.LimitReader(file, 1<<20))
 	decoder.DisallowUnknownFields()
-	var request agentprocess.LaunchRequest
 	if err := decoder.Decode(&request); err != nil {
 		return agentprocess.LaunchRequest{}, fmt.Errorf("decode launch request: %w", err)
 	}

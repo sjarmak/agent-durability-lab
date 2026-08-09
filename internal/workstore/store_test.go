@@ -331,7 +331,11 @@ func TestEvidenceExportIsOrderedJSONL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open evidence: %v", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			t.Errorf("close evidence: %v", err)
+		}
+	}()
 
 	var previous uint64
 	count := 0

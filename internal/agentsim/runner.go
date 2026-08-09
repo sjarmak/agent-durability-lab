@@ -10,15 +10,15 @@ import (
 )
 
 type Config struct {
-	Lease                    workstore.Lease   `json:"lease"`
-	ActorID                  string            `json:"actor_id"`
-	PID                      int               `json:"pid"`
-	ProcessStart             string            `json:"process_start"`
-	ProcessGroupID           int               `json:"process_group_id,omitempty"`
-	Effect                   workstore.Effect  `json:"effect"`
-	Outcome                  workstore.Outcome `json:"outcome"`
-	BlockBeforeRegistration  bool              `json:"block_before_registration,omitempty"`
-	SpawnToolChild           bool              `json:"spawn_tool_child,omitempty"`
+	Lease                   workstore.Lease   `json:"lease"`
+	ActorID                 string            `json:"actor_id"`
+	PID                     int               `json:"pid"`
+	ProcessStart            string            `json:"process_start"`
+	ProcessGroupID          int               `json:"process_group_id,omitempty"`
+	Effect                  workstore.Effect  `json:"effect"`
+	Outcome                 workstore.Outcome `json:"outcome"`
+	BlockBeforeRegistration bool              `json:"block_before_registration,omitempty"`
+	SpawnToolChild          bool              `json:"spawn_tool_child,omitempty"`
 	// BypassAuthorityForEffect is restricted to unsafe benchmark controls.
 	BypassAuthorityForEffect bool `json:"bypass_authority_for_effect,omitempty"`
 }
