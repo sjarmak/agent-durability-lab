@@ -1,0 +1,16 @@
+{
+  "status": "rejected_partial_root",
+  "observed_at_utc": "2026-08-10T01:31:27.270329015Z",
+  "failed_pair": "topology-publication-v1/outage-backlog-herd-recovery/outage-backlog-restoration-and-catchup-worker-crash/unsafe/fanout-032/slot-02",
+  "failed_arm": "child-workflow",
+  "reason_codes": [
+    "child-workflow:execution_failed",
+    "child-workflow:evidence_missing"
+  ],
+  "observation": "The parent Workflow hit its registered 120-second execution ceiling. All 32 Child Workflows started, but their captured histories contain 788 scheduled recovery Activities, with as many as 38 for one child, before the exact 32-item backlog barrier completed.",
+  "inference": "The Worker allowed only eight concurrent Workflow tasks. Early children repeatedly scheduled the unsafe one-millisecond recovery round and starved late cohort members, so the outage coordinator could not observe every unique initial item under the accumulated service history. Activity concurrency remained at the frozen value eight.",
+  "correction": "Keep Activity concurrency at eight and provision 128 Workflow-task slots so every child in the frozen maximum fan-out can schedule its initial Activity without retry-loop starvation. The accepted rerun must use a new append-only root.",
+  "raw_pair_execution": "live-sentinels/pairs/pair-6922c3975df6c12585a19bf96b40726b/pair-execution.json",
+  "raw_histories": "failure-history/",
+  "accepted_for_claims": false
+}

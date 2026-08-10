@@ -1,0 +1,33 @@
+{
+  "protocol_version": "adl.temporal-topology.publication.v1",
+  "kind": "topology-pilot-preflight-correction-result-v1",
+  "created_at_utc": "2026-08-10T11:07:00.924897806Z",
+  "tracker_bead_id": "temporal_projects-4ic.6",
+  "prospective_pilot_root": "pilot-20260810-v5",
+  "correction": "use one durable work store per logical item, retain the original five-second Bolt acquisition bound, and retain versioned control-lane routing for the designated executing-supersession Work Activity",
+  "disposition": "targeted-validation-passed",
+  "publication_excluded": true,
+  "failed_evidence_sha256": {
+    "preflight_analysis": "728486707ffb5c4e081ef1ad34b9c427e95d3e19c18c37688c7312773e29b8fc",
+    "first_correction_analysis": "c1c26a5c2eb61f5d5e53547110238d50d4721fa8b0a4754a68a1ad5706e93296",
+    "raw_failure_excerpt": "4270acc82bcb1a77e03bb015c55ec3b4f3d4fd743d928c33c4d0b7850ab7afa0"
+  },
+  "validation_runs": [
+    {
+      "store_lock_timeout_seconds": 30,
+      "unsafe_queued_child_trial_seconds": [4.30, 3.99, 3.73],
+      "protected_supersession_child_trial_seconds": [20.40, 20.14, 20.45],
+      "result": "six of six passed"
+    },
+    {
+      "store_lock_timeout_seconds": 5,
+      "unsafe_queued_child_trial_seconds": [3.62, 3.76, 3.42],
+      "protected_supersession_child_trial_seconds": [20.88, 20.66, 20.31],
+      "result": "six of six passed"
+    }
+  ],
+  "observation": "After replacing the single episode-wide Bolt file with one store per logical item, two independent targeted invocations passed all twelve trials. Restoring the original five-second lock acquisition bound did not reintroduce any timeout, identity drift, cancellation failure, or replay failure in those trials.",
+  "inference": "Unrelated item processes contending on one Bolt file were the common upstream cause. Per-item stores remove only cross-item lock coupling; obsolete and replacement generations for item-001 still share one durable store, so fencing and the unsafe negative control remain exercised. The control lane separately prevents the designated executing item from competing for bulk Activity capacity.",
+  "falsifier": "Any repeated exact case or full-suite run that again reports a work-store timeout between different item IDs, or any trace showing obsolete and replacement generations use different item-001 store paths, would falsify the correction.",
+  "next_gate": "Replay preserved v4 histories with the version marker, then rerun the complete race-enabled topology suite before creating the v5 pilot root."
+}

@@ -1,0 +1,22 @@
+{
+  "protocol_version": "adl.temporal-topology.publication.v1",
+  "kind": "topology-pilot-correction-preflight-failure-v1",
+  "created_at_utc": "2026-08-10T15:34:19.466429731Z",
+  "tracker_bead_id": "temporal_projects-4ic.6",
+  "pilot_root": "pilot-20260810-v5",
+  "publication_excluded": true,
+  "command": "go test -race -count=1 -coverpkg=<topology-packages> -coverprofile=coverage.topology.TestTemporalExecutorCoversFrozenRecoveryCasesAndBoundaries.out ./benchmarks/agent-durability/topology/semantics -run TestTemporalExecutorCoversFrozenRecoveryCasesAndBoundaries",
+  "result": "failed",
+  "failure": "After 408.23 seconds of accumulated recovery cases, the protected child-Workflow silent-progress arm completed all eight results but reported one prohibited action and Safety=fail.",
+  "observation": "For protected silent-progress, the only nonzero prohibited-action source in the implementation is failure_detection_latency_ms above the frozen 5,000ms oracle: false-positive revocation and stale-action counters are never incremented on this protected path, and no item was unresolved. The existing v1 detector timer consumed 2,000ms before Activity dispatch, leaving only 3,000ms for a loaded Worker and Temporal service.",
+  "raw_work": {
+    "root": "pilot-20260810-v5-recovery-coverage-failed-work",
+    "files": 1,
+    "bytes": 348731,
+    "tree_sha256": "1a4cce072f09f252249557817027887ab293c4ae3535eed8709f05d45254f1c6",
+    "failed_profile": "failed-frozen-recovery-coverage.out"
+  },
+  "inference": "The two-second detector corrected isolated runs but retained insufficient dispatch margin after accumulated real recovery work. This is the recovery-under-backlog condition the benchmark is intended to expose, not a reason to relax the five-second oracle.",
+  "falsifier": "A versioned one-second timer must preserve old-history replay, keep the unsafe 5.2-second negative control unchanged, and pass both the accumulated frozen recovery suite and repeated protected silent-progress real-path profiles with observed detection at or below 5,000ms.",
+  "correction": "Advance the existing silent-progress detection version marker from v1 to v2. Preserve default-history 3s and v1-history 2s behavior; use 1s only for new protected histories, reserving four seconds for loaded dispatch and durable revocation."
+}

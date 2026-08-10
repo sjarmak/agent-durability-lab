@@ -1,0 +1,188 @@
+{
+  "protocol_version": "adl.temporal-topology.publication.v1",
+  "kind": "topology-pilot-correction-result-v1",
+  "created_at_utc": "2026-08-10T13:24:06.832184653Z",
+  "tracker_bead_id": "temporal_projects-4ic.6",
+  "pilot_root": "pilot-20260810-v5",
+  "disposition": "correction-preflight-passed",
+  "publication_excluded": true,
+  "corrections": [
+    "Serialize each complete dependency call per stable work item while retaining cross-item concurrency.",
+    "Cache the exact supersession effect boundary and preserve it across Work and Supersede Activity retries.",
+    "Schedule supersession control before the healthy cohort in new histories, with old command order selected by the existing version marker.",
+    "Use a versioned three-minute ScheduleToClose and two-minute StartToClose budget only for the designated held supersession Work Activity.",
+    "Make Supersede retry-idempotent for cached boundary, initial lease, replacement decision, and final receipt, and reject a replacement decision whose lease does not match declared authority.",
+    "Use a five-minute parent Workflow execution budget for the fanout-128 recovery path.",
+    "Use a versioned two-second protected silent-progress detector delay while preserving the frozen five-second oracle and the unsafe 5.2-second negative control."
+  ],
+  "unit_and_workflow_tests": {
+    "result": "pass",
+    "race_enabled_for_real_path": true,
+    "tests": [
+      "TestRecoveryDependencyCallsSerializeCompleteLineagePerItem",
+      "TestOldEffectBoundaryIsStableAcrossActivityRetries",
+      "TestSupersessionVersionSchedulesControlBeforeHealthyCohort",
+      "TestSupersessionWorkTimeoutIsVersionedForHeldBoundary",
+      "TestReplacementDecisionMustCarryDeclaredAuthority",
+      "TestProgressReplacementDelayReservesDispatchMargin",
+      "TestTopologyWorkflowTimeoutCoversBacklogRecovery"
+    ]
+  },
+  "real_temporal_regressions": [
+    {
+      "test": "TestTemporalExecutorPilotV5FailureShapesRecoverRepeatedly",
+      "result": "pass",
+      "trials_per_shape": 3,
+      "total_duration_seconds": 267.36,
+      "shapes": [
+        {
+          "name": "unfaulted-direct-supersession-32",
+          "group_duration_seconds": 8.11
+        },
+        {
+          "name": "unfaulted-child-outage-128",
+          "group_duration_seconds": 113.85
+        },
+        {
+          "name": "protected-child-outage-128",
+          "group_duration_seconds": 124.46
+        },
+        {
+          "name": "protected-child-silent-progress-8",
+          "group_duration_seconds": 18.63,
+          "failure_detection_latency_ms": [
+            2202,
+            2118,
+            2139
+          ]
+        }
+      ]
+    },
+    {
+      "test": "TestTemporalExecutorProtectedSupersessionChildScaleKeepsHeldArrivalLive",
+      "result": "pass",
+      "fanout": 128,
+      "trial_duration_seconds": [
+        25.59,
+        29.30,
+        25.70
+      ]
+    },
+    {
+      "test": "TestTemporalExecutorProtectedSilentProgressDirectScaleUsesControlLane",
+      "result": "pass",
+      "fanout": 128,
+      "trial_duration_seconds": [
+        13.20,
+        12.37,
+        11.23
+      ],
+      "failure_detection_latency_ms": [
+        2160,
+        2232,
+        2102
+      ]
+    }
+  ],
+  "explicit_repeat_gate_rerun": {
+    "result": "pass",
+    "race_enabled": true,
+    "profiles": [
+      {
+        "environment": "TOPOLOGY_POISON_SCALE_REGRESSION=1",
+        "test": "TestTemporalExecutorPoisonChildScalePreservesBoundaryAcrossRetries",
+        "trials": 3,
+        "total_duration_seconds": 84.76,
+        "trial_duration_seconds": [
+          37.47,
+          22.08,
+          22.87
+        ]
+      },
+      {
+        "environment": "TOPOLOGY_SUPERSESSION_SCALE_REGRESSION=1",
+        "test": "TestTemporalExecutorProtectedSupersessionChildScaleKeepsHeldArrivalLive",
+        "trials": 3,
+        "total_duration_seconds": 179.47,
+        "trial_duration_seconds": [
+          59.44,
+          59.46,
+          57.94
+        ]
+      },
+      {
+        "environment": "TOPOLOGY_SILENT_PROGRESS_SCALE_REGRESSION=1",
+        "test": "TestTemporalExecutorProtectedSilentProgressDirectScaleUsesControlLane",
+        "trials": 3,
+        "total_duration_seconds": 78.37,
+        "trial_duration_seconds": [
+          42.33,
+          15.91,
+          17.17
+        ],
+        "failure_detection_latency_ms": [
+          2295,
+          2278,
+          2306
+        ]
+      },
+      {
+        "environment": "TOPOLOGY_PILOT_V5_REGRESSION=1",
+        "test": "TestTemporalExecutorPilotV5FailureShapesRecoverRepeatedly",
+        "trials_per_shape": 3,
+        "total_duration_seconds": 275.03,
+        "shape_duration_seconds": {
+          "unfaulted-direct-supersession-32": 4.14,
+          "unfaulted-child-outage-128": 96.68,
+          "protected-child-outage-128": 149.12,
+          "protected-child-silent-progress-8": 22.74
+        },
+        "silent_progress_detection_latency_ms": [
+          2377,
+          2360,
+          2315
+        ]
+      }
+    ]
+  },
+  "default_topology_race_gate": {
+    "command": "go test -race ./benchmarks/agent-durability/topology/... -count=1",
+    "result": "pass",
+    "semantics_duration_seconds": 526.110,
+    "package_timeout_changed": false
+  },
+  "retained_history_replay": {
+    "result": "pass",
+    "total_histories": 2624,
+    "roots": [
+      {
+        "root": "pilot-20260810-v1",
+        "histories": 524,
+        "duration_seconds": 66.961
+      },
+      {
+        "root": "pilot-20260810-v2",
+        "histories": 526,
+        "duration_seconds": 45.576
+      },
+      {
+        "root": "pilot-20260810-v3",
+        "histories": 526,
+        "duration_seconds": 52.356
+      },
+      {
+        "root": "pilot-20260810-v4",
+        "histories": 528,
+        "duration_seconds": 47.082
+      },
+      {
+        "root": "pilot-20260810-v5",
+        "histories": 520,
+        "duration_seconds": 44.058
+      }
+    ]
+  },
+  "observation": "All repeated real Temporal/service/process corrections passed. The two child fanout-128 outage shapes required 113.85 and 124.46 seconds for three trials, so the rejected two-minute parent budget had no defensible margin. Protected child and direct silent-progress trials detected in 2.102 to 2.232 seconds. Protected child fanout-128 supersession passed all three repetitions. All 2,624 retained valid histories from rejected pilots v1 through v5 replayed with the corrected Workflow code.",
+  "inference": "The v5 failures were corrected at their application-controlled boundaries without changing the frozen safety/liveness oracle, unsafe behavior, topology treatment, schedule, or publication estimand. A fresh append-only pilot is still required; these correction runs do not qualify the harness and remain publication-excluded.",
+  "falsifier": "Any fresh pilot invalid arm, protected or unfaulted failure, unsafe non-distinction, replay failure, schedule drift, or inability to reconstruct the same metrics rejects the correction and forbids a harness freeze."
+}

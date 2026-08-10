@@ -86,11 +86,11 @@ func (l *Launcher) Launch(request LaunchRequest) (Process, error) {
 		requestPublished = false
 		return Process{}, errors.Join(identityErr, groupErr, closeErr)
 	}
-	if err := command.Process.Release(); err != nil {
-		_ = command.Process.Kill()
-		requestPublished = false
-		return Process{}, fmt.Errorf("release agent process: %w", err)
-	}
+	// Waiting in a detached goroutine does not couple the child lifetime to the
+	// caller or Worker. It only lets this still-live launcher reap the child;
+	// Process.Release would leave one zombie per completed agent until the
+	// benchmark process itself exited.
+	go func() { _ = command.Wait() }()
 	return Process{
 		PID: pid, StartIdentity: startIdentity, ProcessGroupID: processGroupID,
 		RequestPath: requestPath, LogPath: logPath,

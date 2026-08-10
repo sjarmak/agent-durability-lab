@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "evidence_root": "recovery-20260809-v1",
+  "status": "preserved_partial_harness_failure",
+  "recorded_at_utc": "2026-08-09T21:33:09.400639536Z",
+  "runs_preserved": 16,
+  "summary_at_interrupt": {
+    "scenarios": 26,
+    "trials": 1,
+    "pairs_attempted": 26,
+    "valid_pass_runs": 7,
+    "valid_fail_runs": 6,
+    "invalid_or_errors": 39
+  },
+  "observed_failure": "At canonical fan-out 32, the generic protected Activity in-flight semaphore was held while outage Activities waited for all 32 backlog members. Only eight could enter, so the remaining 24 could not register and the outage protected arm timed out. The same pre-Activity semaphore also caused heartbeat timeouts and extra Activity attempts in layered-retry runs.",
+  "inference": "The v1 root is invalid harness evidence and does not support a topology conclusion. The in-flight gate belongs only to the backpressure mechanism; outage catch-up has its own two-request semaphore.",
+  "disposition": "Raw run directories are retained unchanged. A corrected run must use a new evidence root and must not overwrite or delete v1."
+}

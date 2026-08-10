@@ -1,0 +1,78 @@
+{
+  "protocol_version": "adl.temporal-topology.publication.v1",
+  "phase": "publication",
+  "block": {
+    "index": 3362,
+    "schedule_block_id": "schedule-block/topology-publication-v1/backpressure-overload/ready-workers-before-fixed-cohort-release/protected/fanout-008/slot-01",
+    "pair_id": "topology-publication-v1/backpressure-overload/ready-workers-before-fixed-cohort-release/protected/fanout-008/slot-01",
+    "stratum": {
+      "id": "backpressure-overload/ready-workers-before-fixed-cohort-release/protected/fanout-008",
+      "case": "backpressure-overload",
+      "boundary": "ready-workers-before-fixed-cohort-release",
+      "probe": "protected",
+      "fanout": 8
+    },
+    "slot": 1,
+    "reserve": false,
+    "topology_order": [
+      "direct-activity",
+      "child-workflow"
+    ]
+  },
+  "admission": "invalid",
+  "reason_codes": [
+    "direct-activity:run_invalid",
+    "child-workflow:run_invalid"
+  ],
+  "efficiency_eligible": false,
+  "arms": [
+    {
+      "topology": "direct-activity",
+      "order": 1,
+      "run_id": "topology-publication-v1/backpressure-overload/ready-workers-before-fixed-cohort-release/protected/fanout-008/slot-01/direct-activity",
+      "evidence_directory": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/topology/evidence/matrix-20260809-v3/invalid-controls/recovery-control-mismatch/runs/run-32dc6e3bdc4d191c312175b80cc0c15b",
+      "ready_at_utc": "2026-08-10T01:40:32.32682865Z",
+      "started_at_utc": "2026-08-10T01:40:32.326829381Z",
+      "finished_at_utc": "2026-08-10T01:40:32.341245527Z",
+      "duration_ns": 14416146,
+      "verdict": {
+        "protocol_version": "adl.temporal-topology.publication.v1",
+        "run_id": "topology-publication-v1/backpressure-overload/ready-workers-before-fixed-cohort-release/protected/fanout-008/slot-01/direct-activity",
+        "admission": "invalid",
+        "reason_codes": [
+          "recovery_control_mismatch"
+        ],
+        "correctness": "unresolved",
+        "safety": "unresolved",
+        "liveness": "unresolved",
+        "diagnosability": "fail",
+        "efficiency_eligible": false,
+        "oracle": "independent-topology-causal-oracle-v1"
+      }
+    },
+    {
+      "topology": "child-workflow",
+      "order": 2,
+      "run_id": "topology-publication-v1/backpressure-overload/ready-workers-before-fixed-cohort-release/protected/fanout-008/slot-01/child-workflow",
+      "evidence_directory": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/topology/evidence/matrix-20260809-v3/invalid-controls/recovery-control-mismatch/runs/run-75b17b7a79c6cd588c74fe7acff39baf",
+      "ready_at_utc": "2026-08-10T01:40:32.342020763Z",
+      "started_at_utc": "2026-08-10T01:40:32.342021335Z",
+      "finished_at_utc": "2026-08-10T01:40:32.373007901Z",
+      "duration_ns": 30986597,
+      "verdict": {
+        "protocol_version": "adl.temporal-topology.publication.v1",
+        "run_id": "topology-publication-v1/backpressure-overload/ready-workers-before-fixed-cohort-release/protected/fanout-008/slot-01/child-workflow",
+        "admission": "invalid",
+        "reason_codes": [
+          "recovery_control_mismatch"
+        ],
+        "correctness": "unresolved",
+        "safety": "unresolved",
+        "liveness": "unresolved",
+        "diagnosability": "fail",
+        "efficiency_eligible": false,
+        "oracle": "independent-topology-causal-oracle-v1"
+      }
+    }
+  ]
+}

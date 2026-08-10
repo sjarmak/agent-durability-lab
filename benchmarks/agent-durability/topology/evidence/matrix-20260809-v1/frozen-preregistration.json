@@ -1,0 +1,337 @@
+{
+  "protocol_version": "adl.temporal-topology.publication.v1",
+  "contract_version": "adl.temporal-topology.v1",
+  "frozen_at_utc": "2026-08-09T15:54:55Z",
+  "question": "Under matched Temporal configuration and hermetic work, what semantic, recovery, diagnosability, and parity-gated efficiency differences are caused by inserting one Child Workflow per fixed logical item?",
+  "arms": [
+    "direct-activity",
+    "child-workflow"
+  ],
+  "cases": [
+    "join-barrier",
+    "incremental-partial-reduction",
+    "queued-executing-supersession",
+    "destructive-transition",
+    "crash-recovery-boundaries",
+    "layered-retry-amplification",
+    "outage-backlog-herd-recovery",
+    "backpressure-overload",
+    "poison-work-isolation",
+    "silent-progress"
+  ],
+  "probes": [
+    "unfaulted",
+    "unsafe",
+    "protected"
+  ],
+  "track_by_probe": {
+    "unfaulted": "matched-policy-no-injected-fault",
+    "unsafe": "common-negative-control",
+    "protected": "matched-application-and-destination-safety"
+  },
+  "primary_boundary_by_case": {
+    "join-barrier": "designated-item-result-observed-before-activity-completion",
+    "incremental-partial-reduction": "partial-checkpoint-accepted-before-checkpoint-activity-completion",
+    "queued-executing-supersession": "executing-after-process-start-before-effect",
+    "destructive-transition": "destination-accepted-before-activity-completion",
+    "crash-recovery-boundaries": "result-observed-before-activity-completion",
+    "layered-retry-amplification": "dependency-first-request-before-scripted-timeout-500-429-sequence",
+    "outage-backlog-herd-recovery": "outage-backlog-restoration-and-catchup-worker-crash",
+    "backpressure-overload": "ready-workers-before-fixed-cohort-release",
+    "poison-work-isolation": "mixed-cohort-admitted-before-poison-failure-release",
+    "silent-progress": "accepted-progress-before-executor-wedge"
+  },
+  "secondary_boundaries_by_case": {
+    "join-barrier": [
+      "required-item-terminal-failure-before-join"
+    ],
+    "incremental-partial-reduction": [
+      "contribution-observed-before-work-activity-completion"
+    ],
+    "queued-executing-supersession": [
+      "queued-before-activity-start"
+    ],
+    "destructive-transition": [
+      "before-destination-acceptance",
+      "activity-result-recorded-before-outcome-acknowledgement"
+    ],
+    "crash-recovery-boundaries": [
+      "claim-accepted-before-process-launch",
+      "process-launched-before-durable-registration",
+      "checkpoint-accepted-before-activity-completion",
+      "parent-outcome-recorded-before-acknowledgement"
+    ],
+    "layered-retry-amplification": [],
+    "outage-backlog-herd-recovery": [],
+    "backpressure-overload": [],
+    "poison-work-isolation": [],
+    "silent-progress": []
+  },
+  "population": {
+    "minimum_valid_pairs_per_stratum": 30,
+    "maximum_attempted_pairs_per_stratum": 40,
+    "pilot_pairs_per_stratum": 3,
+    "publication_seed": 1618033988,
+    "pilot_seed": 1414213562,
+    "schedule_algorithm": "balanced-splitmix64-fisher-yates-v1-namespaced-ids",
+    "pairing": "matched-case-boundary-probe-fanout-slot",
+    "statistical_unit": "independent-paired-episode",
+    "arm_execution": "sequential-within-pair-after-condition-based-idle-readiness",
+    "arm_order": "randomized-and-balanced-within-stratum",
+    "stratum_order": "randomized-with-recorded-seed",
+    "reserve_policy": "use-next-predetermined-slot-only-after-invalid-pair",
+    "stop_rule": "stop-at-thirty-valid-pairs-or-after-forty-attempted-pairs",
+    "expected_strata": 88,
+    "expected_primary_valid_pairs": 2640,
+    "expected_primary_arm_executions": 5280
+  },
+  "scale_policy": {
+    "fanout_sizes": [
+      8,
+      32,
+      128
+    ],
+    "canonical_fanout": 32,
+    "unsafe_at_canonical_only": true,
+    "secondary_boundaries_at_canonical_only": true,
+    "selection_rule": "Run each case's unfaulted baseline and primary protected boundary at fan-outs 8, 32, and 128; run the primary unsafe control and every secondary unsafe/protected boundary only at fan-out 32.",
+    "rationale": "This identifies nonlinear topology cost and protected recovery behavior while retaining every dangerous boundary without an uninformative full Cartesian product.",
+    "post_pilot_selection": "forbidden"
+  },
+  "workload": {
+    "fixed_required_set": true,
+    "dynamic_fanout": false,
+    "worker_activity_concurrency": 8,
+    "protected_in_flight_limit": 8,
+    "protected_global_retry_concurrency": 2,
+    "hermetic_agent_process": true,
+    "live_model_provider": false,
+    "contribution_by_item_ordinal": true,
+    "expected_reduction": "N*(N+1)/2",
+    "partial_thresholds": "1, ceil(N/4), ceil(N/2), ceil(3N/4), N",
+    "same_work_activity_both_arms": true,
+    "child_additional_retry_policy": false
+  },
+  "recovery_bounds": {
+    "episode_liveness_ceiling_ms": 120000,
+    "idle_readiness_ceiling_ms": 30000,
+    "progress_deadline_ms": 5000,
+    "protected_retry_concurrency_max": 2,
+    "protected_requests_per_item_max": 4,
+    "protected_poison_attempts_max": 3,
+    "protected_in_flight_max": 8,
+    "unsafe_retry_concurrency_must_exceed": 2,
+    "unsafe_layered_requests_per_item_must_exceed": 4,
+    "bound_role": "Correctness and infrastructure-liveness admission only; never an efficiency estimand."
+  },
+  "timing": {
+    "clock": "go-monotonic-duration-with-utc-anchors",
+    "utc_anchors": true,
+    "exact_barriers": true,
+    "setup_excluded": true,
+    "teardown_excluded": true,
+    "liveness_deadlines_only": true,
+    "no_sleep_selected_fault_windows": true,
+    "peak_qps_window_ms": 10,
+    "latency_decomposition": [
+      "schedule_to_start_ms",
+      "active_execution_ms",
+      "failure_detection_ms",
+      "retry_delay_ms",
+      "recovery_delay_ms",
+      "end_to_end_latency_ms"
+    ]
+  },
+  "admission": {
+    "required_outcome_dimensions": [
+      "correctness",
+      "safety",
+      "liveness",
+      "diagnosability"
+    ],
+    "efficiency_gate": "All thirty valid matched pairs must have both topology arms pass correctness, safety, liveness, and diagnosability before any efficiency estimate is interpreted.",
+    "unsafe_gate": "Both topology arms must exhibit the case's preregistered prohibited outcome or bound violation under the common unsafe control; a false pass rejects the case/probe apparatus.",
+    "unfaulted_gate": "Both topology arms must reach identical expected logical output with zero prohibited actions.",
+    "protected_gate": "Both topology arms must reach the expected logical disposition within the liveness ceiling with zero prohibited actions and complete causal evidence.",
+    "invalid_policy": "Retain the complete append-only episode and use the next predetermined reserve pair; never delete, overwrite, or convert invalid evidence into a logical pass or failure.",
+    "invalid_reasons": [
+      "named barrier not reached or reached by the wrong identity",
+      "fault not bracketed by the preregistered causal events",
+      "required raw evidence missing, malformed, outside the sealed root, or hash-mismatched",
+      "arm inputs, Activity options, host envelope, or source hashes differ",
+      "Temporal history absent or replay-incompatible",
+      "setup, readiness, teardown, or cleanup fails",
+      "lineage graph has a missing required identity or causal edge"
+    ],
+    "outcome_based_exclusion": "forbidden"
+  },
+  "analysis": {
+    "paired": true,
+    "confidence_level": 0.95,
+    "bootstrap_resamples": 20000,
+    "bootstrap_method": "paired-percentile-bootstrap-median-difference-child-minus-direct",
+    "analysis_seed": 2718281828,
+    "binary_interval": "wilson-95-percent",
+    "scalar_winner": false,
+    "multiplicity_policy": "descriptive-case-and-scale-families-no-null-hypothesis-winner-claims",
+    "ratio_rule": "report ratios only when both paired values are positive",
+    "scale_rule": "Report each fan-out stratum independently plus per-item history values and observed between-stratum changes; do not fit or extrapolate a universal asymptotic model.",
+    "failed_parity_rule": "Retain and report all binary outcomes and raw metrics, but mark efficiency unresolved for any matched stratum that fails admission.",
+    "primary_estimands": {
+      "join-barrier": [
+        "premature_continuation_count",
+        "accepted_continuation_count",
+        "join_lag_after_last_required_result_ms",
+        "end_to_end_latency_ms",
+        "history_bytes_per_item"
+      ],
+      "incremental-partial-reduction": [
+        "incorrect_reduction_count",
+        "duplicate_checkpoint_apply_count",
+        "time_to_first_reduction_ms",
+        "final_makespan_ms",
+        "history_bytes_per_item"
+      ],
+      "queued-executing-supersession": [
+        "stale_action_accept_count",
+        "cancellation_propagation_ms",
+        "replacement_recovery_ms",
+        "wasted_compute_ms",
+        "wasted_cost_units"
+      ],
+      "destructive-transition": [
+        "accepted_destructive_apply_count",
+        "invariant_violation_count",
+        "physical_delivery_count",
+        "recovery_delay_ms",
+        "end_to_end_latency_ms"
+      ],
+      "crash-recovery-boundaries": [
+        "agent_process_count",
+        "duplicate_effect_count",
+        "duplicate_result_count",
+        "time_to_recovery_ms",
+        "history_bytes_per_item"
+      ],
+      "layered-retry-amplification": [
+        "physical_request_count",
+        "amplification_factor",
+        "retry_delay_ms",
+        "recovery_delay_ms",
+        "cost_units"
+      ],
+      "outage-backlog-herd-recovery": [
+        "peak_retry_concurrency",
+        "peak_qps",
+        "backlog_integral_ms",
+        "backlog_drain_p90_ms",
+        "recovery_delay_ms"
+      ],
+      "backpressure-overload": [
+        "schedule_to_start_ms",
+        "queue_age_ms",
+        "end_to_end_latency_ms",
+        "throughput_per_second",
+        "history_bytes_per_item"
+      ],
+      "poison-work-isolation": [
+        "poison_attempt_count",
+        "poison_cost_units",
+        "healthy_task_latency_ms",
+        "healthy_completion_fraction",
+        "history_bytes_per_item"
+      ],
+      "silent-progress": [
+        "failure_detection_latency_ms",
+        "false_positive_revocation_count",
+        "stale_action_accept_count",
+        "replacement_recovery_ms",
+        "healthy_task_latency_ms"
+      ]
+    },
+    "supporting_estimands": [
+      "schedule_to_start_ms",
+      "active_execution_ms",
+      "workflow_task_count",
+      "activity_attempt_count",
+      "child_workflow_count",
+      "history_event_count",
+      "history_bytes",
+      "history_events_per_item",
+      "history_bytes_per_item",
+      "operator_intervention_count",
+      "lineage_gap_count"
+    ]
+  },
+  "diagnosability": {
+    "required_chain": "tracker Bead and schedule block -> parent Workflow/Run -> logical item -> optional Child Workflow/Run -> Activity attempts -> Worker and process/session -> dependency and destination events -> outcome -> acknowledgement",
+    "lineage_gap_count_required": 0,
+    "adapter_logs_can_determine_verdict": false,
+    "native_history_required": true,
+    "replay_required": true
+  },
+  "pilot_policy": {
+    "publication_excluded": true,
+    "pairs_per_stratum": 3,
+    "may_select_favorable_scales": false,
+    "may_change_estimands_after_results": false,
+    "may_change_admission_after_results": false,
+    "apparatus_defect_policy": "Preserve the failed pilot and raw evidence. Fix in-scope implementation defects under review authorization. If a case, boundary, oracle, scale, estimand, or analysis rule must change, issue a new preregistration version with explicit supersession lineage before any publication run.",
+    "freeze_after_pilot": [
+      "runner and analyzer source hashes",
+      "runner and analyzer binary hashes",
+      "contract and preregistration hashes",
+      "Temporal Server, CLI, Go SDK, and Go versions",
+      "agent-process, destination, and barrier-controller hashes",
+      "host and Worker configuration",
+      "pilot root and review disposition"
+    ]
+  },
+  "host_controls": [
+    "same pinned host and runtime envelope",
+    "prewarmed Temporal namespace and Workers",
+    "condition-based idle readiness before each arm",
+    "sequential arm execution within randomized pairs",
+    "identical Worker count and Activity concurrency",
+    "setup and teardown outside measured intervals",
+    "no concurrent benchmark population",
+    "recorded CPU, memory, process, Temporal, Go, and source identities"
+  ],
+  "required_evidence": [
+    "manifest.json",
+    "causal-events.jsonl",
+    "lineage.json",
+    "authority-state.json",
+    "destination-state.json",
+    "dependency-state.json",
+    "workload-state.json",
+    "fault-boundary.json",
+    "native-history-or-journal-export.json",
+    "process-observations.json",
+    "effective-input.json",
+    "verdict.json",
+    "publication-timing.jsonl",
+    "publication-execution.json",
+    "publication-inventory.json"
+  ],
+  "hashes": {
+    "topology_contract_v1_sha256": "a5a31ba4f877c4b39833f696ad7458accaf1981da58ca3a79077cda64c026a72"
+  },
+  "change_policy": "No pilot or publication result may silently change the frozen cases, topology arms, fan-out ladder, boundary matrix, probes, admission, estimands, or analysis. Any necessary semantic change creates a new protocol version and preserves all earlier artifacts and evidence.",
+  "review_authorization": "Reviewers are authorized to implement all in-scope correctness, evidence-integrity, determinism, race, replay, security, and maintainability fixes without pausing for human approval. Commit, push, remote sync, publication, destructive operations, credential repurposing, and material scope expansion remain outside that authorization.",
+  "falsifiers": [
+    "the two arms execute different work Activity code, inputs, Activity options, retry ownership, task queues, Worker limits, or destination protocol",
+    "a Child Workflow adds retries or business behavior beyond scheduling the identical work Activity",
+    "dynamic membership, physical Activity attempts, or unordered map iteration determines join or reduction readiness",
+    "a fault is selected with a timing guess instead of an exact named barrier",
+    "the unsafe control cannot violate the invariant or bound it was designed to distinguish",
+    "an invalid, failed, or excluded episode is deleted, overwritten, or filtered by outcome",
+    "items or Activity attempts within an episode are treated as independent statistical samples",
+    "pilot evidence enters publication analysis or chooses favorable scales, boundaries, estimands, admission, or analysis",
+    "arm or stratum order differs from the frozen seeded schedule",
+    "a required Temporal history is missing or fails replay with the frozen Worker code",
+    "efficiency is interpreted after either matched arm fails correctness, safety, liveness, or diagnosability",
+    "the analyzer cannot reconstruct a primary metric from sealed raw anchors",
+    "a result is described as exactly once, a universal topology winner, or valid beyond the pinned workload and scale ladder"
+  ]
+}

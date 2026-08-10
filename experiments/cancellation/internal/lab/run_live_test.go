@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 )
 
 func TestLiveTemporalCancellationMatrix(t *testing.T) {
@@ -28,12 +29,14 @@ func TestLiveTemporalCancellationMatrix(t *testing.T) {
 		for _, wait := range []bool{false, true} {
 			name := string(scenario) + map[bool]string{false: "/do-not-wait", true: "/wait"}[wait]
 			t.Run(name, func(t *testing.T) {
-				ctx, cancel := context.WithTimeout(context.Background(), defaultRunTimeout)
+				const raceSuiteRunTimeout = 2 * time.Minute
+				ctx, cancel := context.WithTimeout(context.Background(), raceSuiteRunTimeout)
 				defer cancel()
 				result, err := Run(ctx, Options{
 					Scenario: scenario, WaitForCancellation: wait, TemporalPath: temporalPath,
 					WorkerBinary: workerBinary, AgentBinary: agentBinary, OutputRoot: outputRoot,
-					RunID: "live-" + string(scenario) + map[bool]string{false: "-false", true: "-true"}[wait],
+					RunID:   "live-" + string(scenario) + map[bool]string{false: "-false", true: "-true"}[wait],
+					Timeout: raceSuiteRunTimeout,
 				})
 				if err != nil {
 					t.Fatalf("run live cancellation arm: %v", err)

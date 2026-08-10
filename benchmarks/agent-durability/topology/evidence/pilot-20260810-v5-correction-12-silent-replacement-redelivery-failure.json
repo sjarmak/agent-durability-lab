@@ -1,0 +1,29 @@
+{
+  "kind": "topology-pilot-correction-failure-v1",
+  "recorded_at_utc": "2026-08-10T18:19:46.990679541Z",
+  "tracker_bead_id": "temporal_projects-4ic.6",
+  "invariant": "a redelivered protected silent-progress replacement Activity resumes the durably authorized replacement generation instead of attempting a second owner transition",
+  "failure_boundary": "generation 2 is committed in the fenced store, the replacement Activity delivery exceeds its attempt deadline under load, and Temporal delivers a retry",
+  "oracle": "the retry attaches to generation 2, completes the existing logical replacement, rejects generation-1 stale work, and does not create generation 3",
+  "falsifier": "the retry is rejected as a stale owner, launches a duplicate replacement process, advances the generation again, or accepts a generation-1 effect",
+  "observation": {
+    "case": "silent-progress/accepted-progress-before-executor-wedge/protected",
+    "topology": "child-workflow",
+    "fanout": 8,
+    "trial": 1,
+    "failure": "replacement Activity retry failed with stale owner after generation 2 had already been committed",
+    "partial_profile_sha256": "d335dd3aa267843c74d2675d37628b0db60158cb599235f11ae55674cdf78a82",
+    "partial_profile_bytes": 347450,
+    "preserved_profile_tree_sha256": "9bbe917434dde5ac31282238c89efb7e2133d954358e16d1a3d01e0dc106e4b1",
+    "preserved_profile_root": "pilot-20260810-v5-final-coverage-silent-owner-failed-work"
+  },
+  "inference": "the fixed replacement StartOrAttach attempt treated Activity delivery identity as logical replacement identity; redelivery repeated ReplaceOwner instead of recovering the durable generation-2 decision",
+  "correction": "serialize replacement claims per item, inspect the durable active authority, replace generation 1 only once, attach or observe completion when generation 2 is already active, and validate every returned lease against the declared replacement authority",
+  "correction_verification": {
+    "unit_regression": "first decision launch, redelivery decision attach, identical generation-2 lease, exactly two store executors",
+    "real_service_repeated_trials": 3,
+    "failure_detection_latency_ms": [4197, 2546, 3145],
+    "registered_detection_bound_ms": 5000,
+    "result": "pass"
+  }
+}

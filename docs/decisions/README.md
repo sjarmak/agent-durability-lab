@@ -9,3 +9,4 @@ and do not become lab guarantees without controlled evidence.
 | --- | --- | --- | --- |
 | [0001](0001-evidence-before-abstraction.md) | Evidence before shared abstraction | accepted | 2026-08-06 |
 | [0002](0002-separate-procedure-authority-and-effects.md) | Separate durable procedure, execution authority, and destination effects | accepted | 2026-08-09 |
+| [0003](0003-admit-derived-measurements-only-from-raw-evidence.md) | Admit derived measurements only from raw evidence | accepted | 2026-08-09 |

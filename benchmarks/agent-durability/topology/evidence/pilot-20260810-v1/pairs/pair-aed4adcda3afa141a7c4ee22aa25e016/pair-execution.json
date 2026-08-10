@@ -1,0 +1,72 @@
+{
+  "protocol_version": "adl.temporal-topology.publication.v1",
+  "phase": "pilot",
+  "block": {
+    "index": 61,
+    "schedule_block_id": "schedule-block/topology-pilot-v1/poison-work-isolation/mixed-cohort-admitted-before-poison-failure-release/protected/fanout-128/slot-03",
+    "pair_id": "topology-pilot-v1/poison-work-isolation/mixed-cohort-admitted-before-poison-failure-release/protected/fanout-128/slot-03",
+    "stratum": {
+      "id": "poison-work-isolation/mixed-cohort-admitted-before-poison-failure-release/protected/fanout-128",
+      "case": "poison-work-isolation",
+      "boundary": "mixed-cohort-admitted-before-poison-failure-release",
+      "probe": "protected",
+      "fanout": 128
+    },
+    "slot": 3,
+    "reserve": false,
+    "topology_order": [
+      "direct-activity",
+      "child-workflow"
+    ]
+  },
+  "admission": "invalid",
+  "reason_codes": [
+    "child-workflow:execution_failed",
+    "child-workflow:evidence_missing"
+  ],
+  "efficiency_eligible": false,
+  "arms": [
+    {
+      "topology": "direct-activity",
+      "order": 1,
+      "run_id": "topology-pilot-v1/poison-work-isolation/mixed-cohort-admitted-before-poison-failure-release/protected/fanout-128/slot-03/direct-activity",
+      "evidence_directory": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/topology/evidence/pilot-20260810-v1/runs/run-28e3f68eea2038f32aff63249e051a82",
+      "ready_at_utc": "2026-08-10T05:04:12.819554814Z",
+      "started_at_utc": "2026-08-10T05:04:12.819555806Z",
+      "finished_at_utc": "2026-08-10T05:04:21.837116281Z",
+      "duration_ns": 9017560485,
+      "verdict": {
+        "protocol_version": "adl.temporal-topology.publication.v1",
+        "run_id": "topology-pilot-v1/poison-work-isolation/mixed-cohort-admitted-before-poison-failure-release/protected/fanout-128/slot-03/direct-activity",
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "oracle": "independent-topology-causal-oracle-v1"
+      }
+    },
+    {
+      "topology": "child-workflow",
+      "order": 2,
+      "run_id": "topology-pilot-v1/poison-work-isolation/mixed-cohort-admitted-before-poison-failure-release/protected/fanout-128/slot-03/child-workflow",
+      "ready_at_utc": "2026-08-10T05:04:21.874568664Z",
+      "started_at_utc": "2026-08-10T05:04:21.874569576Z",
+      "finished_at_utc": "2026-08-10T05:05:18.842349473Z",
+      "duration_ns": 56967779897,
+      "verdict": {
+        "protocol_version": "",
+        "run_id": "",
+        "admission": "",
+        "correctness": "",
+        "safety": "",
+        "liveness": "",
+        "diagnosability": "",
+        "efficiency_eligible": false,
+        "oracle": ""
+      },
+      "error": "invalid topology benchmark evidence: unfaulted boundary"
+    }
+  ]
+}

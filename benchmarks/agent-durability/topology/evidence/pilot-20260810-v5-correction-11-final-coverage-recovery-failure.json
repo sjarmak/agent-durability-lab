@@ -1,0 +1,23 @@
+{
+  "kind": "topology-pilot-correction-failure-v1",
+  "recorded_at_utc": "2026-08-10T17:23:47.036007997Z",
+  "tracker_bead_id": "temporal_projects-4ic.6",
+  "invariant": "protected recovery remains within its registered safety and liveness bounds after the complete repository coverage workload has accumulated",
+  "failure_boundary": "run the frozen recovery suite under race and full-topology coverage after every earlier repository coverage partition",
+  "oracle": "every protected or unfaulted episode is admitted, replay-compatible, efficiency-eligible, and leaves the shared Temporal executor ready for the next episode",
+  "falsifier": "an episode times out, a later episode loses the namespace, or protected silent-progress detection exceeds 5000 milliseconds",
+  "observation": {
+    "suite_elapsed_ms": 172305,
+    "first_failure_case": "poison-work-isolation/mixed-cohort-admitted-before-poison-failure-release/protected/direct-activity",
+    "first_failure": "context deadline exceeded",
+    "cascade_failure": "silent-progress/unfaulted-baseline/unfaulted/direct-activity: Namespace default is not found",
+    "protected_silent_progress_detection_ms": 11964,
+    "protected_silent_progress_prohibited_action_count": 1,
+    "partial_profile_sha256": "d2a621237d1ab04dc4805d59ab3f4e034550d9a4cc88205f6b87f6c3b798016a",
+    "partial_profile_bytes": 349044,
+    "preserved_profile_tree_sha256": "a63c8e5ea0eb7a3f373751e56413eead74c823d46e872c98c57bf792f2fd5b2d",
+    "preserved_profile_root": "pilot-20260810-v5-final-coverage-recovery-failed-work"
+  },
+  "inference": "the first episode failure preceded loss of the shared Temporal namespace and the late silent-progress observation, so the later failures cannot yet be interpreted as independent safety defects",
+  "next_discriminator": "rerun the frozen recovery suite in isolation with verbose episode timing, then add retained server and episode diagnostics if the shared executor fails again"
+}

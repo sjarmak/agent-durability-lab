@@ -24,13 +24,30 @@ not reinterpret v1 evidence or expand the v1 publication population.
 The separate, frozen
 [`topology-contract-v1.json`](topology-contract-v1.json) and
 [`topology-preregistration-v1.json`](topology-preregistration-v1.json) define a
-future within-Temporal comparison: one parent Workflow scheduling the common
+within-Temporal comparison: one parent Workflow scheduling the common
 work Activity directly versus one parent scheduling a Child Workflow per item,
 where every child schedules that identical Activity. The fixed 8/32/128 fan-out
 ladder covers joins, partial reduction, queued/executing supersession,
 destructive transitions, and the full crash, retry, outage, backpressure,
-poison, and silent-progress recovery suite. These files are design and preregistration, not
-implementation, pilot, performance evidence, or a supported topology claim.
+poison, and silent-progress recovery suite. The [shared topology
+foundation](topology/README.md) now implements deterministic paired scheduling,
+stable identities, append-only evidence, exact-barrier process integration, and
+fail-closed admission. The first four semantics cases now also have a preserved
+44-run canonical development suite with native history replay and distinguishing
+controls; see [finding 0015](../../docs/findings/0015-topology-semantics-controls-distinguish-with-replay.md).
+The six recovery-dynamics cases have a separate 52-run canonical mechanism
+suite covering all five crash windows, bounded retry, outage/backlog catch-up,
+backpressure, poison isolation, and silent progress; see
+[finding 0016](../../docs/findings/0016-recovery-dynamics-controls-distinguish-with-bounded-catchup.md).
+The complete 88-stratum schedule and apparatus are now admitted through an
+integrated fixture matrix, four invalid controls, and 23 predetermined live
+Temporal sentinel pairs; see
+[finding 0018](../../docs/findings/0018-topology-measurement-admission-is-independent-before-pilot.md).
+The final review reconstructs every registered metric from sealed raw evidence,
+rejects fixture history in live runs, and globally balances pilot arm order.
+Those fixtures and sentinels are publication-excluded. The independent pilot,
+scale population, performance evidence, and any supported topology comparison
+remain pending.
 
 The v2 apparatus is executable. Generate all six cases, three probes, and three
 development trials without overwriting prior evidence:

@@ -1,0 +1,38 @@
+{
+  "kind": "topology-pilot-correction-failure-v1",
+  "recorded_at_utc": "2026-08-10T18:33:42.144677195Z",
+  "tracker_bead_id": "temporal_projects-4ic.6",
+  "invariant": "silent-progress evidence records authority revocation only after the external fenced store commits generation 2, and that enforced revocation occurs within the registered five-second deadline",
+  "failure_boundary": "accepted progress and its deadline are recorded, generation 1 wedges at the exact barrier, and the protected Child-Workflow fanout-8 replacement runs under race and full-source coverage instrumentation",
+  "oracle": "the fenced store advances to generation 2 before exactly one generation-1 authority_revoked event; reconstructed failure_detection_latency_ms is at most 5000; stale generation-1 effects are rejected; history replays",
+  "falsifier": "revocation evidence precedes the store transition, redelivery emits another revocation or generation, detection exceeds 5000ms, a stale effect is accepted, or replay fails",
+  "observation": {
+    "case": "silent-progress/accepted-progress-before-executor-wedge/protected",
+    "topology": "child-workflow",
+    "fanout": 8,
+    "instrumented_trial_detection_latency_ms": [4266, 7226],
+    "trial_1_disposition": "pass",
+    "trial_2_disposition": "valid safety failure",
+    "trial_2_history_events": 172,
+    "trial_2_history_sha256": "7b86e919658e06ea9093e7162c96f2b4ce7461e0d693b565a1384bd2b5bb8f49",
+    "trial_2_replay_compatible": true,
+    "host_logical_cpus": 16,
+    "host_observed_idle_percent_before_run": 27.18,
+    "partial_profile_sha256": "96aa566ec50b8f3d1ad035bf319069bebf32cea11395cc165d76b628970224a0",
+    "partial_profile_bytes": 350853,
+    "partial_profile_statement_coverage_percent": 30.8,
+    "preserved_profile_tree_sha256": "62313d3bf751dbb28f7f184c0ca03e5dff58629bc0890c1269403641552ae400",
+    "preserved_profile_root": "pilot-20260810-v5-final-coverage-silent-diagnostic-failed-work"
+  },
+  "observation_evidence_integrity": "the pre-correction replacement Activity appended authority_revoked before claimRecoveryReplacement advanced the fenced store, so the event described intent rather than enforced loss of authority",
+  "inference": "the latency failure is real under the observed host envelope, and shortening the one-second Workflow timer alone cannot explain or remove the 2.226-second overrun; the premature event also made earlier latency evidence optimistic",
+  "correction": "commit or attach to the exact generation-2 fenced lease first, then emit one generation-1 revocation event bound to the replacement generation and capability; reuse that event on Activity redelivery",
+  "correction_verification": {
+    "race_enabled_unit_repetitions": 20,
+    "revocation_event_count": 1,
+    "replacement_generation": 2,
+    "redelivery_action": "attach",
+    "result": "pass"
+  },
+  "disposition": "preserved failure; the latency oracle remains unchanged and qualifying execution still requires a controlled host envelope or a detector architecture that meets the registered bound"
+}

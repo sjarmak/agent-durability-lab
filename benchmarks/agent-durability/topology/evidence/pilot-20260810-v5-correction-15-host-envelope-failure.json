@@ -1,0 +1,33 @@
+{
+  "kind": "topology-pilot-correction-failure-v1",
+  "recorded_at_utc": "2026-08-10T18:41:28.777347688Z",
+  "tracker_bead_id": "temporal_projects-4ic.6",
+  "invariant": "a latency-qualifying silent-progress run starts only after the preregistered condition-based idle readiness is satisfied and then enforces the unchanged five-second revocation bound",
+  "failure_boundary": "the post-store-transition silent-progress correction is exercised in pilot build mode while unrelated CPU-intensive test, link, database dump, and build processes contend for the pinned host",
+  "oracle": "the host is ready before execution; generation 2 is committed before revocation evidence; failure_detection_latency_ms is at most 5000; stale generation-1 work is rejected; history replays",
+  "falsifier": "the run starts without idle readiness, revocation evidence precedes the fence, detection exceeds 5000ms, stale work is accepted, or replay fails",
+  "command": "TOPOLOGY_PILOT_V5_REGRESSION=1 go test -count=1 -v ./benchmarks/agent-durability/topology/semantics -run TestTemporalExecutorPilotV5FailureShapesRecoverRepeatedly/protected-child-silent-progress-8",
+  "observation": {
+    "case": "silent-progress/accepted-progress-before-executor-wedge/protected",
+    "topology": "child-workflow",
+    "fanout": 8,
+    "pilot_mode_trial_detection_latency_ms": [2924, 29658],
+    "trial_1_disposition": "pass",
+    "trial_2_disposition": "valid safety failure",
+    "trial_2_history_events": 172,
+    "trial_2_history_sha256": "964dfa6f34e0ed85c8c563ee2cd3239c98465d471ac063db85d004f7b18b13d9",
+    "trial_2_replay_compatible": true,
+    "host_logical_cpus": 16,
+    "host_load_average_1m_after_run": 39.10,
+    "host_cpu_pressure_some_avg10_percent_after_run": 71.59,
+    "host_cpu_idle_percent_after_run": 1.07,
+    "concurrent_process_classes": [
+      "node-vitest",
+      "go-compiler-and-linker",
+      "postgres-pg_dump",
+      "beads-dolt"
+    ]
+  },
+  "inference": "the 26.734-second within-command swing and near-saturated host make this execution unsuitable for latency qualification; correctness, liveness, replay, and stale-action behavior still passed, but the registered safety bound correctly failed",
+  "disposition": "preserved host-envelope failure; do not weaken the oracle or count this as a qualifying pilot run; require condition-based host idle readiness before the next performance-sensitive execution"
+}

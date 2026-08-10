@@ -1,0 +1,15 @@
+{
+  "protocol_version": "adl.temporal-topology.publication.v1",
+  "kind": "topology-pilot-correction-preflight-failure-v1",
+  "created_at_utc": "2026-08-10T14:18:00Z",
+  "tracker_bead_id": "temporal_projects-4ic.6",
+  "pilot_root": "pilot-20260810-v5",
+  "publication_excluded": true,
+  "command": "go test -race -coverpkg=./benchmarks/agent-durability/topology/... -coverprofile=coverage.topology.out ./benchmarks/agent-durability/topology/... -count=1",
+  "result": "failed",
+  "failure": "The default topology coverage profile reported 78.6%, below the repository's 80% minimum.",
+  "observation": "All tests passed, including 481.800 seconds in the semantics package, but moving repeated high-scale regressions behind explicit environment gates reduced the statements exercised by the default coverage command.",
+  "inference": "The test behavior is green but the default profile alone no longer establishes the required source-coverage breadth. The explicit real-path v5 regression must contribute its coverage to the topology gate.",
+  "falsifier": "A correctly merged default and explicit v5 profile below 80% would reject this correction and require additional tests rather than a threshold waiver.",
+  "correction": "Run the explicit v5 real Temporal regression with the identical coverpkg set, merge block counts without discarding either profile, and make the combined profile the Makefile's enforced topology coverage result."
+}

@@ -1,0 +1,30 @@
+{
+  "protocol_version": "adl.temporal-topology.publication.v1",
+  "kind": "topology-pilot-preflight-failure-analysis-v1",
+  "created_at_utc": "2026-08-10T10:47:32.569485073Z",
+  "tracker_bead_id": "temporal_projects-4ic.6",
+  "prospective_pilot_root": "pilot-20260810-v5",
+  "disposition": "rejected-before-pilot",
+  "publication_excluded": true,
+  "failed_gate": "go test -race ./benchmarks/agent-durability/topology/... -count=1",
+  "full_gate_duration_seconds": 600.054,
+  "targeted_reproducer": {
+    "command": "go test -race ./benchmarks/agent-durability/topology/semantics -run '^(TestTemporalExecutorUnsafeQueuedChildScaleClosesHeldBarriers|TestTemporalExecutorProtectedSupersessionChildScaleKeepsHeldArrivalLive)$' -count=1 -timeout=10m -v",
+    "duration_seconds": 268.690,
+    "unsafe_queued_child": {
+      "passed_trials": [1],
+      "failed_trials": [2, 3],
+      "failed_healthy_items": ["item-015", "item-007"],
+      "error": "open work store: timeout"
+    },
+    "protected_supersession_child": {
+      "passed_trials": [],
+      "failed_trials": [1, 2, 3],
+      "error": "TopologySupersedeAuthorityV1 exhausted the one-minute ScheduleToClose timeout after StartToClose timeouts"
+    }
+  },
+  "observation": "The race-enabled full topology gate first failed an unsafe queued child trial on a shared work-store lock, then failed all three protected executing-supersession child trials because the supersession Activity never observed the designated obsolete item before its retry budget expired. A targeted fresh package run reproduced both classes. The protected test had passed three isolated non-race trials before this gate, so that isolated success was not sufficient evidence of stable capacity.",
+  "inference": "The designated obsolete Work Activity competed with the 127 healthy child Activities on the bulk task queue even though supersession could not proceed until that one item reached its exact barrier. Workflow scheduling order does not reserve Worker capacity. Separately, retaining one race-instrumented Temporal executor across all three unsafe repetitions accumulated enough contention for unrelated healthy items to exhaust the shared Bolt file-lock bound. These are harness/capacity inferences, not Temporal guarantees.",
+  "falsifier": "A trace showing the designated obsolete Work Activity started promptly on an uncongested task queue while Supersede still timed out would falsify the control-lane diagnosis. A fresh-executor unsafe trial that still produces unrelated work-store lock timeouts would falsify executor accumulation as a sufficient explanation for that failure.",
+  "correction": "Version the executing-supersession designated Work Activity onto the existing effect/control task queue for both topology arms while preserving queued-before-start behavior and old-history replay. Give each exact integration repetition a fresh executor lifecycle, retain three trials, and rerun both targeted tests before the complete gate. See the sibling correction-failure record: fresh lifecycle and control-lane routing were not sufficient while the shared work-store lock remained bounded at five seconds."
+}

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "evidence_root": "recovery-20260809-v2",
+  "status": "preserved_partial_harness_failure",
+  "recorded_at_utc": "2026-08-09T21:42:46.307015518Z",
+  "runs_preserved": 18,
+  "summary_at_interrupt": {
+    "scenarios": 26,
+    "trials": 1,
+    "pairs_attempted": 26,
+    "valid_pass_runs": 12,
+    "valid_fail_runs": 5,
+    "invalid_or_errors": 35
+  },
+  "observed_failure": "The corrected application semaphore no longer blocked every recovery case, but the harness still configured recovery Worker Activity concurrency as 16 instead of the frozen value 8. At fan-out 32, outage Activities retained all Worker slots while waiting for global backlog completion and one timed out. Concurrent layered-retry work also produced a heartbeat retry in an unfaulted arm, exceeding the request bound.",
+  "inference": "The v2 root is invalid harness evidence and does not support a topology conclusion. Global backlog coordination must not retain a scarce Activity slot, and Worker Activity concurrency must remain exactly eight.",
+  "disposition": "Raw run directories are retained unchanged. The corrected procedure must be shared by the direct and Child arms and written to a new root."
+}

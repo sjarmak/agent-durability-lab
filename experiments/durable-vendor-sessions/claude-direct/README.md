@@ -105,7 +105,7 @@ Across the suite, all 21 terminal Claude events reported successful
 schema-validated `EFFECT_COMPLETE` output under 21 distinct vendor session IDs.
 The independent verifier matched all 345 raw artifact sizes and SHA-256 hashes
 against their per-run inventories. The admitted evidence is
-[`claude-direct-20260808-v5`](evidence/claude-direct-20260808-v5); see
+[`claude-direct-20260808-v5`](transport/README.md#current-package); see
 [Finding 0010](../../../docs/findings/0010-direct-claude-activity-retry-duplicates-turns-and-effects.md).
 
 ## Responsibility split
@@ -171,6 +171,15 @@ successful, but the source hash changed; v4 repeated the suite. Static analysis
 then required a non-semantic error-message style correction, which changed the
 binary hash once more. V5 repeated the suite and is the source-matched admitted
 run. No earlier evidence was deleted or rewritten.
+
+## Git-safe evidence transport
+
+The raw v1-v5 roots contain nested `.git` directories and ignored database
+files, so they must not be added directly to the outer repository. The
+[deterministic evidence transport](transport/README.md) packages the complete
+correction lineage as normal Git files, binds all 2,206 file artifacts and 56
+finalized run inventories/verdicts, and restores the raw trees without creating
+outer-repository gitlinks. The original local evidence remains unchanged.
 
 Primary interface references:
 

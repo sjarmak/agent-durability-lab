@@ -1,0 +1,180 @@
+{
+  "run_id": "topology-publication-v1/destructive-transition/destination-accepted-before-activity-completion/unsafe/fanout-032/slot-02/direct-activity",
+  "required_item_ids": [
+    "item-001",
+    "item-002",
+    "item-003",
+    "item-004",
+    "item-005",
+    "item-006",
+    "item-007",
+    "item-008",
+    "item-009",
+    "item-010",
+    "item-011",
+    "item-012",
+    "item-013",
+    "item-014",
+    "item-015",
+    "item-016",
+    "item-017",
+    "item-018",
+    "item-019",
+    "item-020",
+    "item-021",
+    "item-022",
+    "item-023",
+    "item-024",
+    "item-025",
+    "item-026",
+    "item-027",
+    "item-028",
+    "item-029",
+    "item-030",
+    "item-031",
+    "item-032"
+  ],
+  "accepted_result_item_ids": [
+    "item-001",
+    "item-002",
+    "item-003",
+    "item-004",
+    "item-005",
+    "item-006",
+    "item-007",
+    "item-008",
+    "item-009",
+    "item-010",
+    "item-011",
+    "item-012",
+    "item-013",
+    "item-014",
+    "item-015",
+    "item-016",
+    "item-017",
+    "item-018",
+    "item-019",
+    "item-020",
+    "item-021",
+    "item-022",
+    "item-023",
+    "item-024",
+    "item-025",
+    "item-026",
+    "item-027",
+    "item-028",
+    "item-029",
+    "item-030",
+    "item-031",
+    "item-032"
+  ],
+  "expected_logical_output": "destructive-version:1",
+  "actual_logical_output": "destructive-version:2",
+  "prohibited_action_count": 3,
+  "terminal_failure_expected": false,
+  "terminal_failure_observed": false,
+  "liveness_satisfied": true,
+  "orchestration_semantics": {
+    "continuations": [
+      {
+        "event_id": "event-000202",
+        "continuation_id": "topology-publication-v1/destructive-transition/destination-accepted-before-activity-completion/unsafe/fanout-032/slot-02/operation/continuation",
+        "members": [
+          "item-001",
+          "item-002",
+          "item-003",
+          "item-004",
+          "item-005",
+          "item-006",
+          "item-007",
+          "item-008",
+          "item-009",
+          "item-010",
+          "item-011",
+          "item-012",
+          "item-013",
+          "item-014",
+          "item-015",
+          "item-016",
+          "item-017",
+          "item-018",
+          "item-019",
+          "item-020",
+          "item-021",
+          "item-022",
+          "item-023",
+          "item-024",
+          "item-025",
+          "item-026",
+          "item-027",
+          "item-028",
+          "item-029",
+          "item-030",
+          "item-031",
+          "item-032"
+        ],
+        "value": 2,
+        "receipt_id": "receipt/topology-publication-v1/destructive-transition/destination-accepted-before-activity-completion/unsafe/fanout-032/slot-02/operation/continuation",
+        "decision": "accepted",
+        "applied": true
+      }
+    ],
+    "destructive": {
+      "operation_id": "topology-publication-v1/destructive-transition/destination-accepted-before-activity-completion/unsafe/fanout-032/slot-02/operation/destructive",
+      "expected_prior_version": 0,
+      "final_version": 2,
+      "outcome_receipt_id": "receipt/destructive/topology-publication-v1/destructive-transition/destination-accepted-before-activity-completion/unsafe/fanout-032/slot-02/operation/destructive/attempt-2",
+      "deliveries": [
+        {
+          "event_id": "event-000195",
+          "activity_attempt": 1,
+          "operation_id": "topology-publication-v1/destructive-transition/destination-accepted-before-activity-completion/unsafe/fanout-032/slot-02/operation/destructive",
+          "expected_version": 0,
+          "previous_version": 0,
+          "resulting_version": 1,
+          "receipt_id": "receipt/destructive/topology-publication-v1/destructive-transition/destination-accepted-before-activity-completion/unsafe/fanout-032/slot-02/operation/destructive/attempt-1",
+          "decision": "accepted",
+          "applied": true
+        },
+        {
+          "event_id": "event-000200",
+          "activity_attempt": 2,
+          "operation_id": "topology-publication-v1/destructive-transition/destination-accepted-before-activity-completion/unsafe/fanout-032/slot-02/operation/destructive",
+          "expected_version": 0,
+          "previous_version": 1,
+          "resulting_version": 2,
+          "receipt_id": "receipt/destructive/topology-publication-v1/destructive-transition/destination-accepted-before-activity-completion/unsafe/fanout-032/slot-02/operation/destructive/attempt-2",
+          "decision": "accepted",
+          "applied": true
+        }
+      ]
+    },
+    "metrics": [
+      {
+        "name": "accepted_destructive_apply_count",
+        "unit": "count",
+        "value": 2
+      },
+      {
+        "name": "invariant_violation_count",
+        "unit": "count",
+        "value": 3
+      },
+      {
+        "name": "physical_delivery_count",
+        "unit": "count",
+        "value": 2
+      },
+      {
+        "name": "recovery_delay_ms",
+        "unit": "ms",
+        "value": 900
+      },
+      {
+        "name": "end_to_end_latency_ms",
+        "unit": "ms",
+        "value": 2220
+      }
+    ]
+  }
+}

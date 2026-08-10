@@ -1,0 +1,23 @@
+{
+  "protocol_version": "adl.temporal-topology.publication.v1",
+  "kind": "topology-pilot-correction-preflight-failure-v1",
+  "created_at_utc": "2026-08-10T15:17:28.339796127Z",
+  "tracker_bead_id": "temporal_projects-4ic.6",
+  "pilot_root": "pilot-20260810-v5",
+  "publication_excluded": true,
+  "command": "go test -race -count=1 -coverpkg=<topology-packages> -coverprofile=coverage.topology.default.out ./benchmarks/agent-durability/topology/...",
+  "result": "failed",
+  "failure": "The instrumented semantics package reached Go's 10-minute alarm while running TestTemporalExecutorUnsafeQueuedChildScaleClosesHeldBarriers/trial-01; its partial profile reported 58.5% and is not admissible.",
+  "observation": "Every other topology package passed. The semantics process had accumulated all unit tests, the complete frozen semantics and recovery real-path suites, recovery-scale checks, and then a separate three-trial scale regression under one package alarm. The scale test itself was still progressing when the aggregate alarm fired.",
+  "raw_work": {
+    "root": "pilot-20260810-v5-default-coverage-failed-work",
+    "files": 63,
+    "bytes": 18802516,
+    "tree_sha256": "0b5e9a0766ca7e8aa1e4609930304ccdb3748f09896606095580328207e8fe0a",
+    "partial_profile": "partial-default-coverage.out",
+    "test_work": "raw-test-work"
+  },
+  "inference": "A single package process is the wrong failure boundary for instrumenting multiple independent real Temporal suites. The alarm measures accumulated suite duration, not one scenario's liveness, and discards otherwise complete coverage.",
+  "falsifier": "Every partitioned package process must pass independently with the identical coverpkg set; the atomic merger must accept all complete profiles; and the combined result must still meet 80% without using the partial default profile.",
+  "correction": "Run non-semantics packages together, semantics unit tests under -short, each default real integration test in a separate package process, and each v5 high-scale shape in a separate package process. Merge only the named complete profiles. The ordinary go test -race ./... command remains unchanged and still runs the full default suite."
+}

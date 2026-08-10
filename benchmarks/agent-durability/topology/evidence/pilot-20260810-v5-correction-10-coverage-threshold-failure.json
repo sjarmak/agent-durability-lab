@@ -1,0 +1,22 @@
+{
+  "kind": "topology-pilot-correction-failure-v1",
+  "recorded_at_utc": "2026-08-10T17:05:34.836337965Z",
+  "tracker_bead_id": "temporal_projects-4ic.6",
+  "invariant": "the frozen topology harness must have at least 80 percent race-enabled Go statement coverage without excluding production topology packages",
+  "failure_boundary": "merge only complete profiles after the recovery and scale partitions pass, then evaluate the exact aggregate coverage ratio",
+  "oracle": "the aggregate profile covers at least 80 percent of 5766 production statements and remains reproducible from its constituent complete profiles",
+  "falsifier": "the exact covered-statement ratio is below 80 percent, any constituent profile is partial, or a coverage-scope reduction is needed to pass",
+  "observation": {
+    "covered_statements": 4540,
+    "total_statements": 5766,
+    "coverage_percent": 78.737,
+    "rounded_go_tool_percent": 78.7,
+    "missing_statements_for_80_percent": 73,
+    "complete_profile_count": 14,
+    "preserved_profile_bytes": 13702491,
+    "preserved_profile_tree_sha256": "0beb3c25aa03f4babea4c60d7d385e5f3ee361212b644d5126f19dbea1544450",
+    "preserved_profile_root": "pilot-20260810-v5-coverage-threshold-failed-work"
+  },
+  "inference": "the real recovery shapes passed, but the harness did not yet satisfy its test-depth acceptance criterion; the missing coverage was concentrated in production pilot audit and freeze-construction paths",
+  "correction": "audit every pair and admitted history in the preserved rejected v5 pilot under race and coverage instrumentation, test qualified freeze construction and absent dependency-version rejection, and retain the full topology coverpkg scope"
+}

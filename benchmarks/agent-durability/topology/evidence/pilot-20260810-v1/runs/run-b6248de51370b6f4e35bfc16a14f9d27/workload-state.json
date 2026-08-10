@@ -1,0 +1,88 @@
+{
+  "run_id": "topology-pilot-v1/queued-executing-supersession/executing-after-process-start-before-effect/protected/fanout-008/slot-03/child-workflow",
+  "required_item_ids": [
+    "item-001",
+    "item-002",
+    "item-003",
+    "item-004",
+    "item-005",
+    "item-006",
+    "item-007",
+    "item-008"
+  ],
+  "accepted_result_item_ids": [
+    "item-001",
+    "item-002",
+    "item-003",
+    "item-004",
+    "item-005",
+    "item-006",
+    "item-007",
+    "item-008"
+  ],
+  "expected_logical_output": "replacement-generation:2",
+  "actual_logical_output": "replacement-generation:2",
+  "prohibited_action_count": 0,
+  "terminal_failure_expected": false,
+  "terminal_failure_observed": false,
+  "liveness_satisfied": true,
+  "orchestration_semantics": {
+    "continuations": [
+      {
+        "event_id": "event-000064",
+        "continuation_id": "topology-pilot-v1/queued-executing-supersession/executing-after-process-start-before-effect/protected/fanout-008/slot-03/operation/continuation",
+        "members": [
+          "item-001",
+          "item-002",
+          "item-003",
+          "item-004",
+          "item-005",
+          "item-006",
+          "item-007",
+          "item-008"
+        ],
+        "value": 0,
+        "receipt_id": "receipt/topology-pilot-v1/queued-executing-supersession/executing-after-process-start-before-effect/protected/fanout-008/slot-03/operation/continuation",
+        "decision": "accepted",
+        "applied": true
+      }
+    ],
+    "supersession": {
+      "commit_event_id": "event-000035",
+      "cancellation_event_id": "event-000053",
+      "process_disposition_event_id": "event-000055",
+      "obsolete_item_id": "item-001",
+      "obsolete_generation": 1,
+      "obsolete_capability_hash": "00b66aa848179b777da24f33a2aff4f0b2f14f73b9c08d862f96cef0bfa1dc4a",
+      "replacement_generation": 2,
+      "replacement_capability_hash": "ea2b725699aff880e60f49bea53f820ad64cc83b423a6aa6350a797fc9122843"
+    },
+    "metrics": [
+      {
+        "name": "stale_action_accept_count",
+        "unit": "count",
+        "value": 0
+      },
+      {
+        "name": "cancellation_propagation_ms",
+        "unit": "ms",
+        "value": 280
+      },
+      {
+        "name": "replacement_recovery_ms",
+        "unit": "ms",
+        "value": 569
+      },
+      {
+        "name": "wasted_compute_ms",
+        "unit": "ms",
+        "value": 56
+      },
+      {
+        "name": "wasted_cost_units",
+        "unit": "cost_units",
+        "value": 1
+      }
+    ]
+  }
+}

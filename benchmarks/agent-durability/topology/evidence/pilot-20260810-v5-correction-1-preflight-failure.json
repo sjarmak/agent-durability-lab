@@ -1,0 +1,27 @@
+{
+  "protocol_version": "adl.temporal-topology.publication.v1",
+  "kind": "topology-pilot-correction-preflight-failure-v1",
+  "created_at_utc": "2026-08-10T13:36:18.870753710Z",
+  "tracker_bead_id": "temporal_projects-4ic.6",
+  "pilot_root": "pilot-20260810-v5",
+  "publication_excluded": true,
+  "command": "go test -race ./benchmarks/agent-durability/topology/... -count=1",
+  "result": "failed",
+  "failure": "The Go test binary reached its default 10-minute package timeout while TestTemporalExecutorPoisonChildScalePreservesBoundaryAcrossRetries/trial-03 was running. The parent test had run for 2m55s and trial 03 for 52s at timeout.",
+  "completed_packages": [
+    "agent",
+    "cmd/matrix-conformance",
+    "cmd/pilot",
+    "cmd/semantics-conformance",
+    "evidence",
+    "internal/testfixture",
+    "matrix",
+    "oracle",
+    "protocol",
+    "runner"
+  ],
+  "observation": "Every package that completed passed. The semantics process was terminated by testing's package-wide alarm; no scenario assertion, race detector, Workflow timeout, Activity timeout, or oracle failure was reported before termination. The host truncated the emitted goroutine dump after 94,239 characters; the available terminal result and exact running test are retained here.",
+  "inference": "The newly repeated real recovery regressions make the semantics package legitimately longer than Go's default package alarm. This alarm is unrelated to the benchmark's registered experimental deadlines and does not diagnose the poison scenario.",
+  "falsifier": "If the same poison trial or another scenario fails an assertion, race check, experimental deadline, or oracle under a larger package-only alarm, then this timeout-only diagnosis is false.",
+  "correction": "Raise only the semantics test binary's default package alarm to 30 minutes before testing.M.Run. Do not change Workflow, Activity, barrier, dependency, cancellation, progress, or oracle timeouts. Rerun the exact default go test command without a command-line timeout override."
+}

@@ -1,0 +1,40 @@
+{
+  "protocol_version": "adl.temporal-topology.publication.v1",
+  "kind": "topology-pilot-correction-failure-analysis-v1",
+  "created_at_utc": "2026-08-10T10:25:52.293329916Z",
+  "tracker_bead_id": "temporal_projects-4ic.6",
+  "pilot_root": "pilot-20260810-v4",
+  "correction_attempt": "route the protected silent-progress replacement Activity through the effect/control task queue",
+  "disposition": "falsified",
+  "publication_excluded": true,
+  "validation_runs": [
+    {
+      "sequence": 1,
+      "test": "TestTemporalExecutorProtectedSilentProgressDirectScaleUsesControlLane",
+      "trials": 3,
+      "result": "pass",
+      "trial_duration_seconds": [7.28, 5.96, 6.17]
+    },
+    {
+      "sequence": 2,
+      "test": "TestTemporalExecutorProtectedSilentProgressDirectScaleUsesControlLane",
+      "trials": 3,
+      "result": "fail",
+      "failed_trials": [2, 3],
+      "total_duration_seconds": 21.89,
+      "measurement_note": "The original failure assertion emitted the full native history before the metric-specific assertion, so exact detection latencies were not retained. That reporting defect was corrected before sequence 3."
+    },
+    {
+      "sequence": 3,
+      "test": "TestTemporalExecutorProtectedSilentProgressDirectScaleUsesControlLane",
+      "trials": 3,
+      "result": "pass",
+      "failure_detection_latency_ms": [3170, 3186, 3168],
+      "trial_duration_seconds": [9.05, 6.82, 8.41]
+    }
+  ],
+  "observation": "The isolated replacement queue passed the first exact three-trial run, failed trials two and three on the immediate repeat, and passed a third run after compact metric reporting was added. The correction therefore did not make the frozen five-second detection bound reliable under repeated direct-Activity fanout-128 execution.",
+  "inference": "A reserved Activity task queue does not reserve Workflow-task capacity inside the single direct-topology parent Workflow. The parent still has to process the 128-item cohort's Workflow event pressure before it can schedule the replacement, while the child topology distributes that pressure across independent Workflow executions. This is an application concurrency-policy inference, not a Temporal guarantee.",
+  "falsifier": "Repeated direct/fanout-128 trials that always meet the bound after bounding the admitted protected silent-progress cohort would falsify the claim that unbounded single-Workflow event pressure is required to reproduce the miss; a trace showing prompt parent Workflow-task processing during a future miss would falsify the specific scheduling inference.",
+  "correction": "Retain the isolated replacement control queue, and apply the existing protected admission window to protected and unfaulted silent-progress fanout above eight while leaving unsafe controls at full fanout. Add a failing policy test first, repeat the exact real direct/fanout-128 case across independent invocations, and run a new append-only pilot root."
+}

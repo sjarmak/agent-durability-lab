@@ -145,10 +145,9 @@ func startToolChild(request agentprocess.LaunchRequest) error {
 	if err := command.Start(); err != nil {
 		return fmt.Errorf("start tool child: %w", err)
 	}
-	if err := command.Process.Release(); err != nil {
-		_ = command.Process.Kill()
-		return fmt.Errorf("release tool child: %w", err)
-	}
+	// The tool remains detached from cancellation and survives if this agent
+	// exits, while a live parent still reaps it instead of accumulating zombies.
+	go func() { _ = command.Wait() }()
 	return nil
 }
 

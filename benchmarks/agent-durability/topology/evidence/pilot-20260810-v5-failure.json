@@ -1,0 +1,134 @@
+{
+  "protocol_version": "adl.temporal-topology.publication.v1",
+  "kind": "topology-pilot-failure-analysis-v1",
+  "created_at_utc": "2026-08-10T12:56:27.397698349Z",
+  "tracker_bead_id": "temporal_projects-4ic.6",
+  "pilot_root": "pilot-20260810-v5",
+  "disposition": "rejected",
+  "publication_excluded": true,
+  "raw_result": {
+    "attempted_pairs": 264,
+    "valid_pairs": 260,
+    "invalid_pairs": 4,
+    "attempted_arms": 528,
+    "valid_arms": 520,
+    "unsafe_arms": 114,
+    "unsafe_arms_distinguished": 114,
+    "protected_or_unfaulted_arms": 406,
+    "protected_or_unfaulted_arms_passed": 405,
+    "histories_replayed": 520,
+    "qualified": false,
+    "artifact_count": 8656,
+    "artifact_bytes": 718835155,
+    "pilot_report_sha256": "da1720d972339dbc9920e1aad1989c22bc7132eb22a56bdba251c15905150a51",
+    "pilot_inventory_sha256": "46c64b5737d2995cbd58b86a8ea8165dcf3cc1bf76e5a784d25a58d0c1bbc4b1"
+  },
+  "preserved_failed_work": {
+    "root": "pilot-20260810-v5-failed-work",
+    "file_count": 1079,
+    "bytes": 490029688,
+    "temporal_database_sha256": "3a4e076f9b9235afe3573bbcca264f5c84f1b4491da09b3d0bbacecbad4b8a13",
+    "run_roots": [
+      {
+        "path": "runs/772859814eafd969951fe62815bab526",
+        "sorted_file_hashes_sha256": "0877ca9751444b11696058788194245d34a5c07f20e440bbd1919bd395224ed1"
+      },
+      {
+        "path": "runs/645c478d92b5f03070867463057effdf",
+        "sorted_file_hashes_sha256": "80c01cc4e2e7b13ea77bd4bb4ec9a89363d2991cb9b8c47b0739d18236d7b5fb"
+      },
+      {
+        "path": "runs/9623568c624febeed1fa850d642906c7",
+        "sorted_file_hashes_sha256": "c014c15dd7f5ecade6853b2d507cd22e5bfaae2a96f00013725ed0aca3d1b1d4"
+      },
+      {
+        "path": "runs/f9db27198cb94e4c9816fdb719195770",
+        "sorted_file_hashes_sha256": "3508fe054a5dc771d8a55770da076a3a58f391325f6ce1e5d79fd818bfbcabd5"
+      }
+    ]
+  },
+  "invalid_arms": [
+    {
+      "slot": 3,
+      "pair_index": 102,
+      "pair_execution_sha256": "a13fe94769ff09fa6509d8060329c8861ae0c6fb8b82ded7c0f902001d460761",
+      "case": "queued-executing-supersession",
+      "boundary": "unfaulted-baseline",
+      "probe": "unfaulted",
+      "fanout": 32,
+      "topology": "direct-activity",
+      "duration_ns": 80231095803,
+      "work_root": "runs/f9db27198cb94e4c9816fdb719195770",
+      "agent_log_count": 32,
+      "error": "Supersede Activity exhausted its one-minute ScheduleToClose timeout after repeated StartToClose timeouts."
+    },
+    {
+      "slot": 3,
+      "pair_index": 187,
+      "pair_execution_sha256": "daa5c9065b8706e03c02e7884ac7ab824a929db59463032900b2578068c782dc",
+      "case": "queued-executing-supersession",
+      "boundary": "executing-after-process-start-before-effect",
+      "probe": "protected",
+      "fanout": 128,
+      "topology": "child-workflow",
+      "duration_ns": 57301034358,
+      "work_root": "runs/9623568c624febeed1fa850d642906c7",
+      "agent_log_count": 128,
+      "error": "The item-001 Child Workflow identity changed from generation 1 to generation 2 while the durable item store still held generation-1 authority."
+    },
+    {
+      "slot": 1,
+      "pair_index": 190,
+      "pair_execution_sha256": "1538ae19a59e4df4830ff04a08e34903c26dba61744f731b176de3f4e8db99b9",
+      "case": "outage-backlog-herd-recovery",
+      "boundary": "unfaulted-baseline",
+      "probe": "unfaulted",
+      "fanout": 128,
+      "topology": "child-workflow",
+      "duration_ns": 115886676876,
+      "work_root": "runs/645c478d92b5f03070867463057effdf",
+      "agent_log_count": 128,
+      "error": "The independent oracle rejected retry dependency request lineage."
+    },
+    {
+      "slot": 2,
+      "pair_index": 252,
+      "pair_execution_sha256": "2db3c5e3b434aba520bd069a30c52767f690068e4633c8b33d4b98ebb6448cc0",
+      "case": "outage-backlog-herd-recovery",
+      "boundary": "outage-backlog-restoration-and-catchup-worker-crash",
+      "probe": "protected",
+      "fanout": 128,
+      "topology": "child-workflow",
+      "duration_ns": 122724653073,
+      "work_root": "runs/772859814eafd969951fe62815bab526",
+      "agent_log_count": 118,
+      "error": "The parent reached its two-minute Workflow execution timeout before 10 of 128 items finished."
+    }
+  ],
+  "failed_valid_arms": [
+    {
+      "slot": 1,
+      "pair_index": 78,
+      "pair_execution_sha256": "100d58ef3fa2227da8124fb6d9890bdcb2f2165d80c2abdfe555cd8253b70253",
+      "evidence_inventory_sha256": "2d8926458f8611cbbfb4743e9fb538f65925c6d46f2896393a1731b8e0536ce8",
+      "case": "silent-progress",
+      "boundary": "accepted-progress-before-executor-wedge",
+      "probe": "protected",
+      "fanout": 8,
+      "topology": "child-workflow",
+      "duration_ns": 21246798086,
+      "failure_detection_latency_ms": 5953,
+      "replacement_recovery_ms": 720,
+      "false_positive_revocations": 0,
+      "stale_actions_accepted": 0,
+      "healthy_task_latency_ms": 5617,
+      "end_to_end_latency_ms": 19235,
+      "history_event_count": 156,
+      "history_bytes": 115201
+    }
+  ],
+  "observation": "The pilot attempted all 264 preregistered pairs in the required 132/132 topology order. All 114 admitted unsafe arms distinguished, and all 520 admitted histories replayed. Four pairs were invalid: one child fanout-128 outage arm exceeded the two-minute Workflow timeout with 118 of 128 agent logs; one child fanout-128 unfaulted outage arm completed 128 agents but failed dependency-lineage validation; one child fanout-128 protected supersession arm reported a generation-1 to generation-2 Child Workflow identity change while its item store retained generation-1 authority; and one direct fanout-32 unfaulted supersession arm exhausted the Supersede Activity timeout. One otherwise valid protected silent-progress child arm detected the wedge in 5.953 seconds against the frozen five-second bound.",
+  "inference": "The outage timeout is a harness execution budget defect because the exact fanout-128 recovery path can legitimately approach two minutes under retry and catch-up. The dependency-lineage failure is consistent with overlapping Activity attempts reserving request ordinals before earlier requests finish, because request parentage is derived from the last completed request. The two supersession failures are consistent with a one-shot effect-boundary handoff plus late Supersede scheduling behind the healthy cohort: an Activity retry can lose the boundary, release generation 1, or create a non-idempotent replacement decision. The silent-progress miss leaves only two seconds of dispatch budget after the three-second deterministic detector delay; moving that delay to two seconds preserves the five-second oracle while making the intended detection policy explicit. These are application or harness defects, not Temporal guarantees.",
+  "falsifier": "The diagnosis is falsified if per-item serialized dependency calls still produce invalid request lineage; retry-idempotent cached supersession plus early control scheduling still times out or returns mismatched authority; a fanout-128 recovery execution exceeds a separately versioned larger Workflow budget without an actual liveness failure; or repeated silent-progress trials miss five seconds after a versioned two-second detector delay while the trace shows the replacement control path was promptly dispatched.",
+  "correction": "Add RED tests, then serialize each item's complete dependency call; cache and retry the designated supersession boundary, schedule its control Activity before bulk healthy work, preserve the executing boundary across Work Activity retries, and validate replacement authority; version a larger Workflow/Work Activity budget for new histories; and version a two-second protected silent-progress detector delay. Replay every retained history, run repeated real Temporal regressions, then launch a fresh append-only v6 pilot only after the full race, coverage, lint, and evidence gates pass. Preserve v5 as rejected and publication-excluded."
+}

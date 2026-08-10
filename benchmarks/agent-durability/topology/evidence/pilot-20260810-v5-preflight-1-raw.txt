@@ -1,0 +1,23 @@
+Full race-enabled topology gate:
+
+--- FAIL: TestTemporalExecutorUnsafeQueuedChildScaleClosesHeldBarriers (75.58s)
+    --- FAIL: TestTemporalExecutorUnsafeQueuedChildScaleClosesHeldBarriers/trial-02 (60.80s)
+        executor_integration_test.go:452: workflow execution error: replacement or healthy item item-004 failed: activity error (type: TopologyHermeticAgentWorkV1): open work store: timeout
+--- FAIL: TestTemporalExecutorProtectedSupersessionChildScaleKeepsHeldArrivalLive (195.37s)
+    --- FAIL: trial-01 (71.04s): TopologyObserveSupersessionCancellationV1 exhausted ScheduleToClose after StartToClose timeouts
+    --- FAIL: trial-02 (61.54s): TopologyObserveSupersessionCancellationV1 exhausted ScheduleToClose after StartToClose timeouts
+    --- FAIL: trial-03 (61.22s): TopologySupersedeAuthorityV1 exhausted ScheduleToClose after StartToClose timeouts
+panic: test timed out after 10m0s
+FAIL github.com/sjarmak/temporal_projects/benchmarks/agent-durability/topology/semantics 600.054s
+
+Targeted reproducer:
+
+--- FAIL: TestTemporalExecutorUnsafeQueuedChildScaleClosesHeldBarriers (83.68s)
+    --- PASS: trial-01 (5.18s)
+    --- FAIL: trial-02 (49.21s): replacement or healthy item item-015 failed: open work store: timeout
+    --- FAIL: trial-03 (24.32s): replacement or healthy item item-007 failed: open work store: timeout
+--- FAIL: TestTemporalExecutorProtectedSupersessionChildScaleKeepsHeldArrivalLive (184.98s)
+    --- FAIL: trial-01 (60.68s): TopologySupersedeAuthorityV1 exhausted ScheduleToClose after StartToClose timeouts
+    --- FAIL: trial-02 (61.28s): TopologySupersedeAuthorityV1 exhausted ScheduleToClose after StartToClose timeouts
+    --- FAIL: trial-03 (61.43s): TopologySupersedeAuthorityV1 exhausted ScheduleToClose after StartToClose timeouts
+FAIL github.com/sjarmak/temporal_projects/benchmarks/agent-durability/topology/semantics 268.690s

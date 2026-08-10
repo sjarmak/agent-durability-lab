@@ -1,0 +1,226 @@
+{
+  "run_id": "topology-pilot-v1/layered-retry-amplification/unfaulted-baseline/unfaulted/fanout-008/slot-02/child-workflow",
+  "required_item_ids": [
+    "item-001",
+    "item-002",
+    "item-003",
+    "item-004",
+    "item-005",
+    "item-006",
+    "item-007",
+    "item-008"
+  ],
+  "accepted_result_item_ids": [
+    "item-001",
+    "item-002",
+    "item-003",
+    "item-004",
+    "item-005",
+    "item-006",
+    "item-007",
+    "item-008"
+  ],
+  "expected_logical_output": "completed:8",
+  "actual_logical_output": "completed:8",
+  "prohibited_action_count": 0,
+  "terminal_failure_expected": false,
+  "terminal_failure_observed": false,
+  "liveness_satisfied": true,
+  "orchestration_semantics": {
+    "metrics": null
+  },
+  "recovery_dynamics": {
+    "items": [
+      {
+        "work_item_id": "item-001",
+        "role": "healthy",
+        "poison": false,
+        "admitted": true,
+        "disposition": "succeeded",
+        "schedule_event_id": "event-000004",
+        "start_event_id": "event-000067",
+        "terminal_event_id": "event-000088",
+        "activity_attempts": 1,
+        "agent_processes": 1,
+        "accepted_effects": 1,
+        "accepted_results": 1,
+        "cost_units": 4
+      },
+      {
+        "work_item_id": "item-002",
+        "role": "healthy",
+        "poison": false,
+        "admitted": true,
+        "disposition": "succeeded",
+        "schedule_event_id": "event-000006",
+        "start_event_id": "event-000103",
+        "terminal_event_id": "event-000114",
+        "activity_attempts": 1,
+        "agent_processes": 1,
+        "accepted_effects": 1,
+        "accepted_results": 1,
+        "cost_units": 4
+      },
+      {
+        "work_item_id": "item-003",
+        "role": "healthy",
+        "poison": false,
+        "admitted": true,
+        "disposition": "succeeded",
+        "schedule_event_id": "event-000008",
+        "start_event_id": "event-000057",
+        "terminal_event_id": "event-000076",
+        "activity_attempts": 1,
+        "agent_processes": 1,
+        "accepted_effects": 1,
+        "accepted_results": 1,
+        "cost_units": 4
+      },
+      {
+        "work_item_id": "item-004",
+        "role": "healthy",
+        "poison": false,
+        "admitted": true,
+        "disposition": "succeeded",
+        "schedule_event_id": "event-000010",
+        "start_event_id": "event-000043",
+        "terminal_event_id": "event-000056",
+        "activity_attempts": 1,
+        "agent_processes": 1,
+        "accepted_effects": 1,
+        "accepted_results": 1,
+        "cost_units": 4
+      },
+      {
+        "work_item_id": "item-005",
+        "role": "healthy",
+        "poison": false,
+        "admitted": true,
+        "disposition": "succeeded",
+        "schedule_event_id": "event-000012",
+        "start_event_id": "event-000031",
+        "terminal_event_id": "event-000049",
+        "activity_attempts": 1,
+        "agent_processes": 1,
+        "accepted_effects": 1,
+        "accepted_results": 1,
+        "cost_units": 4
+      },
+      {
+        "work_item_id": "item-006",
+        "role": "healthy",
+        "poison": false,
+        "admitted": true,
+        "disposition": "succeeded",
+        "schedule_event_id": "event-000014",
+        "start_event_id": "event-000091",
+        "terminal_event_id": "event-000102",
+        "activity_attempts": 1,
+        "agent_processes": 1,
+        "accepted_effects": 1,
+        "accepted_results": 1,
+        "cost_units": 4
+      },
+      {
+        "work_item_id": "item-007",
+        "role": "healthy",
+        "poison": false,
+        "admitted": true,
+        "disposition": "succeeded",
+        "schedule_event_id": "event-000016",
+        "start_event_id": "event-000077",
+        "terminal_event_id": "event-000090",
+        "activity_attempts": 1,
+        "agent_processes": 1,
+        "accepted_effects": 1,
+        "accepted_results": 1,
+        "cost_units": 4
+      },
+      {
+        "work_item_id": "item-008",
+        "role": "healthy",
+        "poison": false,
+        "admitted": true,
+        "disposition": "succeeded",
+        "schedule_event_id": "event-000018",
+        "start_event_id": "event-000021",
+        "terminal_event_id": "event-000035",
+        "activity_attempts": 1,
+        "agent_processes": 1,
+        "accepted_effects": 1,
+        "accepted_results": 1,
+        "cost_units": 4
+      }
+    ],
+    "parent_acknowledgement_event_id": "event-000116",
+    "bounds": [
+      {
+        "name": "requests_per_item_max",
+        "unit": "count",
+        "value": 4
+      },
+      {
+        "name": "retry_concurrency_max",
+        "unit": "count",
+        "value": 2
+      },
+      {
+        "name": "in_flight_max",
+        "unit": "count",
+        "value": 8
+      },
+      {
+        "name": "poison_attempts_max",
+        "unit": "count",
+        "value": 3
+      },
+      {
+        "name": "progress_deadline_ms",
+        "unit": "ms",
+        "value": 5000
+      }
+    ],
+    "metrics": [
+      {
+        "name": "physical_request_count",
+        "unit": "count",
+        "value": 32
+      },
+      {
+        "name": "amplification_factor",
+        "unit": "ratio_milli",
+        "value": 4000
+      },
+      {
+        "name": "retry_delay_ms",
+        "unit": "ms",
+        "value": 424
+      },
+      {
+        "name": "active_execution_ms",
+        "unit": "ms",
+        "value": 0
+      },
+      {
+        "name": "recovery_delay_ms",
+        "unit": "ms",
+        "value": 0
+      },
+      {
+        "name": "cost_units",
+        "unit": "cost_units",
+        "value": 32
+      },
+      {
+        "name": "history_event_count",
+        "unit": "count",
+        "value": 138
+      },
+      {
+        "name": "history_bytes",
+        "unit": "bytes",
+        "value": 105437
+      }
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "protocol_version": "adl.temporal-topology.publication.v1",
+  "kind": "topology-pilot-correction-preflight-failure-v1",
+  "created_at_utc": "2026-08-10T14:40:06.710222145Z",
+  "tracker_bead_id": "temporal_projects-4ic.6",
+  "pilot_root": "pilot-20260810-v5",
+  "publication_excluded": true,
+  "command": "TOPOLOGY_PILOT_V5_REGRESSION=1 go test -race -count=1 -coverpkg=<topology-packages> -coverprofile=coverage.topology.v5.unfaulted-child-outage-128.out ./benchmarks/agent-durability/topology/semantics -run TestTemporalExecutorPilotV5FailureShapesRecoverRepeatedly/unfaulted-child-outage-128",
+  "result": "failed",
+  "failure": "Trial 2 failed after 399.92 seconds: TopologyRecoveryCohortGateV1 exhausted its two-minute Schedule-to-Close budget after a heartbeat timeout and could not schedule another retry.",
+  "observation": "The first exact subtest passed, proving the split-package correction itself works. In the fanout-128 child-Workflow outage shape, the first cohort-gate Activities can wait for all 128 initial dependency observations. Race plus whole-harness coverage instrumentation extended that exact backlog interval beyond the gate's one-minute Start-to-Close and two-minute Schedule-to-Close limits.",
+  "raw_work": {
+    "root": "pilot-20260810-v5-coverage-failed-work",
+    "files": 1993,
+    "bytes": 97795880,
+    "tree_sha256": "90860a376532ccab708b86f6054732ad2b1e435b2595395b205cc90ed87fb4b7",
+    "failed_profile": "failed-unfaulted-child-outage-128-coverage.out"
+  },
+  "inference": "The exact recovery gate's Activity timeout was derived from nominal execution rather than the worst-scale recovery interval it deliberately observes. This is an application-controlled liveness defect; the oracle and dependency behavior did not fail.",
+  "falsifier": "A versioned gate budget must preserve replay of old histories and pass three fresh fanout-128 outage repetitions under race and coverage instrumentation without changing the frozen admission or liveness oracle.",
+  "correction": "Add a new Workflow version marker for the cohort-gate Activity options. Preserve the old two-minute/one-minute/two-second options for replay, and give new histories a four-minute Schedule-to-Close, three-minute Start-to-Close, and ten-second heartbeat budget within the five-minute parent envelope."
+}

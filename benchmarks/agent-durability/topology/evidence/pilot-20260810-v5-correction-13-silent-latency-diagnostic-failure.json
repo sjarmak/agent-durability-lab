@@ -1,0 +1,25 @@
+{
+  "kind": "topology-pilot-correction-failure-v1",
+  "recorded_at_utc": "2026-08-10T18:27:40.396351750Z",
+  "tracker_bead_id": "temporal_projects-4ic.6",
+  "invariant": "protected silent-progress recovery revokes stale authority within the registered five-second deadline even when the qualifying coverage profile instruments the full topology source set",
+  "failure_boundary": "accepted progress is durably recorded, the original executor wedges at the exact barrier, and the protected Child-Workflow fanout-8 recovery path runs under Go coverage instrumentation",
+  "oracle": "the independently reconstructed failure_detection_latency_ms is at most 5000, stale generation-1 actions are rejected, the logical replacement completes, and the captured history replays",
+  "falsifier": "failure_detection_latency_ms exceeds 5000, a stale action is accepted, replacement fails to complete, or replay fails",
+  "observation": {
+    "case": "silent-progress/accepted-progress-before-executor-wedge/protected",
+    "topology": "child-workflow",
+    "fanout": 8,
+    "trial": 1,
+    "failure": "correctness, liveness, diagnosability, and replay passed but the admitted safety verdict failed",
+    "exact_detection_latency_ms": "not emitted because the pre-correction test asserted the aggregate verdict before logging recovery metrics",
+    "partial_profile_sha256": "ab3a42a4196e04eab41bbfcdbee0f3f42aab286017a63a0c8878d41cdc2ef130",
+    "partial_profile_bytes": 350664,
+    "partial_profile_statement_coverage_percent": 30.8,
+    "preserved_profile_tree_sha256": "5f4a26c4f5f87016b34fb90375bdb7ec73f4f7eaf99e825abf4a6c6e7853b82f",
+    "preserved_profile_root": "pilot-20260810-v5-final-coverage-silent-latency-failed-work"
+  },
+  "inference": "the safety oracle fails this protected case when the reconstructed detection metric exceeds the registered bound or a stale action is accepted; the passing correctness/liveness outcome and prior stale-owner regression make a latency violation the leading explanation, but the exact value is unavailable from this run",
+  "diagnostic_correction": "extract and log the recovery metric before the aggregate verdict assertion and report only native-history event count, hash, replay status, and replay error instead of dumping the full history export",
+  "disposition": "preserved failure; no qualifying claim and no oracle relaxation"
+}

@@ -1,0 +1,68 @@
+{
+  "protocol_version": "adl.temporal-topology.publication.v1",
+  "phase": "pilot",
+  "block": {
+    "index": 243,
+    "schedule_block_id": "schedule-block/topology-pilot-v1/layered-retry-amplification/dependency-first-request-before-scripted-timeout-500-429-sequence/unsafe/fanout-032/slot-01",
+    "pair_id": "topology-pilot-v1/layered-retry-amplification/dependency-first-request-before-scripted-timeout-500-429-sequence/unsafe/fanout-032/slot-01",
+    "stratum": {
+      "id": "layered-retry-amplification/dependency-first-request-before-scripted-timeout-500-429-sequence/unsafe/fanout-032",
+      "case": "layered-retry-amplification",
+      "boundary": "dependency-first-request-before-scripted-timeout-500-429-sequence",
+      "probe": "unsafe",
+      "fanout": 32
+    },
+    "slot": 1,
+    "reserve": false,
+    "topology_order": [
+      "direct-activity",
+      "child-workflow"
+    ]
+  },
+  "admission": "valid",
+  "efficiency_eligible": false,
+  "arms": [
+    {
+      "topology": "direct-activity",
+      "order": 1,
+      "run_id": "topology-pilot-v1/layered-retry-amplification/dependency-first-request-before-scripted-timeout-500-429-sequence/unsafe/fanout-032/slot-01/direct-activity",
+      "evidence_directory": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/topology/evidence/pilot-20260810-v3/runs/run-8aeeabf50c4a1f2850654b710c3ffe44",
+      "ready_at_utc": "2026-08-10T08:34:57.036447685Z",
+      "started_at_utc": "2026-08-10T08:34:57.036448887Z",
+      "finished_at_utc": "2026-08-10T08:34:59.556793965Z",
+      "duration_ns": 2520345078,
+      "verdict": {
+        "protocol_version": "adl.temporal-topology.publication.v1",
+        "run_id": "topology-pilot-v1/layered-retry-amplification/dependency-first-request-before-scripted-timeout-500-429-sequence/unsafe/fanout-032/slot-01/direct-activity",
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "fail",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": false,
+        "oracle": "independent-topology-causal-oracle-v1"
+      }
+    },
+    {
+      "topology": "child-workflow",
+      "order": 2,
+      "run_id": "topology-pilot-v1/layered-retry-amplification/dependency-first-request-before-scripted-timeout-500-429-sequence/unsafe/fanout-032/slot-01/child-workflow",
+      "evidence_directory": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/topology/evidence/pilot-20260810-v3/runs/run-f18a3917344ee4b2af6c02844c60f117",
+      "ready_at_utc": "2026-08-10T08:34:59.57428276Z",
+      "started_at_utc": "2026-08-10T08:34:59.574283912Z",
+      "finished_at_utc": "2026-08-10T08:35:12.201310687Z",
+      "duration_ns": 12627026795,
+      "verdict": {
+        "protocol_version": "adl.temporal-topology.publication.v1",
+        "run_id": "topology-pilot-v1/layered-retry-amplification/dependency-first-request-before-scripted-timeout-500-429-sequence/unsafe/fanout-032/slot-01/child-workflow",
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "fail",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": false,
+        "oracle": "independent-topology-causal-oracle-v1"
+      }
+    }
+  ]
+}

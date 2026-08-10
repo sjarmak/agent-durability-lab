@@ -1,0 +1,24 @@
+{
+  "protocol_version": "adl.temporal-topology.publication.v1",
+  "kind": "topology-pilot-correction-preflight-failure-v1",
+  "created_at_utc": "2026-08-10T14:29:36.250145398Z",
+  "tracker_bead_id": "temporal_projects-4ic.6",
+  "pilot_root": "pilot-20260810-v5",
+  "publication_excluded": true,
+  "command": "TOPOLOGY_PILOT_V5_REGRESSION=1 go test -race -coverpkg=<topology-packages> -coverprofile=coverage.topology.v5.out ./benchmarks/agent-durability/topology/semantics -run TestTemporalExecutorPilotV5FailureShapesRecoverRepeatedly -count=1",
+  "result": "failed",
+  "failure": "The single instrumented twelve-trial test process reached Go's unchanged 10-minute package alarm and exited without a passing test result.",
+  "observation": "The process remained active through 9 minutes 59 seconds. Its coverage file was finalized only as the process exited and is treated as partial, not admissible coverage. The orphaned hermetic Temporal process was stopped after the failure and its raw work was copied before any cleanup.",
+  "raw_work": {
+    "root": "pilot-20260810-v5-coverage-failed-work",
+    "files": 1993,
+    "bytes": 97795880,
+    "tree_sha256": "90860a376532ccab708b86f6054732ad2b1e435b2595395b205cc90ed87fb4b7",
+    "partial_profile": "partial-coverage.out",
+    "followup_failed_profile": "failed-unfaulted-child-outage-128-coverage.out",
+    "lineage_failed_profile": "failed-unfaulted-child-outage-128-lineage-coverage.out"
+  },
+  "inference": "Coverage instrumentation makes the four-shape aggregate exceed the package alarm even though the same uninstrumented profile passed twice. A partial profile cannot satisfy the coverage gate.",
+  "falsifier": "Each exact shape must independently pass under race and coverage instrumentation, and the merger must reject any absent, malformed, or incompatible input profile.",
+  "correction": "Execute the four named subtests as four independent package processes with identical coverpkg settings, then atomically merge those complete profiles with the complete default profile."
+}

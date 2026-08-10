@@ -1,8 +1,18 @@
-.PHONY: build test test-live check-postgres-service check-publication-v2-config publication-v2 test-system-adapters test-temporal-native coverage coverage-system-adapters evidence-temporal-native evidence-claude-direct clean
+.PHONY: build claude-direct-evidence-transport test test-live check-postgres-service check-publication-v2-config publication-v2 topology-semantics-conformance topology-recovery-conformance topology-matrix-conformance topology-pilot test-system-adapters test-temporal-native coverage coverage-system-adapters evidence-temporal-native evidence-claude-direct package-claude-direct-evidence verify-claude-direct-evidence restore-claude-direct-evidence clean
 
 PUBLICATION_DEADLINE ?= 2h
+TOPOLOGY_PILOT_DEADLINE ?= 8h
+CLAUDE_DIRECT_EVIDENCE_SOURCE ?= $(CURDIR)/experiments/durable-vendor-sessions/claude-direct/evidence
+CLAUDE_DIRECT_EVIDENCE_LINEAGE ?= $(CURDIR)/experiments/durable-vendor-sessions/claude-direct/transport/claude-direct-lineage.json
+AGENT_DURABILITY_COVER_TEST_PACKAGES := ./benchmarks/agent-durability ./benchmarks/agent-durability/calibration ./benchmarks/agent-durability/cmd/calibrate ./benchmarks/agent-durability/cmd/live-common ./benchmarks/agent-durability/cmd/publication-report ./benchmarks/agent-durability/cmd/system-suite ./benchmarks/agent-durability/evidence ./benchmarks/agent-durability/livecommon ./benchmarks/agent-durability/oracle ./benchmarks/agent-durability/protocol ./benchmarks/agent-durability/systemsuite
+TOPOLOGY_COVERPKG := ./benchmarks/agent-durability/topology/agent,./benchmarks/agent-durability/topology/cmd/covermerge,./benchmarks/agent-durability/topology/evidence,./benchmarks/agent-durability/topology/internal/coverprofile,./benchmarks/agent-durability/topology/internal/sealedfs,./benchmarks/agent-durability/topology/matrix,./benchmarks/agent-durability/topology/oracle,./benchmarks/agent-durability/topology/protocol,./benchmarks/agent-durability/topology/runner,./benchmarks/agent-durability/topology/semantics
+TOPOLOGY_COVER_TEST_PACKAGES := ./benchmarks/agent-durability/topology/agent ./benchmarks/agent-durability/topology/cmd/covermerge ./benchmarks/agent-durability/topology/cmd/matrix-conformance ./benchmarks/agent-durability/topology/cmd/pilot ./benchmarks/agent-durability/topology/cmd/semantics-conformance ./benchmarks/agent-durability/topology/evidence ./benchmarks/agent-durability/topology/internal/coverprofile ./benchmarks/agent-durability/topology/internal/sealedfs ./benchmarks/agent-durability/topology/internal/testfixture ./benchmarks/agent-durability/topology/matrix ./benchmarks/agent-durability/topology/oracle ./benchmarks/agent-durability/topology/protocol ./benchmarks/agent-durability/topology/runner
+TOPOLOGY_COVER_INTEGRATIONS := TestTemporalExecutorRecoversJoinAcrossBothTopologyArms TestTemporalExecutorCoversFrozenSemanticsCasesAndBoundaries TestTemporalExecutorCoversFrozenRecoveryCasesAndBoundaries TestTemporalExecutorRecoveryScaleDoesNotDeadlockAdmission TestTemporalExecutorUnsafeQueuedChildScaleClosesHeldBarriers
+TOPOLOGY_COVER_SHAPES := unfaulted-direct-supersession-32 unfaulted-child-outage-128 protected-child-outage-128 protected-child-silent-progress-8
+TOPOLOGY_COVER_BASE_PROFILES := coverage.topology.packages.out coverage.topology.semantics-unit.out coverage.topology.pilot-audit.out $(addprefix coverage.topology.,$(addsuffix .out,$(TOPOLOGY_COVER_INTEGRATIONS)))
+TOPOLOGY_COVER_PROFILES := $(addprefix coverage.topology.v5.,$(addsuffix .out,$(TOPOLOGY_COVER_SHAPES)))
 
-build:
+build: claude-direct-evidence-transport
 	mkdir -p bin
 	go build -o bin/lab-worker ./cmd/worker
 	go build -o bin/agent-simulator ./cmd/agent-simulator
@@ -20,11 +30,18 @@ build:
 	go build -o bin/agent-durability-v2-publication ./benchmarks/agent-durability/v2/cmd/publication
 	go build -o bin/agent-durability-v2-publication-report ./benchmarks/agent-durability/cmd/publication-report
 	go build -o bin/agent-durability-v1-system-suite ./benchmarks/agent-durability/cmd/system-suite
+	go build -o bin/topology-semantics-conformance ./benchmarks/agent-durability/topology/cmd/semantics-conformance
+	go build -o bin/topology-matrix-conformance ./benchmarks/agent-durability/topology/cmd/matrix-conformance
+	go build -o bin/topology-pilot ./benchmarks/agent-durability/topology/cmd/pilot
 	go build -o bin/temporal-native-evidence ./experiments/durable-vendor-sessions/temporal-native/cmd/temporal-native-evidence
 	go build -o bin/claude-direct-worker ./experiments/durable-vendor-sessions/claude-direct/cmd/worker
 	go build -o bin/claude-direct-effect ./experiments/durable-vendor-sessions/claude-direct/cmd/controlled-effect
 	go build -o bin/claude-direct-launcher ./experiments/durable-vendor-sessions/claude-direct/cmd/claude-launcher
 	go build -o bin/claude-direct-experiment ./experiments/durable-vendor-sessions/claude-direct/cmd/experiment
+
+claude-direct-evidence-transport:
+	mkdir -p bin
+	go build -o bin/claude-direct-evidence-transport ./experiments/durable-vendor-sessions/claude-direct/cmd/evidence-transport
 
 test:
 	go test -race ./...
@@ -56,6 +73,66 @@ publication-v2: check-publication-v2-config build
 		--postgres-dsn "service=$(POSTGRES_SERVICE)" \
 		--deadline "$(PUBLICATION_DEADLINE)"
 
+topology-semantics-conformance:
+	mkdir -p bin
+	go build -trimpath -o bin/agent-simulator ./cmd/agent-simulator
+	go build -trimpath -o bin/topology-semantics-conformance ./benchmarks/agent-durability/topology/cmd/semantics-conformance
+	@test -n "$(EVIDENCE_ROOT)" || (echo "EVIDENCE_ROOT is required"; exit 1)
+	@test -n "$(TEMPORAL_WORK_ROOT)" || (echo "TEMPORAL_WORK_ROOT is required"; exit 1)
+	@test -n "$(TEMPORAL_CLI_PATH)" || (echo "TEMPORAL_CLI_PATH is required"; exit 1)
+	bin/topology-semantics-conformance \
+		--evidence-root "$(EVIDENCE_ROOT)" \
+		--work-root "$(TEMPORAL_WORK_ROOT)" \
+		--temporal-path "$(TEMPORAL_CLI_PATH)" \
+		--agent-binary "$(CURDIR)/bin/agent-simulator"
+
+topology-recovery-conformance:
+	mkdir -p bin
+	go build -trimpath -o bin/agent-simulator ./cmd/agent-simulator
+	go build -trimpath -o bin/topology-semantics-conformance ./benchmarks/agent-durability/topology/cmd/semantics-conformance
+	@test -n "$(EVIDENCE_ROOT)" || (echo "EVIDENCE_ROOT is required"; exit 1)
+	@test -n "$(TEMPORAL_WORK_ROOT)" || (echo "TEMPORAL_WORK_ROOT is required"; exit 1)
+	@test -n "$(TEMPORAL_CLI_PATH)" || (echo "TEMPORAL_CLI_PATH is required"; exit 1)
+	bin/topology-semantics-conformance \
+		--suite recovery \
+		--fanout 32 \
+		--deadline 40m \
+		--evidence-root "$(EVIDENCE_ROOT)" \
+		--work-root "$(TEMPORAL_WORK_ROOT)" \
+		--temporal-path "$(TEMPORAL_CLI_PATH)" \
+		--agent-binary "$(CURDIR)/bin/agent-simulator"
+
+topology-matrix-conformance:
+	mkdir -p bin
+	go build -trimpath -o bin/agent-simulator ./cmd/agent-simulator
+	go build -trimpath -o bin/topology-matrix-conformance ./benchmarks/agent-durability/topology/cmd/matrix-conformance
+	@test -n "$(EVIDENCE_ROOT)" || (echo "EVIDENCE_ROOT is required"; exit 1)
+	@test -n "$(TEMPORAL_WORK_ROOT)" || (echo "TEMPORAL_WORK_ROOT is required"; exit 1)
+	@test -n "$(TEMPORAL_CLI_PATH)" || (echo "TEMPORAL_CLI_PATH is required"; exit 1)
+	bin/topology-matrix-conformance \
+		--evidence-root "$(EVIDENCE_ROOT)" \
+		--work-root "$(TEMPORAL_WORK_ROOT)" \
+		--preregistration "$(CURDIR)/benchmarks/agent-durability/topology-preregistration-v1.json" \
+		--temporal-path "$(TEMPORAL_CLI_PATH)" \
+		--agent-binary "$(CURDIR)/bin/agent-simulator"
+
+topology-pilot:
+	mkdir -p bin
+	go build -trimpath -o bin/agent-simulator ./cmd/agent-simulator
+	go build -trimpath -o bin/topology-pilot ./benchmarks/agent-durability/topology/cmd/pilot
+	@test -n "$(EVIDENCE_ROOT)" || (echo "EVIDENCE_ROOT is required"; exit 1)
+	@test -n "$(TEMPORAL_WORK_ROOT)" || (echo "TEMPORAL_WORK_ROOT is required"; exit 1)
+	@test -n "$(TEMPORAL_CLI_PATH)" || (echo "TEMPORAL_CLI_PATH is required"; exit 1)
+	bin/topology-pilot \
+		--evidence-root "$(EVIDENCE_ROOT)" \
+		--work-root "$(TEMPORAL_WORK_ROOT)" \
+		--preregistration "$(CURDIR)/benchmarks/agent-durability/topology-preregistration-v1.json" \
+		--contract "$(CURDIR)/benchmarks/agent-durability/topology-contract-v1.json" \
+		--temporal-path "$(TEMPORAL_CLI_PATH)" \
+		--agent-binary "$(CURDIR)/bin/agent-simulator" \
+		--source-root "$(CURDIR)" \
+		--deadline "$(TOPOLOGY_PILOT_DEADLINE)"
+
 test-system-adapters: check-postgres-service
 	@test -n "$(TEMPORAL_CLI_PATH)" || (echo "TEMPORAL_CLI_PATH is required"; exit 1)
 	POSTGRES_DSN="service=$(POSTGRES_SERVICE)" go test -race -v -run TestLive -count=1 \
@@ -84,6 +161,24 @@ evidence-claude-direct: build
 		--max-turns 2 \
 		--trials 3
 
+package-claude-direct-evidence: claude-direct-evidence-transport
+	@test -n "$(CLAUDE_DIRECT_TRANSPORT_ROOT)" || (echo "CLAUDE_DIRECT_TRANSPORT_ROOT is required and must not exist"; exit 1)
+	bin/claude-direct-evidence-transport package \
+		--source "$(CLAUDE_DIRECT_EVIDENCE_SOURCE)" \
+		--lineage "$(CLAUDE_DIRECT_EVIDENCE_LINEAGE)" \
+		--output "$(CLAUDE_DIRECT_TRANSPORT_ROOT)"
+
+verify-claude-direct-evidence: claude-direct-evidence-transport
+	@test -n "$(CLAUDE_DIRECT_TRANSPORT_ROOT)" || (echo "CLAUDE_DIRECT_TRANSPORT_ROOT is required"; exit 1)
+	bin/claude-direct-evidence-transport verify --transport "$(CLAUDE_DIRECT_TRANSPORT_ROOT)"
+
+restore-claude-direct-evidence: claude-direct-evidence-transport
+	@test -n "$(CLAUDE_DIRECT_TRANSPORT_ROOT)" || (echo "CLAUDE_DIRECT_TRANSPORT_ROOT is required"; exit 1)
+	@test -n "$(CLAUDE_DIRECT_RESTORE_ROOT)" || (echo "CLAUDE_DIRECT_RESTORE_ROOT is required and must not exist"; exit 1)
+	bin/claude-direct-evidence-transport restore \
+		--transport "$(CLAUDE_DIRECT_TRANSPORT_ROOT)" \
+		--output "$(CLAUDE_DIRECT_RESTORE_ROOT)"
+
 coverage:
 	go test -race -coverprofile=coverage.out ./internal/...
 	go tool cover -func=coverage.out
@@ -101,7 +196,7 @@ coverage:
 	go tool cover -func=coverage.cancellation.out
 	@lab_coverage=$$(go tool cover -func=coverage.cancellation.out | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
 	awk -v coverage="$$lab_coverage" 'BEGIN { if (coverage + 0 < 80) { printf "cancellation coverage %.1f%% is below 80%%\n", coverage; exit 1 } }'
-	go test -race -coverpkg=./benchmarks/agent-durability/calibration,./benchmarks/agent-durability/evidence,./benchmarks/agent-durability/livecommon,./benchmarks/agent-durability/oracle,./benchmarks/agent-durability/protocol -coverprofile=coverage.agent-durability.out ./benchmarks/agent-durability/...
+	go test -race -coverpkg=./benchmarks/agent-durability/calibration,./benchmarks/agent-durability/evidence,./benchmarks/agent-durability/livecommon,./benchmarks/agent-durability/oracle,./benchmarks/agent-durability/protocol -coverprofile=coverage.agent-durability.out $(AGENT_DURABILITY_COVER_TEST_PACKAGES)
 	go tool cover -func=coverage.agent-durability.out
 	@harness_coverage=$$(go tool cover -func=coverage.agent-durability.out | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
 	awk -v coverage="$$harness_coverage" 'BEGIN { if (coverage + 0 < 80) { printf "agent durability harness coverage %.1f%% is below 80%%\n", coverage; exit 1 } }'
@@ -109,6 +204,12 @@ coverage:
 	go tool cover -func=coverage.claude-direct.out
 	@lab_coverage=$$(go tool cover -func=coverage.claude-direct.out | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
 	awk -v coverage="$$lab_coverage" 'BEGIN { if (coverage + 0 < 80) { printf "Claude direct lab coverage %.1f%% is below 80%%\n", coverage; exit 1 } }'
+	go test -race -coverprofile=coverage.claude-direct-transport.out \
+		./experiments/durable-vendor-sessions/claude-direct/transport \
+		./experiments/durable-vendor-sessions/claude-direct/cmd/evidence-transport
+	go tool cover -func=coverage.claude-direct-transport.out
+	@transport_coverage=$$(go tool cover -func=coverage.claude-direct-transport.out | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
+	awk -v coverage="$$transport_coverage" 'BEGIN { if (coverage + 0 < 80) { printf "Claude evidence transport coverage %.1f%% is below 80%%\n", coverage; exit 1 } }'
 	go test -race -coverprofile=coverage.temporal-native-adapter.out ./experiments/durable-vendor-sessions/temporal-native/evidenceadapter
 	go tool cover -func=coverage.temporal-native-adapter.out
 	@adapter_coverage=$$(go tool cover -func=coverage.temporal-native-adapter.out | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
@@ -119,6 +220,28 @@ coverage:
 	go tool cover -func=coverage.agent-durability-v2.out
 	@v2_coverage=$$(go tool cover -func=coverage.agent-durability-v2.out | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
 	awk -v coverage="$$v2_coverage" 'BEGIN { if (coverage + 0 < 80) { printf "agent durability v2 coverage %.1f%% is below 80%%\n", coverage; exit 1 } }'
+	go test -race -count=1 -coverpkg=$(TOPOLOGY_COVERPKG) \
+		-coverprofile=coverage.topology.packages.out $(TOPOLOGY_COVER_TEST_PACKAGES)
+	go test -race -short -count=1 -coverpkg=$(TOPOLOGY_COVERPKG) \
+		-coverprofile=coverage.topology.semantics-unit.out ./benchmarks/agent-durability/topology/semantics
+	TOPOLOGY_PILOT_AUDIT_ROOT=$(CURDIR)/benchmarks/agent-durability/topology/evidence/pilot-20260810-v5 \
+		go test -race -count=1 -coverpkg=$(TOPOLOGY_COVERPKG) \
+		-coverprofile=coverage.topology.pilot-audit.out ./benchmarks/agent-durability/topology/matrix \
+		-run TestAuditRejectedPilotEvidenceReconstructsEveryPair
+	@set -e; for test in $(TOPOLOGY_COVER_INTEGRATIONS); do \
+		go test -race -count=1 -coverpkg=$(TOPOLOGY_COVERPKG) \
+			-coverprofile="coverage.topology.$$test.out" ./benchmarks/agent-durability/topology/semantics -run "$$test"; \
+	done
+	@set -e; for shape in $(TOPOLOGY_COVER_SHAPES); do \
+		TOPOLOGY_PILOT_V5_REGRESSION=1 go test -race -count=1 -coverpkg=$(TOPOLOGY_COVERPKG) \
+			-coverprofile="coverage.topology.v5.$$shape.out" ./benchmarks/agent-durability/topology/semantics \
+			-run "TestTemporalExecutorPilotV5FailureShapesRecoverRepeatedly/$$shape"; \
+	done
+	go run ./benchmarks/agent-durability/topology/cmd/covermerge \
+		--output coverage.topology.out $(TOPOLOGY_COVER_BASE_PROFILES) $(TOPOLOGY_COVER_PROFILES)
+	go tool cover -func=coverage.topology.out
+	@topology_coverage=$$(go tool cover -func=coverage.topology.out | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
+	awk -v coverage="$$topology_coverage" 'BEGIN { if (coverage + 0 < 80) { printf "topology harness coverage %.1f%% is below 80%%\n", coverage; exit 1 } }'
 
 coverage-system-adapters: check-postgres-service
 	@test -n "$(TEMPORAL_CLI_PATH)" || (echo "TEMPORAL_CLI_PATH is required"; exit 1)
@@ -132,4 +255,4 @@ coverage-system-adapters: check-postgres-service
 
 clean:
 	rm -rf bin
-	rm -f coverage.out coverage.completion.out coverage.external-effects.out coverage.cancellation.out coverage.agent-durability.out coverage.agent-durability-v2.out coverage.agent-durability-v2-system.out coverage.claude-direct.out coverage.temporal-native-adapter.out
+	rm -f coverage.out coverage.completion.out coverage.external-effects.out coverage.cancellation.out coverage.agent-durability.out coverage.agent-durability-v2.out coverage.agent-durability-v2-system.out coverage.claude-direct.out coverage.claude-direct-transport.out coverage.temporal-native-adapter.out coverage.topology.default.out $(TOPOLOGY_COVER_BASE_PROFILES) $(TOPOLOGY_COVER_PROFILES) coverage.topology.v5.out coverage.topology.out

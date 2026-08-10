@@ -1,0 +1,72 @@
+{
+  "protocol_version": "adl.temporal-topology.publication.v1",
+  "phase": "pilot",
+  "block": {
+    "index": 252,
+    "schedule_block_id": "schedule-block/topology-pilot-v1/outage-backlog-herd-recovery/outage-backlog-restoration-and-catchup-worker-crash/protected/fanout-128/slot-02",
+    "pair_id": "topology-pilot-v1/outage-backlog-herd-recovery/outage-backlog-restoration-and-catchup-worker-crash/protected/fanout-128/slot-02",
+    "stratum": {
+      "id": "outage-backlog-herd-recovery/outage-backlog-restoration-and-catchup-worker-crash/protected/fanout-128",
+      "case": "outage-backlog-herd-recovery",
+      "boundary": "outage-backlog-restoration-and-catchup-worker-crash",
+      "probe": "protected",
+      "fanout": 128
+    },
+    "slot": 2,
+    "reserve": false,
+    "topology_order": [
+      "direct-activity",
+      "child-workflow"
+    ]
+  },
+  "admission": "invalid",
+  "reason_codes": [
+    "child-workflow:execution_failed",
+    "child-workflow:evidence_missing"
+  ],
+  "efficiency_eligible": false,
+  "arms": [
+    {
+      "topology": "direct-activity",
+      "order": 1,
+      "run_id": "topology-pilot-v1/outage-backlog-herd-recovery/outage-backlog-restoration-and-catchup-worker-crash/protected/fanout-128/slot-02/direct-activity",
+      "evidence_directory": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/topology/evidence/pilot-20260810-v5/runs/run-802c9ecbaff8ed026fce786a694eb7b9",
+      "ready_at_utc": "2026-08-10T12:36:40.521163461Z",
+      "started_at_utc": "2026-08-10T12:36:40.521164684Z",
+      "finished_at_utc": "2026-08-10T12:36:58.557678962Z",
+      "duration_ns": 18036514288,
+      "verdict": {
+        "protocol_version": "adl.temporal-topology.publication.v1",
+        "run_id": "topology-pilot-v1/outage-backlog-herd-recovery/outage-backlog-restoration-and-catchup-worker-crash/protected/fanout-128/slot-02/direct-activity",
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "oracle": "independent-topology-causal-oracle-v1"
+      }
+    },
+    {
+      "topology": "child-workflow",
+      "order": 2,
+      "run_id": "topology-pilot-v1/outage-backlog-herd-recovery/outage-backlog-restoration-and-catchup-worker-crash/protected/fanout-128/slot-02/child-workflow",
+      "ready_at_utc": "2026-08-10T12:36:58.645684479Z",
+      "started_at_utc": "2026-08-10T12:36:58.645685852Z",
+      "finished_at_utc": "2026-08-10T12:39:01.370338925Z",
+      "duration_ns": 122724653073,
+      "verdict": {
+        "protocol_version": "",
+        "run_id": "",
+        "admission": "",
+        "correctness": "",
+        "safety": "",
+        "liveness": "",
+        "diagnosability": "",
+        "efficiency_eligible": false,
+        "oracle": ""
+      },
+      "error": "workflow execution error (type: TopologySemanticsParentV1, workflowID: topology-772859814eafd969951fe62815bab526-parent, runID: 019febad-2593-7a33-8dcf-91ade74bd20a): Workflow timeout (type: StartToClose)"
+    }
+  ]
+}

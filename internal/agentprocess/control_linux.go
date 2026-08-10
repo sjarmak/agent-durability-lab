@@ -34,7 +34,7 @@ func Probe(identity ProcessIdentity) (Disposition, error) {
 	}
 	startIdentity, err := ProcessStartIdentity(identity.PID)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
+		if processGoneError(err) {
 			return DispositionGone, nil
 		}
 		return "", err
@@ -60,7 +60,7 @@ func Probe(identity ProcessIdentity) (Disposition, error) {
 	}
 	state, err := processState(identity.PID)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
+		if processGoneError(err) {
 			return DispositionGone, nil
 		}
 		return "", err
@@ -69,6 +69,10 @@ func Probe(identity ProcessIdentity) (Disposition, error) {
 		return DispositionGone, nil
 	}
 	return DispositionAlive, nil
+}
+
+func processGoneError(err error) bool {
+	return errors.Is(err, os.ErrNotExist) || errors.Is(err, syscall.ESRCH)
 }
 
 func Signal(request ControlRequest) (ControlResult, error) {

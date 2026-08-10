@@ -96,7 +96,7 @@ or protected ownership protocols.
 ## Evidence and falsifier
 
 The admitted evidence is
-[`claude-direct-20260808-v5`](../../experiments/durable-vendor-sessions/claude-direct/evidence/claude-direct-20260808-v5).
+[`claude-direct-20260808-v5`](../../experiments/durable-vendor-sessions/claude-direct/transport/README.md#current-package).
 It contains 12 run directories, 21 raw Claude JSONL streams, full Temporal
 histories, exact barrier and process identities, independent workspace and
 destination state, common-oracle verdicts, and per-run raw inventories. An
@@ -117,6 +117,13 @@ suite against the hardened source. Static analysis then required lower-case Go
 error strings; that non-semantic edit changed the binary hash. V5 repeated the
 suite and is the admitted source-matched run. No earlier evidence was deleted
 or rewritten.
+
+The Git-safe transport preserves all five roots as deterministic archives with
+separate manifests. Across v1-v5 it binds 2,206 files and 56 finalized run
+inventory/verdict chains; a clean-clone test restored every file and mode and
+verified all 57 nested Git repositories. This transport result establishes
+artifact portability only. It does not reclassify a run or strengthen the
+behavioral claim.
 
 The finding is falsified if fresh source-pinned admitted trials without attach,
 resume, fencing, idempotency, or reconciliation produce one Claude session and

@@ -1,0 +1,22 @@
+{
+  "protocol_version": "adl.temporal-topology.publication.v1",
+  "kind": "topology-pilot-correction-preflight-failure-v1",
+  "created_at_utc": "2026-08-10T14:49:36.011414703Z",
+  "tracker_bead_id": "temporal_projects-4ic.6",
+  "pilot_root": "pilot-20260810-v5",
+  "publication_excluded": true,
+  "command": "TOPOLOGY_PILOT_V5_REGRESSION=1 go test -race -count=1 -coverpkg=<topology-packages> -coverprofile=coverage.topology.v5.unfaulted-child-outage-128.out ./benchmarks/agent-durability/topology/semantics -run TestTemporalExecutorPilotV5FailureShapesRecoverRepeatedly/unfaulted-child-outage-128",
+  "result": "failed",
+  "failure": "Trial 1 reached evidence admission after 253.20 seconds but was rejected as invalid retry dependency request lineage.",
+  "observation": "The per-item request gate preserved exact parent IDs, ordinals, and non-overlapping offsets. The rejected transition was Activity attempt 2 on the initial Work Activity followed by attempt 1 on a newly scheduled recovery-round Work Activity with a different stable Activity ID.",
+  "raw_work": {
+    "root": "pilot-20260810-v5-coverage-failed-work",
+    "files": 1993,
+    "bytes": 97795880,
+    "tree_sha256": "90860a376532ccab708b86f6054732ad2b1e435b2595395b205cc90ed87fb4b7",
+    "failed_profile": "failed-unfaulted-child-outage-128-lineage-coverage.out"
+  },
+  "inference": "The oracle incorrectly treated Temporal Activity attempt as globally monotonic across distinct Activity IDs. Temporal attempts are delivery attempts scoped to an Activity execution; they legitimately reset when Workflow code schedules the next logical recovery round.",
+  "falsifier": "Dependency parent IDs, retry ordinals, and offsets must remain strictly ordered. An Activity attempt decrease must still be rejected when the causal start events carry the same Activity ID, but must be accepted when those events prove a transition to a distinct Activity ID.",
+  "correction": "Keep request-lineage ordering in the dependency record and move attempt monotonicity to causal validation, scoped by the Activity IDs already recorded on dependency start/finish events. Targeted RED/GREEN protocol tests cover both the allowed reset and forbidden same-Activity regression."
+}

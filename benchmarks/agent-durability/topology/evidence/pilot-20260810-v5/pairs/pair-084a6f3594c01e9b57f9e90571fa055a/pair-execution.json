@@ -1,0 +1,72 @@
+{
+  "protocol_version": "adl.temporal-topology.publication.v1",
+  "phase": "pilot",
+  "block": {
+    "index": 102,
+    "schedule_block_id": "schedule-block/topology-pilot-v1/queued-executing-supersession/unfaulted-baseline/unfaulted/fanout-032/slot-03",
+    "pair_id": "topology-pilot-v1/queued-executing-supersession/unfaulted-baseline/unfaulted/fanout-032/slot-03",
+    "stratum": {
+      "id": "queued-executing-supersession/unfaulted-baseline/unfaulted/fanout-032",
+      "case": "queued-executing-supersession",
+      "boundary": "unfaulted-baseline",
+      "probe": "unfaulted",
+      "fanout": 32
+    },
+    "slot": 3,
+    "reserve": false,
+    "topology_order": [
+      "direct-activity",
+      "child-workflow"
+    ]
+  },
+  "admission": "invalid",
+  "reason_codes": [
+    "direct-activity:execution_failed",
+    "direct-activity:evidence_missing"
+  ],
+  "efficiency_eligible": false,
+  "arms": [
+    {
+      "topology": "direct-activity",
+      "order": 1,
+      "run_id": "topology-pilot-v1/queued-executing-supersession/unfaulted-baseline/unfaulted/fanout-032/slot-03/direct-activity",
+      "ready_at_utc": "2026-08-10T11:45:04.560299536Z",
+      "started_at_utc": "2026-08-10T11:45:04.560300749Z",
+      "finished_at_utc": "2026-08-10T11:46:24.791396552Z",
+      "duration_ns": 80231095803,
+      "verdict": {
+        "protocol_version": "",
+        "run_id": "",
+        "admission": "",
+        "correctness": "",
+        "safety": "",
+        "liveness": "",
+        "diagnosability": "",
+        "efficiency_eligible": false,
+        "oracle": ""
+      },
+      "error": "workflow execution error (type: TopologySemanticsParentV1, workflowID: topology-f9db27198cb94e4c9816fdb719195770-parent, runID: 019feb7d-9df9-7281-b27c-526e234ffd1b): activity error (type: TopologySupersedeAuthorityV1, scheduledEventID: 39, startedEventID: 116, identity: ): Not enough time to schedule next retry before activity ScheduleToClose timeout, giving up retrying (type: ScheduleToClose): activity StartToClose timeout (type: StartToClose)"
+    },
+    {
+      "topology": "child-workflow",
+      "order": 2,
+      "run_id": "topology-pilot-v1/queued-executing-supersession/unfaulted-baseline/unfaulted/fanout-032/slot-03/child-workflow",
+      "evidence_directory": "/home/ds/projects/temporal_projects/benchmarks/agent-durability/topology/evidence/pilot-20260810-v5/runs/run-f7e733b7ea30f6cfb0d82c29d23d581c",
+      "ready_at_utc": "2026-08-10T11:46:24.791593875Z",
+      "started_at_utc": "2026-08-10T11:46:24.791594807Z",
+      "finished_at_utc": "2026-08-10T11:46:28.124022996Z",
+      "duration_ns": 3332428199,
+      "verdict": {
+        "protocol_version": "adl.temporal-topology.publication.v1",
+        "run_id": "topology-pilot-v1/queued-executing-supersession/unfaulted-baseline/unfaulted/fanout-032/slot-03/child-workflow",
+        "admission": "valid",
+        "correctness": "pass",
+        "safety": "pass",
+        "liveness": "pass",
+        "diagnosability": "pass",
+        "efficiency_eligible": true,
+        "oracle": "independent-topology-causal-oracle-v1"
+      }
+    }
+  ]
+}

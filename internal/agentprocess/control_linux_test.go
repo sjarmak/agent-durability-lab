@@ -140,6 +140,20 @@ func TestSignalRejectsInvalidControlRequest(t *testing.T) {
 	}
 }
 
+func TestProcessGoneErrorIncludesProcfsESRCH(t *testing.T) {
+	for _, err := range []error{
+		os.ErrNotExist,
+		fmt.Errorf("read proc state: %w", syscall.ESRCH),
+	} {
+		if !processGoneError(err) {
+			t.Fatalf("processGoneError(%v) = false", err)
+		}
+	}
+	if processGoneError(syscall.EPERM) {
+		t.Fatal("permission failure must not be classified as a gone process")
+	}
+}
+
 func TestControlHelperProcess(t *testing.T) {
 	role := os.Getenv(controlHelperRole)
 	if role == "" {
