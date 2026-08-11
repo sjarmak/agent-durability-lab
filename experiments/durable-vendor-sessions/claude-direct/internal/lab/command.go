@@ -57,3 +57,22 @@ func (c ClaudeCommand) Invocation(prompt string) (Invocation, error) {
 		Binary: c.Binary, Args: args, WorkDir: c.WorkDir, Stdin: strings.TrimRight(prompt, "\n") + "\n",
 	}, nil
 }
+
+// SessionInvocation starts a caller-selected Claude session on the first
+// Activity delivery and resumes that exact session on every later delivery.
+// It deliberately does not provide ownership fencing or process attachment.
+func (c ClaudeCommand) SessionInvocation(prompt, sessionID string, temporalAttempt int32) (Invocation, error) {
+	if !validVendorSessionID(sessionID) || temporalAttempt < 1 {
+		return Invocation{}, errors.New("claude session invocation requires a canonical UUID and positive Temporal attempt")
+	}
+	invocation, err := c.Invocation(prompt)
+	if err != nil {
+		return Invocation{}, err
+	}
+	if temporalAttempt == 1 {
+		invocation.Args = append(invocation.Args, "--session-id", sessionID)
+	} else {
+		invocation.Args = append(invocation.Args, "--resume", sessionID)
+	}
+	return invocation, nil
+}

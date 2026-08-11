@@ -158,7 +158,8 @@ evidence-claude-direct: build
 		--claude-binary "$${CLAUDE_BINARY:-$$(command -v claude)}" \
 		--model "$${CLAUDE_MODEL:-haiku}" \
 		--max-budget-usd "$${CLAUDE_MAX_BUDGET_USD:-0.25}" \
-		--max-turns 2 \
+		--max-turns "$${CLAUDE_MAX_TURNS:-2}" \
+		--recovery-mode "$${CLAUDE_RECOVERY_MODE:-unsafe-fresh}" \
 		--trials 3
 
 package-claude-direct-evidence: claude-direct-evidence-transport

@@ -25,50 +25,54 @@ import (
 const committedEffectBarrier = "claude-tool-effect-committed"
 
 type trialSummary struct {
-	WorkflowID          string                  `json:"workflow_id"`
-	WorkflowRunID       string                  `json:"workflow_run_id"`
-	Probe               protocol.Probe          `json:"probe"`
-	FaultBoundary       FaultBoundary           `json:"fault_boundary"`
-	Trial               int                     `json:"trial"`
-	FaultAt             time.Time               `json:"fault_at,omitempty"`
-	BarrierArrivals     []failureinject.Arrival `json:"barrier_arrivals"`
-	WorkflowResult      ClaudeActivityResult    `json:"workflow_result"`
-	WorkspaceBeforeHash string                  `json:"workspace_before_sha256"`
-	WorkspaceAfterHash  string                  `json:"workspace_after_sha256"`
-	WorkspaceEffects    []WorkspaceEffect       `json:"workspace_effects"`
-	Destination         DestinationSnapshot     `json:"destination"`
+	WorkflowID              string                  `json:"workflow_id"`
+	WorkflowRunID           string                  `json:"workflow_run_id"`
+	Probe                   protocol.Probe          `json:"probe"`
+	FaultBoundary           FaultBoundary           `json:"fault_boundary"`
+	Trial                   int                     `json:"trial"`
+	RecoveryMode            RecoveryMode            `json:"recovery_mode"`
+	SelectedVendorSessionID string                  `json:"selected_vendor_session_id,omitempty"`
+	FaultAt                 time.Time               `json:"fault_at,omitempty"`
+	BarrierArrivals         []failureinject.Arrival `json:"barrier_arrivals"`
+	WorkflowResult          ClaudeActivityResult    `json:"workflow_result"`
+	WorkspaceBeforeHash     string                  `json:"workspace_before_sha256"`
+	WorkspaceAfterHash      string                  `json:"workspace_after_sha256"`
+	WorkspaceEffects        []WorkspaceEffect       `json:"workspace_effects"`
+	Destination             DestinationSnapshot     `json:"destination"`
+	ReplayVerified          bool                    `json:"replay_verified"`
 }
 
 type claudeTrial struct {
-	ctx                  context.Context
-	temporalClient       client.Client
-	temporalAddress      string
-	options              ExperimentOptions
-	metadata             experimentMetadata
-	probe                protocol.Probe
-	faultBoundary        FaultBoundary
-	trial                int
-	staging              string
-	startedAt            time.Time
-	fixtureDirectory     string
-	workspacePath        string
-	workspaceBeforeHash  string
-	destinationPath      string
-	attemptRoot          string
-	coordinator          *failureinject.Coordinator
-	barrierServer        *httptest.Server
-	workerConfig         workerProcessConfig
-	workerOne            *managedWorker
-	workerTwo            *managedWorker
-	logicalSessionID     string
-	workflowID           string
-	workflowRun          client.WorkflowRun
-	arrivals             []failureinject.Arrival
-	faultAt              time.Time
-	faultReadyAt         time.Time
-	faultActorID         string
-	faultProcessIdentity string
-	workflowResult       ClaudeActivityResult
+	ctx                     context.Context
+	temporalClient          client.Client
+	temporalAddress         string
+	options                 ExperimentOptions
+	metadata                experimentMetadata
+	probe                   protocol.Probe
+	faultBoundary           FaultBoundary
+	trial                   int
+	staging                 string
+	startedAt               time.Time
+	fixtureDirectory        string
+	workspacePath           string
+	workspaceBeforeHash     string
+	destinationPath         string
+	attemptRoot             string
+	coordinator             *failureinject.Coordinator
+	barrierServer           *httptest.Server
+	workerConfig            workerProcessConfig
+	workerOne               *managedWorker
+	workerTwo               *managedWorker
+	logicalSessionID        string
+	selectedVendorSessionID string
+	workflowID              string
+	workflowRun             client.WorkflowRun
+	arrivals                []failureinject.Arrival
+	faultAt                 time.Time
+	faultReadyAt            time.Time
+	faultActorID            string
+	faultProcessIdentity    string
+	workflowResult          ClaudeActivityResult
 }
 
 func runClaudeTrial(
@@ -95,17 +99,33 @@ func runClaudeTrial(
 func newClaudeTrial(ctx context.Context, temporalClient client.Client, temporalAddress string,
 	options ExperimentOptions, metadata experimentMetadata, probe protocol.Probe, faultBoundary FaultBoundary, trial int,
 ) (*claudeTrial, error) {
-	runID := fmt.Sprintf("claude-direct-ambiguous-effect-%s-%s-trial-%d", probe, faultBoundary, trial)
+	mode := options.RecoveryMode.normalized()
+	runID := trialStorageID(mode, probe, faultBoundary, trial)
 	state := &claudeTrial{
 		ctx: ctx, temporalClient: temporalClient, temporalAddress: temporalAddress,
 		options: options, metadata: metadata, probe: probe, faultBoundary: faultBoundary, trial: trial,
 		staging: filepath.Join(options.EvidenceRoot, ".staging-"+runID), startedAt: time.Now().UTC(),
+	}
+	if mode == RecoveryModeResumeOnly {
+		selected, err := newVendorSessionID()
+		if err != nil {
+			return nil, err
+		}
+		state.selectedVendorSessionID = selected
 	}
 	if err := state.prepareStorage(); err != nil {
 		return nil, err
 	}
 	state.prepareCoordination()
 	return state, nil
+}
+
+func trialStorageID(mode RecoveryMode, probe protocol.Probe, faultBoundary FaultBoundary, trial int) string {
+	prefix := "claude-direct-ambiguous-effect"
+	if mode.normalized() == RecoveryModeResumeOnly {
+		prefix += "-resume-only"
+	}
+	return fmt.Sprintf("%s-%s-%s-trial-%d", prefix, probe, faultBoundary, trial)
 }
 
 func (t *claudeTrial) prepareStorage() error {
@@ -249,6 +269,7 @@ func (t *claudeTrial) startFirstWorkerAndWorkflow() error {
 		ID: t.workflowID, TaskQueue: t.workerConfig.TaskQueue, WorkflowExecutionTimeout: t.options.Timeout,
 	}, DirectClaudeWorkflowName, ClaudeActivityInput{
 		LogicalSessionID: t.logicalSessionID, LogicalTurnID: "turn-1", LogicalEffectID: "effect-1",
+		RecoveryMode: t.options.RecoveryMode.normalized(), SelectedVendorSessionID: t.selectedVendorSessionID,
 	})
 	if err != nil {
 		return fmt.Errorf("start Claude direct Workflow: %w", err)
@@ -334,6 +355,7 @@ type collectedTrial struct {
 	workspaceAfterHash string
 	status             []byte
 	history            []byte
+	replayVerified     bool
 }
 
 func (t *claudeTrial) collect() (collectedTrial, error) {
@@ -343,7 +365,9 @@ func (t *claudeTrial) collect() (collectedTrial, error) {
 		return output, err
 	}
 	output.destination = destination
-	output.attempts, err = collectClaudeAttempts(t.ctx, t.attemptRoot, destination)
+	output.attempts, err = collectClaudeAttempts(
+		t.ctx, t.attemptRoot, destination, t.options.RecoveryMode.normalized(), t.selectedVendorSessionID,
+	)
 	if err != nil {
 		return output, err
 	}
@@ -363,7 +387,14 @@ func (t *claudeTrial) collect() (collectedTrial, error) {
 		return output, err
 	}
 	output.history, err = exportWorkflowHistory(t.ctx, t.temporalClient, t.workflowID, t.workflowRun.GetRunID())
-	return output, err
+	if err != nil {
+		return output, err
+	}
+	if replayErr := replayWorkflowHistory(output.history); replayErr != nil {
+		return output, replayErr
+	}
+	output.replayVerified = true
+	return output, nil
 }
 
 func (t *claudeTrial) verifyAdmission(attempts []ClaudeAttemptCapture) error {
@@ -402,7 +433,7 @@ func (t *claudeTrial) publish() (string, error) {
 	if err != nil {
 		return runDirectory, err
 	}
-	return runDirectory, verifyTrialVerdict(t.probe, verdict)
+	return runDirectory, verifyTrialVerdict(t.options.RecoveryMode.normalized(), t.probe, verdict)
 }
 
 func (t *claudeTrial) buildCapture(collected collectedTrial, rawInventoryHash string) EvidenceCapture {
@@ -410,6 +441,7 @@ func (t *claudeTrial) buildCapture(collected collectedTrial, rawInventoryHash st
 		{Kind: "temporal-workflow", Detail: t.workflowID + "/" + t.workflowRun.GetRunID()},
 		{Kind: "workflow-result", Detail: t.workflowResult.Result},
 		{Kind: "workspace-status", Detail: strings.TrimSpace(string(collected.status))},
+		{Kind: "workflow-history-replay", Detail: "compatible=true"},
 	}
 	for _, attempt := range collected.attempts {
 		native = append(native, NativeCapture{
@@ -425,14 +457,16 @@ func (t *claudeTrial) buildCapture(collected collectedTrial, rawInventoryHash st
 		Probe: t.probe, Trial: t.trial, LogicalSessionID: t.logicalSessionID,
 		FaultBoundary: t.faultBoundary,
 		LogicalTurnID: "turn-1", LogicalEffectID: "effect-1", DestinationID: "fixture-" + t.logicalSessionID,
+		RecoveryMode: t.options.RecoveryMode.normalized(), SelectedVendorSessionID: t.selectedVendorSessionID,
 		StartedAt: t.startedAt, Attempts: collected.attempts, FaultAt: t.faultAt, CompletedAt: time.Now().UTC(),
 		Settings: map[string]string{
 			"fault_selection": string(t.faultBoundary), "permission_mode": "dontAsk",
-			"session_identity": "vendor-assigned-after-start", "resume_control": "none",
+			"session_identity": t.sessionIdentitySetting(), "resume_control": t.resumeControlSetting(),
 			"worker_binary_sha256": t.metadata.WorkerSHA256, "effect_binary_sha256": t.metadata.EffectSHA256,
 			"launcher_binary_sha256": t.metadata.LauncherSHA256, "raw_inventory_sha256": rawInventoryHash,
 			"workspace_before_sha256": t.workspaceBeforeHash, "workspace_after_sha256": collected.workspaceAfterHash,
-			"workspace_effect_count": strconv.Itoa(len(collected.workspaceEffects)),
+			"workspace_effect_count":           strconv.Itoa(len(collected.workspaceEffects)),
+			"workflow_history_replay_verified": strconv.FormatBool(collected.replayVerified),
 		},
 		Native: native,
 	}
@@ -445,6 +479,20 @@ func (t *claudeTrial) buildCapture(collected collectedTrial, rawInventoryHash st
 	return capture
 }
 
+func (t *claudeTrial) sessionIdentitySetting() string {
+	if t.options.RecoveryMode.normalized() == RecoveryModeResumeOnly {
+		return "caller-selected-before-workflow-start"
+	}
+	return "vendor-assigned-after-start"
+}
+
+func (t *claudeTrial) resumeControlSetting() string {
+	if t.options.RecoveryMode.normalized() == RecoveryModeResumeOnly {
+		return "first-delivery-session-id-later-deliveries-resume"
+	}
+	return "none"
+}
+
 func (t *claudeTrial) publishRaw(runDirectory, inventoryHash string) error {
 	if err := os.Rename(t.staging, filepath.Join(runDirectory, "raw")); err != nil {
 		return fmt.Errorf("publish raw trial artifacts: %w", err)
@@ -455,10 +503,12 @@ func (t *claudeTrial) publishRaw(runDirectory, inventoryHash string) error {
 func (t *claudeTrial) summary(collected collectedTrial) trialSummary {
 	return trialSummary{
 		WorkflowID: t.workflowID, WorkflowRunID: t.workflowRun.GetRunID(), Probe: t.probe,
-		FaultBoundary: t.faultBoundary, Trial: t.trial,
-		FaultAt: t.faultAt, BarrierArrivals: t.arrivals, WorkflowResult: t.workflowResult,
+		FaultBoundary: t.faultBoundary, Trial: t.trial, RecoveryMode: t.options.RecoveryMode.normalized(),
+		SelectedVendorSessionID: t.selectedVendorSessionID,
+		FaultAt:                 t.faultAt, BarrierArrivals: t.arrivals, WorkflowResult: t.workflowResult,
 		WorkspaceBeforeHash: t.workspaceBeforeHash, WorkspaceAfterHash: collected.workspaceAfterHash,
 		WorkspaceEffects: collected.workspaceEffects, Destination: collected.destination,
+		ReplayVerified: collected.replayVerified,
 	}
 }
 
@@ -503,6 +553,8 @@ func collectClaudeAttempts(
 	ctx context.Context,
 	attemptRoot string,
 	destination DestinationSnapshot,
+	mode RecoveryMode,
+	selectedVendorSessionID string,
 ) ([]ClaudeAttemptCapture, error) {
 	entries, err := os.ReadDir(attemptRoot)
 	if err != nil {
@@ -517,7 +569,9 @@ func collectClaudeAttempts(
 		if !entry.IsDir() {
 			continue
 		}
-		capture, err := collectClaudeAttempt(ctx, attemptRoot, entry.Name(), destinationByID)
+		capture, err := collectClaudeAttempt(
+			ctx, attemptRoot, entry.Name(), destinationByID, mode, selectedVendorSessionID,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -531,6 +585,7 @@ func collectClaudeAttempts(
 
 func collectClaudeAttempt(ctx context.Context, attemptRoot, name string,
 	destinationByID map[string]EffectAttempt,
+	mode RecoveryMode, selectedVendorSessionID string,
 ) (ClaudeAttemptCapture, error) {
 	directory := filepath.Join(attemptRoot, name)
 	process, err := readJSONFile[ProcessRecord](filepath.Join(directory, name+".process-started.json"))
@@ -555,6 +610,9 @@ func collectClaudeAttempt(ctx context.Context, attemptRoot, name string,
 	attemptNumber, err := parseAttemptNumber(name)
 	if err != nil {
 		return ClaudeAttemptCapture{}, err
+	}
+	if err := validateRecordedInvocation(process, mode, selectedVendorSessionID, attemptNumber); err != nil {
+		return ClaudeAttemptCapture{}, fmt.Errorf("validate attempt %s invocation: %w", name, err)
 	}
 	return ClaudeAttemptCapture{
 		TemporalAttempt: attemptNumber, ActorID: request.ActorID, ProcessIdentity: process.Identity,
@@ -596,7 +654,11 @@ func readJSONFile[T any](path string) (T, error) {
 	return value, nil
 }
 
-func verifyTrialVerdict(probe protocol.Probe, verdict protocol.Verdict) error {
+func verifyTrialVerdict(mode RecoveryMode, probe protocol.Probe, verdict protocol.Verdict) error {
+	if mode.normalized() == RecoveryModeResumeOnly &&
+		(verdict.Class == protocol.VerdictValidPass || verdict.Class == protocol.VerdictValidFail) {
+		return nil
+	}
 	if probe == protocol.ProbeUnfaulted && verdict.Class == protocol.VerdictValidPass {
 		return nil
 	}

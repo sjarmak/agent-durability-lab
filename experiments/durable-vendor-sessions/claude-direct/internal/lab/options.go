@@ -21,6 +21,7 @@ type ExperimentOptions struct {
 	Model          string
 	MaxBudgetUSD   string
 	MaxTurns       int
+	RecoveryMode   RecoveryMode
 }
 
 type ExperimentResult struct {
@@ -31,7 +32,7 @@ type ExperimentResult struct {
 func validateExperimentOptions(options ExperimentOptions) error {
 	if options.EvidenceRoot == "" || options.TemporalPath == "" || options.WorkerBinary == "" ||
 		options.EffectBinary == "" || options.LauncherBinary == "" || options.ClaudeBinary == "" || options.Trials < 1 ||
-		options.Timeout <= 0 || options.Model == "" || options.MaxTurns < 1 {
+		options.Timeout <= 0 || options.Model == "" || options.MaxTurns < 1 || !options.RecoveryMode.valid() {
 		return errors.New("experiment requires evidence root, pinned binaries, trials, timeout, model, budget, and turn limit")
 	}
 	budget, err := strconv.ParseFloat(options.MaxBudgetUSD, 64)

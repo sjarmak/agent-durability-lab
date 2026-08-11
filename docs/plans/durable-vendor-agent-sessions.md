@@ -464,6 +464,10 @@ their own verdict or evidence format.
    result from the hermetic calibration. See [Finding 0010](../findings/0010-direct-claude-activity-retry-duplicates-turns-and-effects.md)
    and the [unsafe direct-Claude control](../../experiments/durable-vendor-sessions/claude-direct/README.md).
 5. Add caller-selected Claude session identity and the resume-only arm.
+   **Complete:** `temporal_projects-5im.7` produced 12 admitted authenticated
+   Claude Code 2.1.226 trials. Every Worker-loss retry resumed the selected UUID
+   and still duplicated the physical effect; transcript identity was not an
+   ownership or effect fence. See [Finding 0019](../findings/0019-claude-resume-preserves-session-identity-not-effect-safety.md).
 6. Add the fenced start-or-attach supervisor and cancellation revocation.
 7. Repeat the matched CLI experiment with `codex exec`, including the
    pre-registration gap.

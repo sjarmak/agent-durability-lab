@@ -40,6 +40,7 @@ func parseOptions(args []string) (lab.ExperimentOptions, error) {
 	flags := flag.NewFlagSet("claude-direct-experiment", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	var options lab.ExperimentOptions
+	var recoveryMode string
 	flags.StringVar(&options.EvidenceRoot, "evidence-root", "", "new append-only evidence directory")
 	flags.StringVar(&options.TemporalPath, "temporal-binary", "", "pinned Temporal CLI binary")
 	flags.StringVar(&options.WorkerBinary, "worker-binary", "", "claude-direct Worker binary")
@@ -51,9 +52,16 @@ func parseOptions(args []string) (lab.ExperimentOptions, error) {
 	flags.StringVar(&options.Model, "model", "haiku", "pinned model alias or ID")
 	flags.StringVar(&options.MaxBudgetUSD, "max-budget-usd", "0.25", "per-attempt spend ceiling")
 	flags.IntVar(&options.MaxTurns, "max-turns", 2, "per-attempt agentic turn ceiling")
+	flags.StringVar(&recoveryMode, "recovery-mode", string(lab.RecoveryModeUnsafeFresh),
+		"Claude delivery strategy: unsafe-fresh or resume-only")
 	if err := flags.Parse(args); err != nil {
 		return lab.ExperimentOptions{}, fmt.Errorf("parse experiment flags: %w", err)
 	}
+	mode, err := lab.ParseRecoveryMode(recoveryMode)
+	if err != nil {
+		return lab.ExperimentOptions{}, err
+	}
+	options.RecoveryMode = mode
 	if flags.NArg() != 0 || options.EvidenceRoot == "" || options.TemporalPath == "" ||
 		options.WorkerBinary == "" || options.EffectBinary == "" || options.LauncherBinary == "" ||
 		options.ClaudeBinary == "" {

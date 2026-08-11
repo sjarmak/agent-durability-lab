@@ -84,6 +84,7 @@ Workflow" demos.
 - Pin coverage test package sets explicitly; recursive package globs silently expand when a new benchmark generation is added and can rerun unrelated real-service suites.
 - Do not repeat a fenced owner transition when a replacement Activity is redelivered; inspect the durable active generation and attach to the already-authorized replacement.
 - Do not emit or score `authority_revoked` before the external authority store commits the replacement generation; a scheduled revocation is not yet an enforced fence.
+- Start Activity heartbeats before local process setup and budget their timeout above contended-host dispatch/procfs latency; otherwise a healthy delivery can time out before its session receipt and create a false pre-registration retry.
 - Do not validate archive paths with clean/absolute checks alone; reject parent prefixes and backslashes before confined extraction, or cross-platform traversal can bypass the manifest boundary.
 - Do not drain bytes after tar end markers as harmless padding; require decompressed EOF at the parsed archive boundary, or unmanifested payload can pass verification.
 

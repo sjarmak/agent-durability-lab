@@ -107,8 +107,17 @@ func TestSmallValidationHelpersRejectMalformedValues(t *testing.T) {
 	if _, err := readJSONFile[ProcessRecord](filepath.Join(t.TempDir(), "missing.json")); err == nil {
 		t.Fatal("missing JSON file returned nil error")
 	}
-	if err := verifyTrialVerdict(protocol.ProbeUnsafe, protocol.Verdict{Class: protocol.VerdictValidPass}); err == nil {
+	if err := verifyTrialVerdict(RecoveryModeUnsafeFresh, protocol.ProbeUnsafe,
+		protocol.Verdict{Class: protocol.VerdictValidPass}); err == nil {
 		t.Fatal("unexpected unsafe pass returned nil error")
+	}
+	if err := verifyTrialVerdict(RecoveryModeResumeOnly, protocol.ProbeUnsafe,
+		protocol.Verdict{Class: protocol.VerdictValidPass}); err != nil {
+		t.Fatalf("resume-only valid pass was rejected: %v", err)
+	}
+	if err := verifyTrialVerdict(RecoveryModeResumeOnly, protocol.ProbeUnsafe,
+		protocol.Verdict{Class: protocol.VerdictInvalid}); err == nil {
+		t.Fatal("resume-only invalid verdict returned nil error")
 	}
 	if identity := (&managedWorker{}).processIdentity(); identity != "" {
 		t.Fatalf("empty Worker identity = %q", identity)

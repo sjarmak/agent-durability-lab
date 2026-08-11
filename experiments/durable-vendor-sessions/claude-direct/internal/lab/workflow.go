@@ -9,9 +9,10 @@ import (
 )
 
 const (
-	DirectClaudeWorkflowName = "DirectClaudeUnsafeWorkflow"
-	RunClaudeActivityName    = "RunClaudeUnsafeActivity"
-	directClaudeActivityID   = "direct-claude-turn"
+	DirectClaudeWorkflowName     = "DirectClaudeUnsafeWorkflow"
+	RunClaudeActivityName        = "RunClaudeUnsafeActivity"
+	directClaudeActivityID       = "direct-claude-turn"
+	directClaudeHeartbeatTimeout = 15 * time.Second
 )
 
 func DirectClaudeWorkflow(ctx workflow.Context, input ClaudeActivityInput) (ClaudeActivityResult, error) {
@@ -19,7 +20,7 @@ func DirectClaudeWorkflow(ctx workflow.Context, input ClaudeActivityInput) (Clau
 		ActivityID:             directClaudeActivityID,
 		ScheduleToCloseTimeout: 10 * time.Minute,
 		StartToCloseTimeout:    5 * time.Minute,
-		HeartbeatTimeout:       2 * time.Second,
+		HeartbeatTimeout:       directClaudeHeartbeatTimeout,
 		RetryPolicy: &temporal.RetryPolicy{
 			InitialInterval: 100 * time.Millisecond, MaximumInterval: 100 * time.Millisecond,
 			BackoffCoefficient: 1, MaximumAttempts: 2,

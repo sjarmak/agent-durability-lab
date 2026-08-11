@@ -47,6 +47,28 @@ repositories. The package does not change the admitted result: v1 is rejected,
 v2-v4 are superseded correction lineage, and v5 remains the only admitted
 suite.
 
+## Resume-only package
+
+The separate package under `resume-evidence-transport/` preserves the
+caller-selected session/resume experiment without changing the unsafe-control
+lineage above. It contains five roots, 1,759 files, 8,166,362 uncompressed
+bytes, 44 finalized run bindings, and 11 transport files. Its index SHA-256 is
+`107da44f12f0e9c9b6bd0a76095790e2943dd655c141d74d48ebfff779f838d3`.
+
+Resume v1 and v4 are rejected partial runs. V2 and v3 completed but are
+superseded because later review added raw invocation receipts and stricter
+session-flag admission. V5 is the only admitted source-matched resume-only
+suite. The ordered dispositions and explanations are bound by
+[`claude-direct-resume-lineage.json`](claude-direct-resume-lineage.json).
+
+Verify this package with:
+
+```bash
+go run ./experiments/durable-vendor-sessions/claude-direct/cmd/evidence-transport \
+  verify \
+  --transport experiments/durable-vendor-sessions/claude-direct/resume-evidence-transport
+```
+
 ## Commands
 
 Verify the clone-safe package:

@@ -95,6 +95,31 @@ func TestUnfaultedClaudeCaptureProducesValidPass(t *testing.T) {
 	}
 }
 
+func TestResumeOnlyCaptureBindsSelectedAndObservedVendorSession(t *testing.T) {
+	t.Parallel()
+
+	const selected = "01890f3e-7b5a-4c2d-8e1f-0123456789ab"
+	capture := unsafeCapture()
+	capture.RecoveryMode = RecoveryModeResumeOnly
+	capture.SelectedVendorSessionID = selected
+	for index := range capture.Attempts {
+		capture.Attempts[index].VendorSessionID = selected
+	}
+	bundle, err := BuildEvidenceBundle(capture)
+	if err != nil {
+		t.Fatalf("build resume-only evidence: %v", err)
+	}
+	if bundle.Input.Settings["recovery_mode"] != string(RecoveryModeResumeOnly) ||
+		bundle.Input.Settings["selected_vendor_session_id"] != selected {
+		t.Fatalf("effective input settings = %+v", bundle.Input.Settings)
+	}
+
+	capture.Attempts[1].VendorSessionID = "11890f3e-7b5a-4c2d-8e1f-0123456789ab"
+	if _, err := BuildEvidenceBundle(capture); err == nil || !strings.Contains(err.Error(), "selected Claude session") {
+		t.Fatalf("session mismatch error = %v", err)
+	}
+}
+
 func unsafeCapture() EvidenceCapture {
 	started := time.Date(2026, 8, 8, 13, 0, 0, 0, time.UTC)
 	return EvidenceCapture{

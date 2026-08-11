@@ -111,3 +111,37 @@ func TestPreRegistrationInvocationUsesLauncherWithoutRecoveryControls(t *testing
 		t.Fatalf("launcher args contain recovery controls: %v", got.Args)
 	}
 }
+
+func TestResumeOnlyActivityRejectsObservedSessionIdentityMismatch(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	activities := Activities{
+		Command: ClaudeCommand{
+			Binary: "/opt/claude", WorkDir: t.TempDir(), Model: "haiku", MaxBudgetUSD: "0.25", MaxTurns: 2,
+		},
+		LauncherBinary: "/opt/launcher", FaultBoundary: FaultNone,
+		EffectBinary: "/opt/controlled-effect", DestinationPath: filepath.Join(root, "destination.db"),
+		WorkspacePath: filepath.Join(root, "workspace", "effects.jsonl"), EffectPayload: "controlled-edit",
+		BarrierURL: "http://127.0.0.1:8080", BarrierPoint: committedEffectBarrier,
+		RunRoot: root, WorkerID: "worker-one",
+		Invoke: func(_ context.Context, _ Invocation, input RunInvocationInput) (InvocationResult, error) {
+			return InvocationResult{
+				Claude: ClaudeStreamResult{SessionID: "11890f3e-7b5a-4c2d-8e1f-0123456789ab", Result: "EFFECT_COMPLETE"},
+				Process: ProcessRecord{AttemptID: input.AttemptID, ActorID: input.ActorID, PID: 101,
+					StartIdentity: "start-one", Identity: "pid:101:start:start-one"},
+			}, nil
+		},
+	}
+	var suite testsuite.WorkflowTestSuite
+	environment := suite.NewTestActivityEnvironment()
+	environment.RegisterActivity(activities.RunClaude)
+	_, err := environment.ExecuteActivity(activities.RunClaude, ClaudeActivityInput{
+		LogicalSessionID: "logical-session-1", LogicalTurnID: "turn-1", LogicalEffectID: "effect-1",
+		RecoveryMode:            RecoveryModeResumeOnly,
+		SelectedVendorSessionID: "01890f3e-7b5a-4c2d-8e1f-0123456789ab",
+	})
+	if err == nil || !strings.Contains(err.Error(), "selected Claude session") {
+		t.Fatalf("session mismatch error = %v", err)
+	}
+}

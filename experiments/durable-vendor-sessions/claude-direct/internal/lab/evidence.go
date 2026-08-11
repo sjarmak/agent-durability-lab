@@ -35,25 +35,27 @@ type BoundaryCapture struct {
 }
 
 type EvidenceCapture struct {
-	AdapterVersion     string
-	ClaudeBinarySHA256 string
-	ClaudeVersion      string
-	Model              string
-	Runtime            string
-	Probe              protocol.Probe
-	FaultBoundary      FaultBoundary
-	Trial              int
-	LogicalSessionID   string
-	LogicalTurnID      string
-	LogicalEffectID    string
-	DestinationID      string
-	StartedAt          time.Time
-	Attempts           []ClaudeAttemptCapture
-	Boundary           BoundaryCapture
-	FaultAt            time.Time
-	CompletedAt        time.Time
-	Settings           map[string]string
-	Native             []NativeCapture
+	AdapterVersion          string
+	ClaudeBinarySHA256      string
+	ClaudeVersion           string
+	Model                   string
+	Runtime                 string
+	Probe                   protocol.Probe
+	FaultBoundary           FaultBoundary
+	Trial                   int
+	LogicalSessionID        string
+	LogicalTurnID           string
+	LogicalEffectID         string
+	RecoveryMode            RecoveryMode
+	SelectedVendorSessionID string
+	DestinationID           string
+	StartedAt               time.Time
+	Attempts                []ClaudeAttemptCapture
+	Boundary                BoundaryCapture
+	FaultAt                 time.Time
+	CompletedAt             time.Time
+	Settings                map[string]string
+	Native                  []NativeCapture
 }
 
 func BuildEvidenceBundle(capture EvidenceCapture) (evidence.Bundle, error) {
@@ -74,9 +76,8 @@ func BuildEvidenceBundle(capture EvidenceCapture) (evidence.Bundle, error) {
 	})
 	return evidence.Bundle{
 		Identity: evidence.RunIdentity{
-			RunID: fmt.Sprintf("claude-direct-ambiguous-effect-%s-%s-trial-%d",
-				capture.Probe, capture.FaultBoundary, capture.Trial),
-			Case: protocol.CaseAmbiguousEffect, Probe: capture.Probe, Trial: capture.Trial,
+			RunID: captureRunID(capture),
+			Case:  protocol.CaseAmbiguousEffect, Probe: capture.Probe, Trial: capture.Trial,
 			SessionID: capture.LogicalSessionID,
 		},
 		Events: events,
@@ -122,6 +123,10 @@ func effectiveInput(capture EvidenceCapture) protocol.EffectiveInput {
 	settings["logical_turn_id"] = capture.LogicalTurnID
 	settings["probe"] = string(capture.Probe)
 	settings["fault_boundary"] = string(capture.FaultBoundary)
+	settings["recovery_mode"] = string(capture.RecoveryMode.normalized())
+	if capture.SelectedVendorSessionID != "" {
+		settings["selected_vendor_session_id"] = capture.SelectedVendorSessionID
+	}
 	return protocol.EffectiveInput{
 		AdapterID: evidenceAdapterID, AdapterVersion: capture.AdapterVersion,
 		AgentProtocol: protocol.AgentProtocol, AgentBinarySHA256: capture.ClaudeBinarySHA256,
@@ -252,6 +257,19 @@ func validateCaptureShape(capture EvidenceCapture) error {
 		len(capture.Settings) == 0 || len(capture.Native) == 0 {
 		return fmt.Errorf("%w: incomplete Claude direct capture", protocol.ErrInvalidEvidence)
 	}
+	if !capture.RecoveryMode.valid() ||
+		(capture.RecoveryMode.normalized() == RecoveryModeResumeOnly && !validVendorSessionID(capture.SelectedVendorSessionID)) ||
+		(capture.RecoveryMode.normalized() == RecoveryModeUnsafeFresh && capture.SelectedVendorSessionID != "") {
+		return fmt.Errorf("%w: invalid Claude recovery mode or selected session", protocol.ErrInvalidEvidence)
+	}
+	if capture.RecoveryMode.normalized() == RecoveryModeResumeOnly {
+		for _, attempt := range capture.Attempts {
+			if attempt.VendorSessionID != capture.SelectedVendorSessionID {
+				return fmt.Errorf("%w: selected Claude session %q observed as %q",
+					protocol.ErrInvalidEvidence, capture.SelectedVendorSessionID, attempt.VendorSessionID)
+			}
+		}
+	}
 	if !capture.FaultBoundary.valid() ||
 		(capture.Probe == protocol.ProbeUnfaulted && capture.FaultBoundary != FaultNone) ||
 		(capture.Probe == protocol.ProbeUnsafe && capture.FaultBoundary == FaultNone) {
@@ -263,6 +281,14 @@ func validateCaptureShape(capture EvidenceCapture) error {
 		return fmt.Errorf("%w: unsafe capture lacks its Worker fault boundary", protocol.ErrInvalidEvidence)
 	}
 	return nil
+}
+
+func captureRunID(capture EvidenceCapture) string {
+	prefix := "claude-direct-ambiguous-effect"
+	if capture.RecoveryMode.normalized() == RecoveryModeResumeOnly {
+		prefix += "-resume-only"
+	}
+	return fmt.Sprintf("%s-%s-%s-trial-%d", prefix, capture.Probe, capture.FaultBoundary, capture.Trial)
 }
 
 func validateCaptureFault(capture EvidenceCapture) error {

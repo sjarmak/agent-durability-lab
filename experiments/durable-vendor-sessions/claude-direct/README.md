@@ -1,8 +1,8 @@
-# Unsafe direct Claude CLI Activity
+# Direct Claude CLI recovery controls
 
-**Status:** observed in 12 admitted authenticated Claude trials  
-**Tracking:** `temporal_projects-5im.5`  
-**Observed CLI:** Claude Code 2.1.226 on 2026-08-08  
+**Status:** observed in 24 admitted authenticated Claude trials
+**Tracking:** `temporal_projects-5im.5`, `temporal_projects-5im.7`
+**Observed CLI:** Claude Code 2.1.226 on 2026-08-08 and 2026-08-10
 **Observed binary SHA-256:** `4e9bec1177ce9690e8bd988b710ac24105e70da428dd094c5adcbbe786a55555`
 
 ## Question
@@ -15,6 +15,13 @@ This is the deliberately unsafe control. It does not pass `--session-id`,
 `--resume`, `--continue`, `--background`, or any application ownership token.
 Each Activity delivery starts a fresh CLI process.
 
+The resume-only arm asks a narrower follow-up: if the application chooses and
+durably records an RFC 4122 UUIDv4 before Workflow start, invokes the first
+delivery with `--session-id <uuid>`, and invokes every redelivery with
+`--resume <uuid>`, does Claude preserve session identity, and does that identity
+also prevent duplicate effects? The arm never uses `--fork-session` or
+`--continue`.
+
 ## Invariant and falsifier
 
 For one logical turn, at most one executor may advance the turn, one physical
@@ -25,6 +32,12 @@ The proposed negative control is falsified if admitted Worker-death trials show
 one executor, one physical effect, one vendor session, and result/workspace
 agreement despite the direct Activity retry having no attach, fencing,
 idempotency, or reconciliation mechanism.
+
+For resume-only, every provider event must report the precommitted UUID and
+there may still be only one physical effect and one accepted outcome. The
+effect-safety hypothesis is falsified by an admitted same-session retry that
+applies the independently recorded effect twice. Session identity is not
+treated as an ownership token or an exactly-once destination protocol.
 
 ## Failure boundaries
 
@@ -72,6 +85,8 @@ The model is not the oracle. A trial records and cross-checks:
 - Temporal Workflow, Run, Activity, and attempt identity;
 - Worker and Claude PID plus process-start identity;
 - vendor-assigned Claude session ID from raw `stream-json` output;
+- the exact executable, working directory, and raw argument vector, including
+  one canonical `--session-id <uuid>` or `--resume <uuid>` pair in resume-only;
 - exact pre-registration, tool-effect, or final-output barrier arrivals and UTC
   fault time;
 - physical destination receipts and workspace journal entries;
@@ -92,6 +107,12 @@ effect. Missing streams, a wrong process identity, a missed barrier, an invalid
 raw inventory, absent workspace state, or malformed history makes the trial
 invalid rather than passing.
 
+Resume-only admission also fails closed if the provider reports a session ID
+other than the caller-selected UUID, if the raw invocation contains duplicate
+or conflicting session controls, or if any captured Workflow history fails
+replay. Both `valid-pass` and `valid-fail` outcomes are admissible when their
+artifacts agree; admission does not assume which hypothesis should win.
+
 The hermetic fake-Claude process/service E2E produces three valid passes and
 nine valid failures with `duplicate_physical_effect`. The authenticated v5 run
 produced the same verdicts with Claude Code 2.1.226: three unfaulted
@@ -108,6 +129,17 @@ against their per-run inventories. The admitted evidence is
 [`claude-direct-20260808-v5`](transport/README.md#current-package); see
 [Finding 0010](../../../docs/findings/0010-direct-claude-activity-retry-duplicates-turns-and-effects.md).
 
+The authenticated resume-only v5 run also completed 12 admitted trials: three
+unfaulted `valid-pass` controls and nine faulted
+`valid-fail / duplicate_physical_effect` trials, three at each boundary. All 21
+Claude invocations reported the caller-selected UUID for their logical run, so
+the suite used 12 provider session identities rather than 21. Every faulted run
+nevertheless recorded two physical effects and one accepted Workflow outcome.
+All histories replayed, and the verifier matched all 345 raw artifacts. The
+admitted package is described under
+[resume-only package](transport/README.md#resume-only-package); see
+[Finding 0019](../../../docs/findings/0019-claude-resume-preserves-session-identity-not-effect-safety.md).
+
 ## Responsibility split
 
 - Temporal supplies durable Workflow state, Activity heartbeat timeout, and
@@ -115,7 +147,8 @@ against their per-run inventories. The admitted evidence is
 - The experiment application supplies logical identities, exact fault control,
   raw evidence, and the independent verdict.
 - Claude Code supplies a vendor session and executes the allowed Bash tool, but
-  the unsafe arm does not ask it to resume or attach.
+  the unsafe arm does not ask it to resume or attach; in the resume-only arm it
+  preserves the caller-selected session identity across redelivery.
 - The fixture filesystem and BoltDB destination determine whether effects were
   physically applied.
 
@@ -145,7 +178,8 @@ bin/claude-direct-experiment \
   --claude-binary "${CLAUDE_BINARY:-$(command -v claude)}" \
   --model haiku \
   --max-budget-usd 0.25 \
-  --max-turns 2 \
+  --max-turns 3 \
+  --recovery-mode resume-only \
   --trials 3
 ```
 
@@ -155,6 +189,15 @@ three boundaries. The CLI runs with `--safe-mode`, `--permission-mode dontAsk`,
 JSON Schema whose only valid status is `EFFECT_COMPLETE`. The harness does not
 add a blanket permission bypass; account wrappers can add their own flags, so
 the admitted v5 run invoked the actual Claude binary directly.
+
+Omit `--recovery-mode`, or set it to `unsafe-fresh`, to reproduce the original
+negative control. Resume-only requires enough turns for the resumed process to
+observe the prior tool call and emit the schema-constrained result; the admitted
+run used three. Activities heartbeat before local process setup, and the
+15-second heartbeat timeout includes dispatch and procfs margin for a contended
+development host. The resume v4 root is preserved but rejected because the
+earlier 2-second timeout caused redelivery before the first process had emitted
+its session receipt.
 
 Evidence roots are append-only. A failed or invalid run must remain in place;
 use a new versioned root for a corrected run.
@@ -183,5 +226,6 @@ outer-repository gitlinks. The original local evidence remains unchanged.
 
 Primary interface references:
 
-- [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference)
+- [Claude Code CLI usage](https://code.claude.com/docs/en/cli-usage)
+- [Claude Code sessions](https://code.claude.com/docs/en/sessions)
 - [Run Claude Code programmatically](https://code.claude.com/docs/en/headless)

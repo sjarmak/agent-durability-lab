@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -35,6 +36,10 @@ func TestDirectRunnerPreservesRawStreamsAndProcessIdentity(t *testing.T) {
 	}
 	if result.Process.PID <= 0 || result.Process.StartIdentity == "" || result.Process.Identity == "" {
 		t.Fatalf("process = %+v", result.Process)
+	}
+	if result.Process.Binary != binary || !slices.Equal(result.Process.Args, []string{"-p"}) ||
+		result.Process.WorkDir != directory {
+		t.Fatalf("recorded invocation = %+v", result.Process)
 	}
 	for _, path := range []string{result.StdoutPath, result.StderrPath, result.ProcessStartedPath, result.ProcessCompletedPath} {
 		if _, err := os.Stat(path); err != nil {

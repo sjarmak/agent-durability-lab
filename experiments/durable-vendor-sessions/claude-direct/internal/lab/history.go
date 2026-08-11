@@ -7,6 +7,8 @@ import (
 	"go.temporal.io/api/enums/v1"
 	"go.temporal.io/api/history/v1"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/worker"
+	"go.temporal.io/sdk/workflow"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -32,4 +34,20 @@ func exportWorkflowHistory(
 		return nil, fmt.Errorf("encode Temporal history: %w", err)
 	}
 	return append(encoded, '\n'), nil
+}
+
+func replayWorkflowHistory(encoded []byte) error {
+	value := &history.History{}
+	if err := protojson.Unmarshal(encoded, value); err != nil {
+		return fmt.Errorf("decode Temporal history for replay: %w", err)
+	}
+	replayer := worker.NewWorkflowReplayer()
+	replayer.RegisterWorkflowWithOptions(
+		DirectClaudeWorkflow,
+		workflow.RegisterOptions{Name: DirectClaudeWorkflowName},
+	)
+	if err := replayer.ReplayWorkflowHistory(nil, value); err != nil {
+		return fmt.Errorf("replay direct Claude Workflow history: %w", err)
+	}
+	return nil
 }

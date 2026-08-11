@@ -13,9 +13,11 @@ import (
 )
 
 type ClaudeActivityInput struct {
-	LogicalSessionID string `json:"logical_session_id"`
-	LogicalTurnID    string `json:"logical_turn_id"`
-	LogicalEffectID  string `json:"logical_effect_id"`
+	LogicalSessionID        string       `json:"logical_session_id"`
+	LogicalTurnID           string       `json:"logical_turn_id"`
+	LogicalEffectID         string       `json:"logical_effect_id"`
+	RecoveryMode            RecoveryMode `json:"recovery_mode,omitempty"`
+	SelectedVendorSessionID string       `json:"selected_vendor_session_id,omitempty"`
 }
 
 type ClaudeActivityResult struct {
@@ -47,12 +49,14 @@ func (a Activities) RunClaude(ctx context.Context, input ClaudeActivityInput) (C
 	if err := a.validate(input); err != nil {
 		return ClaudeActivityResult{}, err
 	}
+	stopHeartbeats := startActivityHeartbeats(ctx)
+	defer stopHeartbeats()
 	info := activity.GetInfo(ctx)
 	physicalAttemptID := temporalAttemptID(
 		info.WorkflowExecution.ID, info.WorkflowExecution.RunID, info.ActivityID, info.Attempt,
 	)
 	actorID := fmt.Sprintf("%s-attempt-%d", a.WorkerID, info.Attempt)
-	result, err := a.executeAttempt(ctx, input, physicalAttemptID, actorID)
+	result, err := a.executeAttempt(ctx, input, physicalAttemptID, actorID, info.Attempt)
 	if err != nil {
 		return ClaudeActivityResult{}, fmt.Errorf("run direct Claude attempt %d: %w", info.Attempt, err)
 	}
@@ -64,7 +68,7 @@ func (a Activities) RunClaude(ctx context.Context, input ClaudeActivityInput) (C
 }
 
 func (a Activities) executeAttempt(ctx context.Context, input ClaudeActivityInput,
-	physicalAttemptID, actorID string,
+	physicalAttemptID, actorID string, temporalAttempt int32,
 ) (InvocationResult, error) {
 	attemptDirectory := filepath.Join(a.RunRoot, physicalAttemptID)
 	prepared, err := PrepareAttempt(ctx, AttemptInput{
@@ -79,7 +83,12 @@ func (a Activities) executeAttempt(ctx context.Context, input ClaudeActivityInpu
 	}
 	command := a.Command
 	command.AllowedTool = prepared.AllowedTool
-	invocation, err := command.Invocation(prepared.Prompt)
+	var invocation Invocation
+	if input.RecoveryMode.normalized() == RecoveryModeResumeOnly {
+		invocation, err = command.SessionInvocation(prepared.Prompt, input.SelectedVendorSessionID, temporalAttempt)
+	} else {
+		invocation, err = command.Invocation(prepared.Prompt)
+	}
 	if err != nil {
 		return InvocationResult{}, err
 	}
@@ -90,13 +99,15 @@ func (a Activities) executeAttempt(ctx context.Context, input ClaudeActivityInpu
 	if invoke == nil {
 		invoke = RunInvocation
 	}
-	stopHeartbeats := startActivityHeartbeats(ctx)
-	defer stopHeartbeats()
 	result, invokeErr := invoke(ctx, invocation, RunInvocationInput{
 		Directory: attemptDirectory, AttemptID: physicalAttemptID, ActorID: actorID,
 	})
 	if invokeErr != nil {
 		return InvocationResult{}, invokeErr
+	}
+	if input.RecoveryMode.normalized() == RecoveryModeResumeOnly && result.Claude.SessionID != input.SelectedVendorSessionID {
+		return InvocationResult{}, fmt.Errorf("selected Claude session %q observed as %q",
+			input.SelectedVendorSessionID, result.Claude.SessionID)
 	}
 	if a.FaultBoundary == FaultAfterFinalOutput {
 		if err := waitAtFinalOutputBarrier(
@@ -129,9 +140,15 @@ func (a Activities) validate(input ClaudeActivityInput) error {
 		a.Command.MaxBudgetUSD == "" || a.Command.MaxTurns < 1 || a.EffectBinary == "" ||
 		a.DestinationPath == "" || a.WorkspacePath == "" || a.EffectPayload == "" ||
 		a.BarrierURL == "" || a.BarrierPoint == "" || !a.FaultBoundary.valid() ||
-		a.RunRoot == "" || a.WorkerID == "" || input.LogicalSessionID == "" ||
+		a.RunRoot == "" || a.WorkerID == "" || input.LogicalSessionID == "" || !input.RecoveryMode.valid() ||
 		input.LogicalTurnID == "" || input.LogicalEffectID == "" {
 		return errors.New("activity requires complete Claude command, effect, Worker, and logical identities")
+	}
+	if input.RecoveryMode.normalized() == RecoveryModeResumeOnly && !validVendorSessionID(input.SelectedVendorSessionID) {
+		return errors.New("resume-only activity requires a caller-selected Claude session UUID")
+	}
+	if input.RecoveryMode.normalized() == RecoveryModeUnsafeFresh && input.SelectedVendorSessionID != "" {
+		return errors.New("unsafe-fresh activity cannot declare a selected Claude session")
 	}
 	return nil
 }
@@ -144,11 +161,11 @@ func temporalAttemptID(workflowID, runID, activityID string, attempt int32) stri
 func startActivityHeartbeats(ctx context.Context) func() {
 	done := make(chan struct{})
 	stopped := make(chan struct{})
+	activity.RecordHeartbeat(ctx, "claude-activity-running")
 	go func() {
 		defer close(stopped)
 		ticker := time.NewTicker(500 * time.Millisecond)
 		defer ticker.Stop()
-		activity.RecordHeartbeat(ctx, "claude-process-running")
 		for {
 			select {
 			case <-ctx.Done():
@@ -156,7 +173,7 @@ func startActivityHeartbeats(ctx context.Context) func() {
 			case <-done:
 				return
 			case <-ticker.C:
-				activity.RecordHeartbeat(ctx, "claude-process-running")
+				activity.RecordHeartbeat(ctx, "claude-activity-running")
 			}
 		}
 	}()

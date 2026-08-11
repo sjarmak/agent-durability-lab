@@ -22,6 +22,9 @@ type RunInvocationInput struct {
 type ProcessRecord struct {
 	AttemptID     string    `json:"attempt_id"`
 	ActorID       string    `json:"actor_id"`
+	Binary        string    `json:"binary"`
+	Args          []string  `json:"args"`
+	WorkDir       string    `json:"work_dir"`
 	PID           int       `json:"pid"`
 	StartIdentity string    `json:"start_identity"`
 	Identity      string    `json:"identity"`
@@ -83,7 +86,7 @@ func startInvocation(invocation Invocation, input RunInvocationInput) (runningIn
 		stopStartedProcess(command)
 		return runningInvocation{}, fmt.Errorf("close parent stream handles: %w", err)
 	}
-	process, err := observeProcess(input, command.Process.Pid, "running", "")
+	process, err := observeProcess(input, invocation, command.Process.Pid, "running", "")
 	if err != nil {
 		stopStartedProcess(command)
 		return runningInvocation{}, err
@@ -159,13 +162,15 @@ func invocationPaths(input RunInvocationInput) runPaths {
 	}
 }
 
-func observeProcess(input RunInvocationInput, pid int, state, failure string) (ProcessRecord, error) {
+func observeProcess(input RunInvocationInput, invocation Invocation, pid int, state, failure string) (ProcessRecord, error) {
 	startIdentity, err := agentprocess.ProcessStartIdentity(pid)
 	if err != nil {
 		return ProcessRecord{}, fmt.Errorf("identify Claude process: %w", err)
 	}
 	return ProcessRecord{
-		AttemptID: input.AttemptID, ActorID: input.ActorID, PID: pid, StartIdentity: startIdentity,
+		AttemptID: input.AttemptID, ActorID: input.ActorID,
+		Binary: invocation.Binary, Args: append([]string(nil), invocation.Args...), WorkDir: invocation.WorkDir,
+		PID: pid, StartIdentity: startIdentity,
 		Identity: fmt.Sprintf("pid:%d:start:%s", pid, startIdentity), ObservedAt: time.Now().UTC(),
 		State: state, Failure: failure,
 	}, nil
