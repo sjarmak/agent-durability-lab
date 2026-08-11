@@ -34,6 +34,14 @@ type BoundaryCapture struct {
 	ReachedAt       time.Time
 }
 
+type AttachmentCapture struct {
+	TemporalAttempt int32
+	ActorID         string
+	ProcessIdentity string
+	Generation      uint64
+	AttachedAt      time.Time
+}
+
 type EvidenceCapture struct {
 	AdapterVersion          string
 	ClaudeBinarySHA256      string
@@ -51,6 +59,7 @@ type EvidenceCapture struct {
 	DestinationID           string
 	StartedAt               time.Time
 	Attempts                []ClaudeAttemptCapture
+	Attachments             []AttachmentCapture
 	Boundary                BoundaryCapture
 	FaultAt                 time.Time
 	CompletedAt             time.Time
@@ -97,7 +106,7 @@ func BuildEvidenceBundle(capture EvidenceCapture) (evidence.Bundle, error) {
 }
 
 func captureFault(capture EvidenceCapture, boundarySequence uint64, events []protocol.Event) protocol.FaultBoundary {
-	if capture.Probe != protocol.ProbeUnsafe {
+	if capture.Probe == protocol.ProbeUnfaulted {
 		return protocol.FaultBoundary{}
 	}
 	beforeSequence := uint64(0)
@@ -153,7 +162,7 @@ func buildAttemptEvidence(capture EvidenceCapture) (
 	destination []protocol.DestinationAttempt, actions []protocol.AcceptedAction,
 	boundarySequence uint64, err error,
 ) {
-	candidates := make([]eventCandidate, 0, len(capture.Attempts)*2+1)
+	candidates := make([]eventCandidate, 0, len(capture.Attempts)*2+len(capture.Attachments)+1)
 	for _, attempt := range capture.Attempts {
 		candidates = append(candidates, eventCandidate{event: protocol.Event{
 			Time: attempt.StartedAt.Format(time.RFC3339Nano),
@@ -169,7 +178,15 @@ func buildAttemptEvidence(capture EvidenceCapture) (
 			Decision: "accepted",
 		}, time: attempt.AppliedAt, destination: true})
 	}
-	if capture.Probe == protocol.ProbeUnsafe {
+	for _, attachment := range capture.Attachments {
+		candidates = append(candidates, eventCandidate{event: protocol.Event{
+			Time: attachment.AttachedAt.Format(time.RFC3339Nano), Kind: protocol.EventExecutorAttached,
+			SessionID: capture.LogicalSessionID, ActorID: attachment.ActorID,
+			Generation: attachment.Generation, ProcessIdentity: attachment.ProcessIdentity,
+			Decision: "observed",
+		}, time: attachment.AttachedAt, processState: "running"})
+	}
+	if capture.Probe != protocol.ProbeUnfaulted {
 		candidates = append(candidates, eventCandidate{event: protocol.Event{
 			Time: capture.Boundary.ReachedAt.Format(time.RFC3339Nano), Kind: protocol.EventBarrierReached,
 			SessionID: capture.LogicalSessionID, ActorID: capture.Boundary.ActorID, Generation: 1,
@@ -213,6 +230,9 @@ func materializeCandidates(candidates []eventCandidate, logicalEffectID string) 
 }
 
 func concurrentOwnerCount(capture EvidenceCapture) int {
+	if capture.Probe == protocol.ProbeProtected {
+		return 1
+	}
 	if capture.FaultBoundary == FaultAfterFinalOutput {
 		return 1
 	}
@@ -247,6 +267,8 @@ func validateCaptureShape(capture EvidenceCapture) error {
 		wantAttempts = 1
 	case protocol.ProbeUnsafe:
 		wantAttempts = 2
+	case protocol.ProbeProtected:
+		wantAttempts = 1
 	default:
 		return fmt.Errorf("%w: unsupported Claude direct probe", protocol.ErrInvalidEvidence)
 	}
@@ -258,11 +280,11 @@ func validateCaptureShape(capture EvidenceCapture) error {
 		return fmt.Errorf("%w: incomplete Claude direct capture", protocol.ErrInvalidEvidence)
 	}
 	if !capture.RecoveryMode.valid() ||
-		(capture.RecoveryMode.normalized() == RecoveryModeResumeOnly && !validVendorSessionID(capture.SelectedVendorSessionID)) ||
+		(capture.RecoveryMode.usesSelectedSession() && !validVendorSessionID(capture.SelectedVendorSessionID)) ||
 		(capture.RecoveryMode.normalized() == RecoveryModeUnsafeFresh && capture.SelectedVendorSessionID != "") {
 		return fmt.Errorf("%w: invalid Claude recovery mode or selected session", protocol.ErrInvalidEvidence)
 	}
-	if capture.RecoveryMode.normalized() == RecoveryModeResumeOnly {
+	if capture.RecoveryMode.usesSelectedSession() {
 		for _, attempt := range capture.Attempts {
 			if attempt.VendorSessionID != capture.SelectedVendorSessionID {
 				return fmt.Errorf("%w: selected Claude session %q observed as %q",
@@ -272,23 +294,19 @@ func validateCaptureShape(capture EvidenceCapture) error {
 	}
 	if !capture.FaultBoundary.valid() ||
 		(capture.Probe == protocol.ProbeUnfaulted && capture.FaultBoundary != FaultNone) ||
-		(capture.Probe == protocol.ProbeUnsafe && capture.FaultBoundary == FaultNone) {
+		(capture.Probe != protocol.ProbeUnfaulted && capture.FaultBoundary == FaultNone) {
 		return fmt.Errorf("%w: probe and fault boundary disagree", protocol.ErrInvalidEvidence)
 	}
-	if capture.Probe == protocol.ProbeUnsafe &&
+	if capture.Probe != protocol.ProbeUnfaulted &&
 		(capture.Boundary.Point != capture.FaultBoundary || capture.Boundary.ActorID == "" ||
 			capture.Boundary.ProcessIdentity == "" || capture.Boundary.ReachedAt.IsZero()) {
-		return fmt.Errorf("%w: unsafe capture lacks its Worker fault boundary", protocol.ErrInvalidEvidence)
+		return fmt.Errorf("%w: faulted capture lacks its Worker fault boundary", protocol.ErrInvalidEvidence)
 	}
 	return nil
 }
 
 func captureRunID(capture EvidenceCapture) string {
-	prefix := "claude-direct-ambiguous-effect"
-	if capture.RecoveryMode.normalized() == RecoveryModeResumeOnly {
-		prefix += "-resume-only"
-	}
-	return fmt.Sprintf("%s-%s-%s-trial-%d", prefix, capture.Probe, capture.FaultBoundary, capture.Trial)
+	return trialStorageID(capture.RecoveryMode, capture.Probe, capture.FaultBoundary, capture.Trial)
 }
 
 func validateCaptureFault(capture EvidenceCapture) error {
@@ -300,10 +318,40 @@ func validateCaptureFault(capture EvidenceCapture) error {
 			return err
 		}
 	}
+	if capture.Probe == protocol.ProbeProtected {
+		if err := validateProtectedFaultOrder(capture); err != nil {
+			return err
+		}
+	}
 	for _, record := range capture.Native {
 		if record.Kind == "" || record.Detail == "" {
 			return fmt.Errorf("%w: invalid native capture", protocol.ErrInvalidEvidence)
 		}
+	}
+	return nil
+}
+
+func validateProtectedFaultOrder(capture EvidenceCapture) error {
+	if len(capture.Attempts) != 1 || len(capture.Attachments) != 1 {
+		return fmt.Errorf("%w: protected fault lacks one execution and a recovery attachment", protocol.ErrInvalidEvidence)
+	}
+	attempt := capture.Attempts[0]
+	attachment := capture.Attachments[0]
+	valid := attachment.TemporalAttempt == 2 && attachment.ActorID != "" &&
+		!attachment.AttachedAt.IsZero() && capture.Boundary.ReachedAt.Before(capture.FaultAt) &&
+		capture.FaultAt.Before(attachment.AttachedAt) && attachment.Generation == 1 &&
+		attachment.ProcessIdentity == attempt.ProcessIdentity
+	if capture.FaultBoundary == FaultBeforeVendorRegistration {
+		valid = valid && attempt.StartedAt.Before(capture.Boundary.ReachedAt) &&
+			attachment.AttachedAt.Before(attempt.AppliedAt)
+	} else if capture.FaultBoundary == FaultAfterClaimBeforeExec {
+		valid = valid && attachment.AttachedAt.Before(attempt.StartedAt) &&
+			attempt.StartedAt.Before(attempt.AppliedAt)
+	} else {
+		valid = valid && attempt.AppliedAt.Before(capture.Boundary.ReachedAt)
+	}
+	if !valid {
+		return fmt.Errorf("%w: protected fault is not exactly ordered for %s", protocol.ErrInvalidEvidence, capture.FaultBoundary)
 	}
 	return nil
 }

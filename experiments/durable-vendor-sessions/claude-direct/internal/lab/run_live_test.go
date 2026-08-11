@@ -66,7 +66,7 @@ printf '{"type":"result","subtype":"success","session_id":"%s","is_error":false,
 		EvidenceRoot: filepath.Join(directory, "evidence"), TemporalPath: temporalPath,
 		WorkerBinary: workerBinary, EffectBinary: effectBinary, LauncherBinary: launcherBinary,
 		ClaudeBinary: fakeClaude,
-		Trials:       3, Timeout: 6 * time.Minute, Model: "fake", MaxBudgetUSD: "0.01", MaxTurns: 2,
+		Trials:       3, Timeout: 10 * time.Minute, Model: "fake", MaxBudgetUSD: "0.01", MaxTurns: 2,
 	})
 	if err != nil {
 		t.Fatalf("run fake-Claude experiment: %v", err)
@@ -134,35 +134,14 @@ func TestRunExperimentWithFakeClaudeProvesResumeOnlyDoesNotFenceEffects(t *testi
 	buildBinary(t, repositoryRoot, workerBinary, "./experiments/durable-vendor-sessions/claude-direct/cmd/worker")
 	buildBinary(t, repositoryRoot, effectBinary, "./experiments/durable-vendor-sessions/claude-direct/cmd/controlled-effect")
 	buildBinary(t, repositoryRoot, launcherBinary, "./experiments/durable-vendor-sessions/claude-direct/cmd/claude-launcher")
-	fakeClaude := writeExecutable(t, directory, "fake-claude", `#!/bin/sh
-set -eu
-if [ "${1:-}" = "--version" ]; then
-  echo "fake-claude 1.0"
-  exit 0
-fi
-session_id=""
-while [ "$#" -gt 0 ]; do
-  case "$1" in
-    --session-id|--resume)
-      session_id="$2"
-      shift 2
-      ;;
-    *) shift ;;
-  esac
-done
-test -n "$session_id"
-IFS= read -r instruction
-IFS= read -r controlled_command
-printf '{"type":"system","subtype":"init","session_id":"%s"}\n' "$session_id"
-sh -c "$controlled_command" >/dev/null
-printf '{"type":"result","subtype":"success","session_id":"%s","is_error":false,"structured_output":{"status":"EFFECT_COMPLETE"}}\n' "$session_id"
-`)
+	fakeClaude := filepath.Join(directory, "hermetic-claude")
+	buildBinary(t, repositoryRoot, fakeClaude, "./experiments/durable-vendor-sessions/claude-direct/cmd/hermetic-claude")
 
 	result, err := RunExperiment(context.Background(), ExperimentOptions{
 		EvidenceRoot: filepath.Join(directory, "resume-evidence"), TemporalPath: temporalPath,
 		WorkerBinary: workerBinary, EffectBinary: effectBinary, LauncherBinary: launcherBinary,
 		ClaudeBinary: fakeClaude, RecoveryMode: RecoveryModeResumeOnly,
-		Trials: 3, Timeout: 6 * time.Minute, Model: "fake", MaxBudgetUSD: "0.01", MaxTurns: 2,
+		Trials: 3, Timeout: 10 * time.Minute, Model: "fake", MaxBudgetUSD: "0.01", MaxTurns: 2,
 	})
 	if err != nil {
 		t.Fatalf("run fake-Claude resume experiment: %v", err)
@@ -207,6 +186,83 @@ printf '{"type":"result","subtype":"success","session_id":"%s","is_error":false,
 				t.Fatalf("resume trial %d verdict = %+v, err = %v", index, verdict, err)
 			}
 		}
+	}
+	report, err := AuditResumeEvidence(context.Background(), result.EvidenceRoot)
+	if err != nil || !report.AllRequirementsVerified || report.DuplicateEffectRuns != 9 || report.PhysicalEffects != 21 {
+		t.Fatalf("audit resume-only evidence = %+v, err=%v", report, err)
+	}
+}
+
+func TestRunExperimentWithFakeClaudeFencedSupervisorAttachesOnce(t *testing.T) {
+	if testing.Short() {
+		t.Skip("process/service integration test")
+	}
+	temporalPath, err := exec.LookPath("temporal")
+	if err != nil {
+		t.Skip("Temporal CLI is not installed")
+	}
+	repositoryRoot := claudeDirectRepositoryRoot(t)
+	directory := t.TempDir()
+	workerBinary := filepath.Join(directory, "claude-direct-worker")
+	effectBinary := filepath.Join(directory, "controlled-effect")
+	launcherBinary := filepath.Join(directory, "claude-direct-launcher")
+	buildBinary(t, repositoryRoot, workerBinary, "./experiments/durable-vendor-sessions/claude-direct/cmd/worker")
+	buildBinary(t, repositoryRoot, effectBinary, "./experiments/durable-vendor-sessions/claude-direct/cmd/controlled-effect")
+	buildBinary(t, repositoryRoot, launcherBinary, "./experiments/durable-vendor-sessions/claude-direct/cmd/claude-launcher")
+	fakeClaude := filepath.Join(directory, "hermetic-claude")
+	buildBinary(t, repositoryRoot, fakeClaude, "./experiments/durable-vendor-sessions/claude-direct/cmd/hermetic-claude")
+
+	result, err := RunExperiment(context.Background(), ExperimentOptions{
+		EvidenceRoot: filepath.Join(directory, "fenced-evidence"), TemporalPath: temporalPath,
+		WorkerBinary: workerBinary, EffectBinary: effectBinary, LauncherBinary: launcherBinary,
+		ClaudeBinary: fakeClaude, RecoveryMode: RecoveryModeFenced,
+		Trials: 3, Timeout: 10 * time.Minute, Model: "fake", MaxBudgetUSD: "0.01", MaxTurns: 2,
+	})
+	if err != nil {
+		t.Fatalf("run fake-Claude fenced experiment: %v", err)
+	}
+	if len(result.RunDirectories) != 15 {
+		t.Fatalf("run directories = %d, want 15", len(result.RunDirectories))
+	}
+	for index, runDirectory := range result.RunDirectories {
+		rawDirectory := filepath.Join(runDirectory, "raw")
+		summary, err := readJSONFile[trialSummary](filepath.Join(rawDirectory, "trial-summary.json"))
+		if err != nil {
+			t.Fatalf("read fenced summary %d: %v", index, err)
+		}
+		if summary.RecoveryMode != RecoveryModeFenced || !summary.ReplayVerified ||
+			summary.WorkflowResult.VendorSessionID != summary.SelectedVendorSessionID ||
+			len(summary.Destination.Attempts) != 1 || len(summary.WorkspaceEffects) != 1 ||
+			summary.Authority == nil || summary.Authority.ActiveGeneration != 1 ||
+			len(summary.Authority.Executors) != 1 || len(summary.Authority.Effects) != 1 ||
+			summary.Authority.Outcome == nil {
+			t.Fatalf("fenced summary %d = %+v", index, summary)
+		}
+		verdict, err := readJSONFile[protocol.Verdict](filepath.Join(runDirectory, protocol.VerdictFile))
+		if err != nil || verdict.Class != protocol.VerdictValidPass ||
+			verdict.Metrics.PhysicalEffectCount != 1 || verdict.Metrics.ConcurrentOwnerCount != 1 ||
+			verdict.Metrics.AcceptedOutcomeCount != 1 {
+			t.Fatalf("fenced verdict %d = %+v, err=%v", index, verdict, err)
+		}
+		if index%5 != 0 && verdict.Probe != protocol.ProbeProtected {
+			t.Fatalf("fenced fault probe %d = %q, want protected", index, verdict.Probe)
+		}
+		started := findAttemptFiles(t, rawDirectory, ".process-started.json")
+		if len(started) != 1 {
+			t.Fatalf("fenced process count %d = %d, want 1", index, len(started))
+		}
+		input, err := readJSONFile[protocol.EffectiveInput](filepath.Join(runDirectory, protocol.EffectiveInputFile))
+		if err != nil || input.Settings["recovery_mode"] != string(RecoveryModeFenced) ||
+			input.Settings["selected_vendor_session_id"] != summary.SelectedVendorSessionID {
+			t.Fatalf("fenced input %d = %+v, err=%v", index, input, err)
+		}
+		if err := verifyRawInventory(rawDirectory, input.Settings["raw_inventory_sha256"]); err != nil {
+			t.Fatalf("verify fenced raw inventory %d: %v", index, err)
+		}
+	}
+	report, err := AuditFencedEvidence(context.Background(), result.EvidenceRoot)
+	if err != nil || !report.AllRequirementsVerified || report.ProtectedRuns != 12 || report.AuthoritativeEffects != 15 {
+		t.Fatalf("audit fenced evidence = %+v, err=%v", report, err)
 	}
 }
 

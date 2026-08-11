@@ -12,6 +12,7 @@ var (
 	ErrSessionNotFound        = errors.New("session not found")
 	ErrStaleOwner             = errors.New("stale owner")
 	ErrExecutorNotRunning     = errors.New("executor not running")
+	ErrEffectConflict         = errors.New("effect content conflicts with accepted effect")
 	ErrOutcomeAlreadyAccepted = errors.New("outcome already accepted")
 	ErrSessionCanceled        = errors.New("session canceled")
 	ErrSessionNotCanceled     = errors.New("session not canceled")

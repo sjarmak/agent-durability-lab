@@ -17,6 +17,7 @@ import (
 type experimentMetadata struct {
 	ClaudeVersion  string
 	ClaudeSHA256   string
+	HarnessSHA256  string
 	WorkerSHA256   string
 	EffectSHA256   string
 	LauncherSHA256 string
@@ -29,6 +30,11 @@ type suiteFailure struct {
 }
 
 func RunExperiment(parent context.Context, options ExperimentOptions) (result ExperimentResult, runErr error) {
+	var err error
+	options, err = normalizeExperimentOptions(options)
+	if err != nil {
+		return ExperimentResult{}, err
+	}
 	if err := validateExperimentOptions(options); err != nil {
 		return ExperimentResult{}, err
 	}
@@ -110,9 +116,17 @@ func runExperimentTrials(ctx context.Context, server *testsuite.DevServer, optio
 			return directories, fmt.Errorf("run unfaulted trial %d: %w", trial, err)
 		}
 		directories = append(directories, directory)
-		for _, boundary := range unsafeFaultSchedule() {
+		faultProbe := protocol.ProbeUnsafe
+		if options.RecoveryMode.normalized() == RecoveryModeFenced {
+			faultProbe = protocol.ProbeProtected
+		}
+		faultSchedule := unsafeFaultSchedule()
+		if options.RecoveryMode.normalized() == RecoveryModeFenced {
+			faultSchedule = fencedFaultSchedule()
+		}
+		for _, boundary := range faultSchedule {
 			directory, err = runClaudeTrial(ctx, server.Client(), server.FrontendHostPort(),
-				options, metadata, protocol.ProbeUnsafe, boundary, trial)
+				options, metadata, faultProbe, boundary, trial)
 			if err != nil {
 				return directories, fmt.Errorf("run %s trial %d: %w", boundary, trial, err)
 			}
@@ -144,12 +158,20 @@ func inspectExperimentBinaries(ctx context.Context, options ExperimentOptions) (
 	if err != nil {
 		return experimentMetadata{}, err
 	}
+	harnessPath, err := os.Executable()
+	if err != nil {
+		return experimentMetadata{}, fmt.Errorf("locate executing experiment harness: %w", err)
+	}
+	harnessHash, err := protocol.FileSHA256(harnessPath)
+	if err != nil {
+		return experimentMetadata{}, fmt.Errorf("hash executing experiment harness: %w", err)
+	}
 	version := strings.TrimSpace(string(versionOutput))
 	if version == "" {
 		return experimentMetadata{}, errors.New("claude CLI returned an empty version")
 	}
 	return experimentMetadata{
-		ClaudeVersion: version, ClaudeSHA256: claudeHash,
+		ClaudeVersion: version, ClaudeSHA256: claudeHash, HarnessSHA256: harnessHash,
 		WorkerSHA256: workerHash, EffectSHA256: effectHash, LauncherSHA256: launcherHash,
 	}, nil
 }

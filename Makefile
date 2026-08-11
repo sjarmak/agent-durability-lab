@@ -38,6 +38,8 @@ build: claude-direct-evidence-transport
 	go build -o bin/claude-direct-effect ./experiments/durable-vendor-sessions/claude-direct/cmd/controlled-effect
 	go build -o bin/claude-direct-launcher ./experiments/durable-vendor-sessions/claude-direct/cmd/claude-launcher
 	go build -o bin/claude-direct-experiment ./experiments/durable-vendor-sessions/claude-direct/cmd/experiment
+	go build -o bin/claude-direct-evidence-audit ./experiments/durable-vendor-sessions/claude-direct/cmd/evidence-audit
+	go build -o bin/claude-direct-hermetic-claude ./experiments/durable-vendor-sessions/claude-direct/cmd/hermetic-claude
 
 claude-direct-evidence-transport:
 	mkdir -p bin
@@ -201,7 +203,14 @@ coverage:
 	go tool cover -func=coverage.agent-durability.out
 	@harness_coverage=$$(go tool cover -func=coverage.agent-durability.out | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
 	awk -v coverage="$$harness_coverage" 'BEGIN { if (coverage + 0 < 80) { printf "agent durability harness coverage %.1f%% is below 80%%\n", coverage; exit 1 } }'
-	go test -race -coverprofile=coverage.claude-direct.out ./experiments/durable-vendor-sessions/claude-direct/internal/lab
+	go test -race -coverprofile=coverage.claude-direct.base.out ./experiments/durable-vendor-sessions/claude-direct/internal/lab
+	CLAUDE_DIRECT_TRANSPORT_AUDIT=1 go test -race -count=1 \
+		-coverpkg=./experiments/durable-vendor-sessions/claude-direct/internal/lab \
+		-coverprofile=coverage.claude-direct.audit.out \
+		./experiments/durable-vendor-sessions/claude-direct/internal/lab \
+		-run '^TestAdmittedTransportsReconstructEveryVerdict$$'
+	go run ./benchmarks/agent-durability/topology/cmd/covermerge \
+		--output coverage.claude-direct.out coverage.claude-direct.base.out coverage.claude-direct.audit.out
 	go tool cover -func=coverage.claude-direct.out
 	@lab_coverage=$$(go tool cover -func=coverage.claude-direct.out | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
 	awk -v coverage="$$lab_coverage" 'BEGIN { if (coverage + 0 < 80) { printf "Claude direct lab coverage %.1f%% is below 80%%\n", coverage; exit 1 } }'
@@ -256,4 +265,4 @@ coverage-system-adapters: check-postgres-service
 
 clean:
 	rm -rf bin
-	rm -f coverage.out coverage.completion.out coverage.external-effects.out coverage.cancellation.out coverage.agent-durability.out coverage.agent-durability-v2.out coverage.agent-durability-v2-system.out coverage.claude-direct.out coverage.claude-direct-transport.out coverage.temporal-native-adapter.out coverage.topology.default.out $(TOPOLOGY_COVER_BASE_PROFILES) $(TOPOLOGY_COVER_PROFILES) coverage.topology.v5.out coverage.topology.out
+	rm -f coverage.out coverage.completion.out coverage.external-effects.out coverage.cancellation.out coverage.agent-durability.out coverage.agent-durability-v2.out coverage.agent-durability-v2-system.out coverage.claude-direct.base.out coverage.claude-direct.audit.out coverage.claude-direct.out coverage.claude-direct-transport.out coverage.temporal-native-adapter.out coverage.topology.default.out $(TOPOLOGY_COVER_BASE_PROFILES) $(TOPOLOGY_COVER_PROFILES) coverage.topology.v5.out coverage.topology.out

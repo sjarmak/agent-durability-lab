@@ -19,6 +19,7 @@ type WorkerConfig struct {
 	BarrierPoint    string
 	RunRoot         string
 	WorkerID        string
+	SupervisorURL   string
 }
 
 type WorkerRegistrar interface {
@@ -41,6 +42,7 @@ func RegisterWorker(registrar WorkerRegistrar, config WorkerConfig) error {
 			DestinationPath: config.DestinationPath, WorkspacePath: config.WorkspacePath,
 			EffectPayload: config.EffectPayload, BarrierURL: config.BarrierURL,
 			BarrierPoint: config.BarrierPoint, RunRoot: config.RunRoot, WorkerID: config.WorkerID,
+			SupervisorURL: config.SupervisorURL,
 		}.RunClaude,
 		activity.RegisterOptions{Name: RunClaudeActivityName},
 	)

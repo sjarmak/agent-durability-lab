@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 )
@@ -27,6 +28,24 @@ type ExperimentOptions struct {
 type ExperimentResult struct {
 	EvidenceRoot   string   `json:"evidence_root"`
 	RunDirectories []string `json:"run_directories"`
+}
+
+func normalizeExperimentOptions(options ExperimentOptions) (ExperimentOptions, error) {
+	paths := []*string{
+		&options.EvidenceRoot, &options.TemporalPath, &options.WorkerBinary,
+		&options.EffectBinary, &options.LauncherBinary, &options.ClaudeBinary,
+	}
+	for _, path := range paths {
+		if *path == "" {
+			continue
+		}
+		absolute, err := filepath.Abs(*path)
+		if err != nil {
+			return ExperimentOptions{}, fmt.Errorf("resolve experiment path %q: %w", *path, err)
+		}
+		*path = filepath.Clean(absolute)
+	}
+	return options, nil
 }
 
 func validateExperimentOptions(options ExperimentOptions) error {

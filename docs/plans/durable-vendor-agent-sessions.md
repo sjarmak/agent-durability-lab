@@ -469,6 +469,15 @@ their own verdict or evidence format.
    and still duplicated the physical effect; transcript identity was not an
    ownership or effect fence. See [Finding 0019](../findings/0019-claude-resume-preserves-session-identity-not-effect-safety.md).
 6. Add the fenced start-or-attach supervisor and cancellation revocation.
+   **Complete:** `temporal_projects-5im.8` produced matched hermetic and
+   authenticated Claude Code `2.1.227` comparisons. In each comparison the
+   resume-only control failed all nine Worker-loss trials with duplicate
+   effects, while the protected arm passed 15/15 runs across four exact
+   boundaries with one process/effect/outcome per logical run and 12 exact
+   recovery attachments. All 54 histories replayed, every sealed population
+   passed independent disk audit, and deterministic transports preserve the
+   rejected logged-out attempt and admitted fixed-profile evidence. See
+   [Finding 0020](../findings/0020-application-fenced-claude-supervisor-survives-worker-loss.md).
 7. Repeat the matched CLI experiment with `codex exec`, including the
    pre-registration gap.
 8. Add Codex App Server and Claude Agent SDK/`SessionStore` protocol-native arms
@@ -543,10 +552,12 @@ This plan does not claim that:
 - placing a CLI inside an Activity makes an interactive agent application
   correct after recovery.
 
-The strongest prospective claim is narrower: Temporal can durably orchestrate
-and recover vendor-owned coding-agent sessions when an application supervisor
-supplies stable identity, current-owner fencing, attachment, and destination
-reconciliation. The experiment must still determine whether that claim is true.
+The hermetic and authenticated Claude Code `2.1.227` results support the bounded
+claim: Temporal can durably redeliver the procedure while an application
+supervisor supplies stable identity, current-owner fencing, attachment, and
+destination reconciliation on the tested single host. Supervisor/host loss,
+cross-host routing, deployment/version change, and destination-general
+enforcement remain unresolved.
 
 ## Related research
 
@@ -559,6 +570,7 @@ reconciliation. The experiment must still determine whether that claim is true.
 - [Finding 0004: One Temporal completion can hide two effects](../findings/0004-one-temporal-completion-can-hide-two-effects.md)
 - [Finding 0006: Cancellation requires application revocation](../findings/0006-cancellation-requires-application-revocation.md)
 - [Finding 0007: Live common harness calibration](../findings/0007-live-common-harness-calibrates-the-oracle.md)
+- [Finding 0020: Application-fenced Claude supervisor](../findings/0020-application-fenced-claude-supervisor-survives-worker-loss.md)
 
 Related open work includes agent-session compatibility across Worker Versioning
 (`temporal_projects-0xm`), partial Workflow Stream recovery

@@ -71,6 +71,7 @@ func parseConfig(args []string) (workerCLIConfig, error) {
 	flags.StringVar(&config.Worker.BarrierURL, "barrier-url", "", "exact barrier controller URL")
 	flags.StringVar(&config.Worker.BarrierPoint, "barrier-point", "", "post-effect barrier point")
 	flags.StringVar(&config.Worker.RunRoot, "run-root", "", "append-only attempt artifact root")
+	flags.StringVar(&config.Worker.SupervisorURL, "supervisor-url", "", "loopback fenced turn supervisor URL")
 	if err := flags.Parse(args); err != nil {
 		return workerCLIConfig{}, fmt.Errorf("parse Worker flags: %w", err)
 	}

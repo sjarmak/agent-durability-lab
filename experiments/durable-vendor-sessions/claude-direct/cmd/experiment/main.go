@@ -53,7 +53,7 @@ func parseOptions(args []string) (lab.ExperimentOptions, error) {
 	flags.StringVar(&options.MaxBudgetUSD, "max-budget-usd", "0.25", "per-attempt spend ceiling")
 	flags.IntVar(&options.MaxTurns, "max-turns", 2, "per-attempt agentic turn ceiling")
 	flags.StringVar(&recoveryMode, "recovery-mode", string(lab.RecoveryModeUnsafeFresh),
-		"Claude delivery strategy: unsafe-fresh or resume-only")
+		"Claude delivery strategy: unsafe-fresh, resume-only, or fenced-start-or-attach")
 	if err := flags.Parse(args); err != nil {
 		return lab.ExperimentOptions{}, fmt.Errorf("parse experiment flags: %w", err)
 	}

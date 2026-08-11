@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+var ErrWorkspaceEffectConflict = errors.New("workspace effect content conflicts with accepted effect")
+
 type WorkspaceEffect struct {
 	LogicalEffectID   string    `json:"logical_effect_id"`
 	PhysicalAttemptID string    `json:"physical_attempt_id"`
@@ -50,6 +52,37 @@ func AppendWorkspaceEffect(ctx context.Context, path string, effect WorkspaceEff
 		return fmt.Errorf("close workspace effect: %w", err)
 	}
 	return nil
+}
+
+func AppendWorkspaceEffectOnce(ctx context.Context, path string, effect WorkspaceEffect) (returnErr error) {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if path == "" || !effect.valid() {
+		return errors.New("workspace path and complete effect are required")
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+		return fmt.Errorf("create fixture workspace: %w", err)
+	}
+	unlock, err := lockWorkspaceEffect(path + ".lock")
+	if err != nil {
+		return err
+	}
+	defer func() { returnErr = errors.Join(returnErr, unlock()) }()
+	effects, err := ReadWorkspaceEffects(path)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	for _, accepted := range effects {
+		if accepted.LogicalEffectID != effect.LogicalEffectID {
+			continue
+		}
+		if accepted.Payload == effect.Payload {
+			return nil
+		}
+		return ErrWorkspaceEffectConflict
+	}
+	return AppendWorkspaceEffect(ctx, path, effect)
 }
 
 func ReadWorkspaceEffects(path string) (effects []WorkspaceEffect, returnErr error) {

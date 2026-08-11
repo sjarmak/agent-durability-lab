@@ -31,11 +31,17 @@ type evidence struct {
 }
 
 func EvaluateAndWrite(ctx context.Context, runDir string) (protocol.Verdict, error) {
-	verdict := evaluate(ctx, runDir)
+	verdict := Evaluate(ctx, runDir)
 	if err := writeVerdict(ctx, filepath.Join(runDir, protocol.VerdictFile), verdict); err != nil {
 		return protocol.Verdict{}, err
 	}
 	return verdict, nil
+}
+
+// Evaluate reconstructs a verdict from sealed raw evidence without writing to
+// the run directory. It is intended for independent post-run audits.
+func Evaluate(ctx context.Context, runDir string) protocol.Verdict {
+	return evaluate(ctx, runDir)
 }
 
 func evaluate(ctx context.Context, runDir string) protocol.Verdict {
@@ -320,11 +326,17 @@ func expectedBoundary(loaded evidence) (string, string, []string) {
 		return "worker-died-after-agent-registration", protocol.EventBarrierReached, []string{protocol.EventExecutorAttached, protocol.EventExecutorRegistered}
 	case protocol.CaseAmbiguousEffect:
 		switch boundary := loaded.input.Settings["fault_boundary"]; boundary {
+		case "claim-committed-before-process-exec":
+			return boundary, protocol.EventBarrierReached, []string{protocol.EventExecutorAttached}
 		case protocol.FaultPointProcessCreatedBeforeVendorRegistration:
-			return boundary, protocol.EventBarrierReached, []string{protocol.EventEffectAccepted}
+			return boundary, protocol.EventBarrierReached, []string{
+				protocol.EventExecutorAttached, protocol.EventEffectAccepted,
+			}
 		case protocol.FaultPointToolEffectBeforeActivityCompletion,
 			protocol.FaultPointFinalOutputBeforeActivityCompletion:
-			return boundary, protocol.EventBarrierReached, []string{protocol.EventExecutorRegistered}
+			return boundary, protocol.EventBarrierReached, []string{
+				protocol.EventExecutorAttached, protocol.EventExecutorRegistered,
+			}
 		case "", "unfaulted":
 			return "effect-confirmed-before-step-completion", protocol.EventEffectAccepted,
 				[]string{protocol.EventEffectAccepted, protocol.EventEffectRejected}

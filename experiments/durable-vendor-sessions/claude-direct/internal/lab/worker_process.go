@@ -30,6 +30,7 @@ type workerProcessConfig struct {
 	BarrierURL       string
 	BarrierPoint     string
 	RunRoot          string
+	SupervisorURL    string
 	Model            string
 	MaxBudgetUSD     string
 	MaxTurns         int
@@ -96,6 +97,7 @@ func workerCommand(config workerProcessConfig, readyPath string) *exec.Cmd {
 		"--barrier-url", config.BarrierURL,
 		"--barrier-point", config.BarrierPoint,
 		"--run-root", config.RunRoot,
+		"--supervisor-url", config.SupervisorURL,
 		"--ready-file", readyPath,
 		"--model", config.Model,
 		"--max-budget-usd", config.MaxBudgetUSD,

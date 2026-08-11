@@ -12,6 +12,7 @@ type RecoveryMode string
 const (
 	RecoveryModeUnsafeFresh RecoveryMode = "unsafe-fresh"
 	RecoveryModeResumeOnly  RecoveryMode = "resume-only"
+	RecoveryModeFenced      RecoveryMode = "fenced-start-or-attach"
 )
 
 func (m RecoveryMode) normalized() RecoveryMode {
@@ -23,11 +24,15 @@ func (m RecoveryMode) normalized() RecoveryMode {
 
 func (m RecoveryMode) valid() bool {
 	switch m.normalized() {
-	case RecoveryModeUnsafeFresh, RecoveryModeResumeOnly:
+	case RecoveryModeUnsafeFresh, RecoveryModeResumeOnly, RecoveryModeFenced:
 		return true
 	default:
 		return false
 	}
+}
+
+func (m RecoveryMode) usesSelectedSession() bool {
+	return m.normalized() == RecoveryModeResumeOnly || m.normalized() == RecoveryModeFenced
 }
 
 func ParseRecoveryMode(value string) (RecoveryMode, error) {

@@ -69,6 +69,79 @@ go run ./experiments/durable-vendor-sessions/claude-direct/cmd/evidence-transpor
   --transport experiments/durable-vendor-sessions/claude-direct/resume-evidence-transport
 ```
 
+## Fenced-supervisor package
+
+The protected correction lineage is packaged separately under
+`fenced-evidence-transport-v2/`. It contains five roots, 1,697 files, 8,706,372
+uncompressed bytes, 45 finalized run bindings, and 11 transport files. Its
+index SHA-256 is
+`d43a5463f0dcfd852744cbf52ca649f4898873985ea61a516c1438ce18f40c02`.
+
+The authenticated v1 and hermetic v1 roots are rejected partial runs. Hermetic
+v2 completed 15 runs but was superseded after review added the running-harness
+hash and durable cancellation wait. Hermetic v3 also completed and passed, but
+static-analysis and module-graph corrections changed the evidence-bound build
+identities. Hermetic v4 is the admitted current-source suite. The dispositions
+are bound by
+[`claude-direct-fenced-lineage.json`](claude-direct-fenced-lineage.json).
+
+The matched source-pinned resume-only control is independently packaged under
+`resume-hermetic-evidence-transport-v2/`: two roots, 936 files, 3,399,329
+uncompressed bytes, 24 finalized run bindings, and five transport files. Its
+index SHA-256 is
+`df92cbcf453e596f24a34ee1ea62ed2f8b8e5dd2899de2918a6ea68e147a7bb5`.
+Control v1 is superseded and v2 is admitted; their dispositions are bound by
+[`claude-direct-resume-hermetic-lineage.json`](claude-direct-resume-hermetic-lineage.json).
+
+The earlier `fenced-evidence-transport/` and
+`resume-hermetic-evidence-transport/` packages are retained as the pre-static-
+analysis transport correction, not silently replaced.
+
+The current-source authenticated comparison is preserved separately. The
+`fenced-claude4-evidence-transport-v3/` package binds the rejected logged-out
+root, superseded complete v1/v3, and admitted staticcheck-clean v4: four roots,
+1,679 files, 8,593,538 uncompressed bytes, 45 finalized run bindings, and nine
+transport files occupying 1,450,876 bytes. Its index SHA-256 is
+`b3d2b35dc3f79038e9e968529a828b172fbd502b5eec657e940a4572a7481535`;
+the ordered dispositions are bound by
+[`claude-direct-fenced-claude4-lineage.json`](claude-direct-fenced-claude4-lineage.json).
+
+The matched `resume-claude4-evidence-transport-v3/` package contains superseded
+v1-v3 and admitted v4: four roots, 1,872 files, 7,856,513 uncompressed bytes,
+48 finalized run bindings, and nine transport files occupying 1,604,386 bytes.
+Its index SHA-256 is
+`006e1d7544a34f4e1c123b2865a153e8300247249c9a26e64dcd4c480dd7e71a`;
+its disposition is bound by
+[`claude-direct-resume-claude4-lineage.json`](claude-direct-resume-claude4-lineage.json).
+Two independent builds of each current authenticated package were byte-
+identical. The earlier authenticated packages are retained as the pre-build-
+graph/auditor/static-analysis corrections, not overwritten.
+
+Verify both packages with:
+
+```bash
+go run ./experiments/durable-vendor-sessions/claude-direct/cmd/evidence-transport \
+  verify \
+  --transport experiments/durable-vendor-sessions/claude-direct/fenced-evidence-transport-v2
+
+go run ./experiments/durable-vendor-sessions/claude-direct/cmd/evidence-transport \
+  verify \
+  --transport experiments/durable-vendor-sessions/claude-direct/resume-hermetic-evidence-transport-v2
+
+go run ./experiments/durable-vendor-sessions/claude-direct/cmd/evidence-transport \
+  verify \
+  --transport experiments/durable-vendor-sessions/claude-direct/fenced-claude4-evidence-transport-v3
+
+go run ./experiments/durable-vendor-sessions/claude-direct/cmd/evidence-transport \
+  verify \
+  --transport experiments/durable-vendor-sessions/claude-direct/resume-claude4-evidence-transport-v3
+```
+
+The semantic audit reports are written outside sealed evidence roots. After
+restoring a package, rerun `claude-direct-evidence-audit` against the admitted
+root to recompute verdicts, replay histories, and verify authority/effect
+lineage without changing the restored root.
+
 ## Commands
 
 Verify the clone-safe package:

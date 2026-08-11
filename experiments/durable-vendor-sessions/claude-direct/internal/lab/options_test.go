@@ -3,9 +3,29 @@ package lab
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
+
+func TestNormalizeExperimentOptionsMakesFilesystemInputsAbsolute(t *testing.T) {
+	options, err := normalizeExperimentOptions(ExperimentOptions{
+		EvidenceRoot: "evidence", TemporalPath: "bin/temporal", WorkerBinary: "bin/worker",
+		EffectBinary: "bin/effect", LauncherBinary: "bin/launcher", ClaudeBinary: "bin/claude",
+	})
+	if err != nil {
+		t.Fatalf("normalize options: %v", err)
+	}
+	for name, path := range map[string]string{
+		"evidence": options.EvidenceRoot, "temporal": options.TemporalPath,
+		"worker": options.WorkerBinary, "effect": options.EffectBinary,
+		"launcher": options.LauncherBinary, "claude": options.ClaudeBinary,
+	} {
+		if !filepath.IsAbs(path) || !strings.HasSuffix(path, filepath.Join("bin", filepath.Base(path))) && name != "evidence" {
+			t.Fatalf("%s path = %q, want absolute normalized path", name, path)
+		}
+	}
+}
 
 func TestValidateOptionsRequiresPinnedExecutableInputsAndNewEvidenceRoot(t *testing.T) {
 	t.Parallel()

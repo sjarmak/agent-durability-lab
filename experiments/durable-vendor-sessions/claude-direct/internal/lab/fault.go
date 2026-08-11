@@ -14,6 +14,7 @@ type FaultBoundary string
 
 const (
 	FaultNone                     FaultBoundary = "unfaulted"
+	FaultAfterClaimBeforeExec     FaultBoundary = "claim-committed-before-process-exec"
 	FaultBeforeVendorRegistration FaultBoundary = protocol.FaultPointProcessCreatedBeforeVendorRegistration
 	FaultAfterToolEffect          FaultBoundary = protocol.FaultPointToolEffectBeforeActivityCompletion
 	FaultAfterFinalOutput         FaultBoundary = protocol.FaultPointFinalOutputBeforeActivityCompletion
@@ -21,6 +22,7 @@ const (
 
 const (
 	preRegistrationBarrier = "claude-process-created-before-vendor-registration"
+	claimBeforeExecBarrier = "claude-claim-committed-before-exec"
 	finalOutputBarrier     = "claude-final-output-before-activity-completion"
 )
 
@@ -32,8 +34,17 @@ func unsafeFaultSchedule() []FaultBoundary {
 	}
 }
 
+func fencedFaultSchedule() []FaultBoundary {
+	return []FaultBoundary{
+		FaultAfterClaimBeforeExec,
+		FaultBeforeVendorRegistration,
+		FaultAfterToolEffect,
+		FaultAfterFinalOutput,
+	}
+}
+
 func (b FaultBoundary) valid() bool {
-	return b == FaultNone || b == FaultBeforeVendorRegistration ||
+	return b == FaultNone || b == FaultAfterClaimBeforeExec || b == FaultBeforeVendorRegistration ||
 		b == FaultAfterToolEffect || b == FaultAfterFinalOutput
 }
 

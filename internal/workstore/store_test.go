@@ -311,6 +311,45 @@ func TestConcurrentStartOrAttachHasOneLauncher(t *testing.T) {
 	}
 }
 
+func TestCommitEffectOnceIsAtomicIdempotentAndRejectsConflict(t *testing.T) {
+	store := openTestStore(t)
+	decision, err := store.StartOrAttach(context.Background(), StartRequest{
+		SessionID: "session-1", Mode: ModeFenced, CandidateOwner: "owner-1",
+		WorkerID: "worker-1", Attempt: 1,
+	})
+	if err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	if err := store.RegisterProcess(context.Background(), decision.Lease, Process{
+		PID: 101, StartIdentity: "boot:101", ProcessGroupID: 101,
+	}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	effect := Effect{ID: "effect-1", Value: "payload"}
+	errorsByCall := make(chan error, 2)
+	for range 2 {
+		go func() { errorsByCall <- store.CommitEffectOnce(context.Background(), decision.Lease, effect) }()
+	}
+	for range 2 {
+		if err := <-errorsByCall; err != nil {
+			t.Fatalf("idempotent commit: %v", err)
+		}
+	}
+	if err := store.CommitEffectOnce(context.Background(), decision.Lease, Effect{
+		ID: effect.ID, Value: "conflict",
+	}); !errors.Is(err, ErrEffectConflict) {
+		t.Fatalf("conflicting commit = %v, want ErrEffectConflict", err)
+	}
+	snapshot, err := store.Snapshot(context.Background(), decision.Lease.SessionID)
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+	if len(snapshot.Effects) != 1 || snapshot.Effects[0].Effect != effect {
+		t.Fatalf("effects = %+v, want one %+v", snapshot.Effects, effect)
+	}
+	assertEventKinds(t, snapshot.Events, "effect_accepted", "effect_idempotently_observed", "effect_conflict_rejected")
+}
+
 func TestEvidenceExportIsOrderedJSONL(t *testing.T) {
 	store := openTestStore(t)
 	decision := mustStart(t, store, StartRequest{

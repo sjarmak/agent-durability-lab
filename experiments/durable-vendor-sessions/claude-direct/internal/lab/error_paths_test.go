@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/sjarmak/temporal_projects/benchmarks/agent-durability/protocol"
 )
 
 func TestIOBoundariesPropagateCancellationAndFilesystemFailures(t *testing.T) {
@@ -104,6 +106,33 @@ func TestRunnerAndMetadataRejectUnusableExecutables(t *testing.T) {
 	}
 	if _, err := inspectExperimentBinaries(context.Background(), options); err == nil {
 		t.Fatal("empty Claude version returned nil error")
+	}
+}
+
+func TestInspectExperimentBinariesBindsExecutingHarness(t *testing.T) {
+	t.Parallel()
+
+	directory := t.TempDir()
+	fixture := filepath.Join(directory, "fixture-binary")
+	if err := os.WriteFile(fixture, []byte("#!/bin/sh\nprintf 'fixture 1.0\\n'\n"), 0o700); err != nil {
+		t.Fatalf("write fixture executable: %v", err)
+	}
+	metadata, err := inspectExperimentBinaries(context.Background(), ExperimentOptions{
+		ClaudeBinary: fixture, WorkerBinary: fixture, EffectBinary: fixture, LauncherBinary: fixture,
+	})
+	if err != nil {
+		t.Fatalf("inspect experiment binaries: %v", err)
+	}
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatalf("locate executing harness: %v", err)
+	}
+	want, err := protocol.FileSHA256(executable)
+	if err != nil {
+		t.Fatalf("hash executing harness: %v", err)
+	}
+	if metadata.HarnessSHA256 != want {
+		t.Fatalf("harness SHA-256 = %q, want %q", metadata.HarnessSHA256, want)
 	}
 }
 

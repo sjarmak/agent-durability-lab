@@ -91,8 +91,29 @@ func TestDirectRunnerPreservesFailureAndHonorsPreStartCancellation(t *testing.T)
 func writeExecutable(t *testing.T, directory, name, body string) string {
 	t.Helper()
 	path := filepath.Join(directory, name)
-	if err := os.WriteFile(path, []byte(body), 0o700); err != nil {
-		t.Fatalf("write executable: %v", err)
+	file, err := os.CreateTemp(directory, "."+name+"-*")
+	if err != nil {
+		t.Fatalf("create executable staging file: %v", err)
+	}
+	stagingPath := file.Name()
+	closeWithFailure := func(action string, actionErr error) {
+		_ = file.Close()
+		_ = os.Remove(stagingPath)
+		t.Fatalf("%s executable: %v", action, actionErr)
+	}
+	if _, err := file.Write([]byte(body)); err != nil {
+		closeWithFailure("write", err)
+	}
+	if err := file.Chmod(0o700); err != nil {
+		closeWithFailure("chmod", err)
+	}
+	if err := file.Close(); err != nil {
+		_ = os.Remove(stagingPath)
+		t.Fatalf("close executable: %v", err)
+	}
+	if err := os.Rename(stagingPath, path); err != nil {
+		_ = os.Remove(stagingPath)
+		t.Fatalf("publish executable: %v", err)
 	}
 	return path
 }

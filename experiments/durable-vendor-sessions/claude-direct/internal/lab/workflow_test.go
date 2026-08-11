@@ -58,3 +58,11 @@ func TestReplayWorkflowHistoryRejectsMalformedExport(t *testing.T) {
 		t.Fatalf("malformed history replay error = %v", err)
 	}
 }
+
+func TestFencedWorkflowConfiguresCancellationWait(t *testing.T) {
+	fenced := directClaudeActivityOptions(ClaudeActivityInput{RecoveryMode: RecoveryModeFenced})
+	resume := directClaudeActivityOptions(ClaudeActivityInput{RecoveryMode: RecoveryModeResumeOnly})
+	if !fenced.WaitForCancellation || resume.WaitForCancellation {
+		t.Fatalf("WaitForCancellation: fenced=%t resume=%t", fenced.WaitForCancellation, resume.WaitForCancellation)
+	}
+}

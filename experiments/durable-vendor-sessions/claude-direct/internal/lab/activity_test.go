@@ -2,10 +2,14 @@ package lab
 
 import (
 	"context"
+	"errors"
+	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/sjarmak/temporal_projects/internal/workstore"
 	"go.temporal.io/sdk/testsuite"
 )
 
@@ -68,6 +72,121 @@ func TestRunClaudeActivityDerivesDistinctPhysicalAttemptFromTemporalIdentity(t *
 	}
 	if !strings.Contains(capturedInvocation.Stdin, "controlled-effect --request") {
 		t.Fatalf("Activity prompt = %q", capturedInvocation.Stdin)
+	}
+}
+
+func TestFencedActivityCancellationDurablyRevokesSupervisorBeforeReturning(t *testing.T) {
+	store := openSupervisorTestStore(t)
+	started := make(chan struct{})
+	stopped := make(chan struct{})
+	supervisor := newTurnSupervisor(context.Background(), store,
+		func(ctx context.Context, store *workstore.Store, lease workstore.Lease) (supervisedResult, error) {
+			if err := store.RegisterProcess(ctx, lease, supervisorTestProcess(lease.Generation)); err != nil {
+				return supervisedResult{}, err
+			}
+			close(started)
+			<-ctx.Done()
+			close(stopped)
+			return supervisedResult{}, workstore.ErrSessionCanceled
+		}, sequentialCapabilities())
+	server := httptest.NewServer(newSupervisorHandler(supervisor))
+	t.Cleanup(server.Close)
+	activities := Activities{SupervisorURL: server.URL, WorkerID: "worker-one"}
+	activityContext, cancelActivity := context.WithCancel(context.Background())
+	result := make(chan error, 1)
+	go func() {
+		_, err := activities.runFencedClaude(activityContext, ClaudeActivityInput{
+			LogicalSessionID: "logical-session-1", LogicalTurnID: "turn-1", LogicalEffectID: "effect-1",
+			RecoveryMode: RecoveryModeFenced,
+		}, 1, "temporal-cancel-operation-1")
+		result <- err
+	}()
+	select {
+	case <-started:
+	case err := <-result:
+		t.Fatalf("fenced Activity ended before supervisor start: %v", err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("fenced Activity did not reach supervisor start")
+	}
+	cancelActivity()
+	select {
+	case err := <-result:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("canceled fenced Activity = %v, want context.Canceled", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("canceled fenced Activity did not return")
+	}
+	select {
+	case <-stopped:
+	case <-time.After(5 * time.Second):
+		t.Fatal("supervisor-owned execution was not stopped")
+	}
+	snapshot, err := store.Snapshot(context.Background(), "logical-session-1")
+	if err != nil {
+		t.Fatalf("snapshot canceled Activity: %v", err)
+	}
+	if snapshot.Cancellation == nil || snapshot.Cancellation.RequestID != "temporal-cancel-operation-1" ||
+		snapshot.Cancellation.Generation != 1 || snapshot.Executors[0].Status != workstore.ExecutorStatusCanceled {
+		t.Fatalf("durable cancellation = %+v", snapshot)
+	}
+}
+
+func TestFencedActivityDelegatesTurnToSupervisor(t *testing.T) {
+	store := openSupervisorTestStore(t)
+	supervisor := newTurnSupervisor(context.Background(), store,
+		func(ctx context.Context, store *workstore.Store, lease workstore.Lease) (supervisedResult, error) {
+			process := supervisorTestProcess(lease.Generation)
+			if err := store.RegisterProcess(ctx, lease, process); err != nil {
+				return supervisedResult{}, err
+			}
+			if err := store.CommitEffectOnce(ctx, lease, workstore.Effect{ID: "effect-1", Value: "controlled-edit"}); err != nil {
+				return supervisedResult{}, err
+			}
+			return supervisedResult{
+				VendorSessionID:   "01890f3e-7b5a-4c2d-8e1f-0123456789ab",
+				PhysicalAttemptID: "supervisor-generation-1", ProcessIdentity: "pid:101:start:boot:1",
+				Outcome: workstore.Outcome{Value: "EFFECT_COMPLETE"},
+			}, nil
+		}, sequentialCapabilities())
+	server := httptest.NewServer(newSupervisorHandler(supervisor))
+	t.Cleanup(server.Close)
+	activities := Activities{
+		Command: ClaudeCommand{
+			Binary: "/opt/claude", WorkDir: t.TempDir(), Model: "haiku", MaxBudgetUSD: "0.25", MaxTurns: 2,
+		},
+		LauncherBinary: "/opt/launcher", FaultBoundary: FaultNone,
+		EffectBinary: "/opt/controlled-effect", DestinationPath: t.TempDir() + "/destination.db",
+		WorkspacePath: t.TempDir() + "/workspace.jsonl", EffectPayload: "controlled-edit",
+		BarrierURL: "http://127.0.0.1:8080", BarrierPoint: committedEffectBarrier,
+		RunRoot: t.TempDir(), WorkerID: "worker-one", SupervisorURL: server.URL,
+	}
+	var suite testsuite.WorkflowTestSuite
+	environment := suite.NewTestActivityEnvironment()
+	environment.RegisterActivity(activities.RunClaude)
+	encoded, err := environment.ExecuteActivity(activities.RunClaude, ClaudeActivityInput{
+		LogicalSessionID: "logical-session-1", LogicalTurnID: "turn-1", LogicalEffectID: "effect-1",
+		RecoveryMode:            RecoveryModeFenced,
+		SelectedVendorSessionID: "01890f3e-7b5a-4c2d-8e1f-0123456789ab",
+	})
+	if err != nil {
+		t.Fatalf("execute fenced Activity: %v", err)
+	}
+	var result ClaudeActivityResult
+	if err := encoded.Get(&result); err != nil {
+		t.Fatalf("decode fenced Activity: %v", err)
+	}
+	if result.TemporalAttempt != 1 || result.PhysicalAttemptID != "supervisor-generation-1" ||
+		result.VendorSessionID != "01890f3e-7b5a-4c2d-8e1f-0123456789ab" ||
+		result.Result != "EFFECT_COMPLETE" || result.ProcessIdentity != "pid:101:start:boot:1" {
+		t.Fatalf("fenced Activity result = %+v", result)
+	}
+	snapshot, err := store.Snapshot(context.Background(), "logical-session-1")
+	if err != nil {
+		t.Fatalf("fenced snapshot: %v", err)
+	}
+	if snapshot.ActiveGeneration != 1 || len(snapshot.Effects) != 1 || snapshot.Outcome == nil {
+		t.Fatalf("fenced snapshot = %+v", snapshot)
 	}
 }
 

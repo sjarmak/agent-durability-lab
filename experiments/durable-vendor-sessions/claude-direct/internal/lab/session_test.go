@@ -25,8 +25,10 @@ func TestRecoveryModeValidation(t *testing.T) {
 	t.Parallel()
 
 	if RecoveryMode("").normalized() != RecoveryModeUnsafeFresh ||
-		!RecoveryModeUnsafeFresh.valid() || !RecoveryModeResumeOnly.valid() || RecoveryMode("fork").valid() {
-		t.Fatal("recovery mode validation does not preserve the unsafe default and resume-only arm")
+		!RecoveryModeUnsafeFresh.valid() || !RecoveryModeResumeOnly.valid() || !RecoveryModeFenced.valid() ||
+		RecoveryMode("fork").valid() || RecoveryModeUnsafeFresh.usesSelectedSession() ||
+		!RecoveryModeResumeOnly.usesSelectedSession() || !RecoveryModeFenced.usesSelectedSession() {
+		t.Fatal("recovery mode validation does not preserve the unsafe, resume-only, and fenced arms")
 	}
 }
 
@@ -35,6 +37,15 @@ func TestParseRecoveryModeRejectsExplicitEmptyValue(t *testing.T) {
 
 	if _, err := ParseRecoveryMode(""); err == nil {
 		t.Fatal("explicit empty recovery mode returned nil error")
+	}
+	if _, err := ParseRecoveryMode("fork"); err == nil {
+		t.Fatal("unsupported recovery mode returned nil error")
+	}
+	for _, want := range []RecoveryMode{RecoveryModeUnsafeFresh, RecoveryModeResumeOnly, RecoveryModeFenced} {
+		got, err := ParseRecoveryMode(string(want))
+		if err != nil || got != want {
+			t.Fatalf("parse recovery mode %q = %q, %v", want, got, err)
+		}
 	}
 }
 

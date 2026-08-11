@@ -200,6 +200,17 @@ func (s *Store) RecordObservation(ctx context.Context, event Event) error {
 }
 
 func (s *Store) CommitEffect(ctx context.Context, lease Lease, effect Effect) error {
+	return s.commitEffect(ctx, lease, effect, false)
+}
+
+// CommitEffectOnce makes Effect.ID an idempotency key inside one logical
+// session. Reissuing the same ID and value succeeds without another accepted
+// effect; reusing the ID for different content fails closed.
+func (s *Store) CommitEffectOnce(ctx context.Context, lease Lease, effect Effect) error {
+	return s.commitEffect(ctx, lease, effect, true)
+}
+
+func (s *Store) commitEffect(ctx context.Context, lease Lease, effect Effect, once bool) error {
 	if effect.ID == "" {
 		return fmt.Errorf("%w: effect ID is required", ErrInvalidRequest)
 	}
@@ -213,6 +224,25 @@ func (s *Store) CommitEffect(ctx context.Context, lease Lease, effect Effect) er
 		}
 		if executor.Status != ExecutorStatusRunning {
 			return record, staleEventWithExecutor("effect_rejected_not_running", lease, executor), ErrExecutorNotRunning
+		}
+		if once {
+			for _, accepted := range record.Effects {
+				if accepted.ID != effect.ID {
+					continue
+				}
+				event := Event{
+					SessionID: lease.SessionID, Generation: lease.Generation,
+					OwnerTokenHash: HashToken(lease.OwnerToken), WorkerID: executor.WorkerID,
+					Attempt: executor.Attempt, PID: executor.PID,
+					Details: map[string]string{"effect_id": effect.ID, "accepted_generation": fmt.Sprint(accepted.Generation)},
+				}
+				if accepted.Value == effect.Value {
+					event.Kind = "effect_idempotently_observed"
+					return record, event, nil
+				}
+				event.Kind = "effect_conflict_rejected"
+				return record, event, ErrEffectConflict
+			}
 		}
 		accepted := AcceptedEffect{
 			Effect: effect, Generation: lease.Generation, OwnerTokenHash: HashToken(lease.OwnerToken), AcceptedAt: time.Now().UTC(),

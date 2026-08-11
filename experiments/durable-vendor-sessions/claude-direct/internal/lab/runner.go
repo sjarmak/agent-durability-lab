@@ -20,17 +20,18 @@ type RunInvocationInput struct {
 }
 
 type ProcessRecord struct {
-	AttemptID     string    `json:"attempt_id"`
-	ActorID       string    `json:"actor_id"`
-	Binary        string    `json:"binary"`
-	Args          []string  `json:"args"`
-	WorkDir       string    `json:"work_dir"`
-	PID           int       `json:"pid"`
-	StartIdentity string    `json:"start_identity"`
-	Identity      string    `json:"identity"`
-	ObservedAt    time.Time `json:"observed_at"`
-	State         string    `json:"state"`
-	Failure       string    `json:"failure,omitempty"`
+	AttemptID      string    `json:"attempt_id"`
+	ActorID        string    `json:"actor_id"`
+	Binary         string    `json:"binary"`
+	Args           []string  `json:"args"`
+	WorkDir        string    `json:"work_dir"`
+	PID            int       `json:"pid"`
+	StartIdentity  string    `json:"start_identity"`
+	ProcessGroupID int       `json:"process_group_id,omitempty"`
+	Identity       string    `json:"identity"`
+	ObservedAt     time.Time `json:"observed_at"`
+	State          string    `json:"state"`
+	Failure        string    `json:"failure,omitempty"`
 }
 
 type InvocationResult struct {
@@ -66,6 +67,12 @@ type runningInvocation struct {
 }
 
 func startInvocation(invocation Invocation, input RunInvocationInput) (runningInvocation, error) {
+	return startInvocationConfigured(invocation, input, nil)
+}
+
+func startInvocationConfigured(invocation Invocation, input RunInvocationInput,
+	configure func(*exec.Cmd) error,
+) (runningInvocation, error) {
 	paths := invocationPaths(input)
 	stdout, stderr, err := createInvocationStreams(paths)
 	if err != nil {
@@ -77,6 +84,13 @@ func startInvocation(invocation Invocation, input RunInvocationInput) (runningIn
 	command.Stdin = strings.NewReader(invocation.Stdin)
 	command.Stdout = stdout
 	command.Stderr = stderr
+	if configure != nil {
+		if err := configure(command); err != nil {
+			_ = stdout.Close()
+			_ = stderr.Close()
+			return runningInvocation{}, fmt.Errorf("configure Claude process: %w", err)
+		}
+	}
 	if err := command.Start(); err != nil {
 		_ = stdout.Close()
 		_ = stderr.Close()
@@ -102,6 +116,10 @@ func (r runningInvocation) await() (InvocationResult, error) {
 	// Intentionally do not bind the child lifetime to the Activity context. This
 	// is the unsafe control: Worker loss can leave the direct CLI process alive.
 	waitErr := r.command.Wait()
+	return r.finish(waitErr)
+}
+
+func (r runningInvocation) finish(waitErr error) (InvocationResult, error) {
 	failure := ""
 	if waitErr != nil {
 		failure = waitErr.Error()
@@ -167,10 +185,14 @@ func observeProcess(input RunInvocationInput, invocation Invocation, pid int, st
 	if err != nil {
 		return ProcessRecord{}, fmt.Errorf("identify Claude process: %w", err)
 	}
+	processGroupID, err := agentprocess.ProcessGroupID(pid)
+	if err != nil {
+		return ProcessRecord{}, fmt.Errorf("identify Claude process group: %w", err)
+	}
 	return ProcessRecord{
 		AttemptID: input.AttemptID, ActorID: input.ActorID,
 		Binary: invocation.Binary, Args: append([]string(nil), invocation.Args...), WorkDir: invocation.WorkDir,
-		PID: pid, StartIdentity: startIdentity,
+		PID: pid, StartIdentity: startIdentity, ProcessGroupID: processGroupID,
 		Identity: fmt.Sprintf("pid:%d:start:%s", pid, startIdentity), ObservedAt: time.Now().UTC(),
 		State: state, Failure: failure,
 	}, nil

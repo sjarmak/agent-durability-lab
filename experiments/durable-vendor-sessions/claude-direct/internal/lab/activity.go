@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/sjarmak/temporal_projects/internal/workstore"
 	"go.temporal.io/sdk/activity"
 )
 
@@ -30,6 +31,8 @@ type ClaudeActivityResult struct {
 
 type InvocationFunc func(context.Context, Invocation, RunInvocationInput) (InvocationResult, error)
 
+const supervisorCancellationTimeout = 10 * time.Second
+
 type Activities struct {
 	Command         ClaudeCommand
 	LauncherBinary  string
@@ -42,6 +45,7 @@ type Activities struct {
 	BarrierPoint    string
 	RunRoot         string
 	WorkerID        string
+	SupervisorURL   string
 	Invoke          InvocationFunc
 }
 
@@ -56,6 +60,12 @@ func (a Activities) RunClaude(ctx context.Context, input ClaudeActivityInput) (C
 		info.WorkflowExecution.ID, info.WorkflowExecution.RunID, info.ActivityID, info.Attempt,
 	)
 	actorID := fmt.Sprintf("%s-attempt-%d", a.WorkerID, info.Attempt)
+	if input.RecoveryMode.normalized() == RecoveryModeFenced {
+		cancellationRequestID := "temporal-cancel-" + temporalOperationID(
+			info.WorkflowExecution.ID, info.WorkflowExecution.RunID, info.ActivityID,
+		)
+		return a.runFencedClaude(ctx, input, info.Attempt, cancellationRequestID)
+	}
 	result, err := a.executeAttempt(ctx, input, physicalAttemptID, actorID, info.Attempt)
 	if err != nil {
 		return ClaudeActivityResult{}, fmt.Errorf("run direct Claude attempt %d: %w", info.Attempt, err)
@@ -64,6 +74,37 @@ func (a Activities) RunClaude(ctx context.Context, input ClaudeActivityInput) (C
 		TemporalAttempt: info.Attempt, PhysicalAttemptID: physicalAttemptID,
 		VendorSessionID: result.Claude.SessionID, Result: result.Claude.Result,
 		ProcessIdentity: result.Process.Identity,
+	}, nil
+}
+
+func (a Activities) runFencedClaude(ctx context.Context, input ClaudeActivityInput,
+	temporalAttempt int32, cancellationRequestID string,
+) (ClaudeActivityResult, error) {
+	client := newSupervisorClient(a.SupervisorURL, nil)
+	receipt, err := client.StartOrAttach(ctx, supervisorStartRequest{
+		SessionID: input.LogicalSessionID, WorkerID: a.WorkerID, AgentBuild: "claude-direct-fenced-v1",
+		Attempt: temporalAttempt, LogicalTurnID: input.LogicalTurnID,
+		LogicalEffectID: input.LogicalEffectID, SelectedVendorSessionID: input.SelectedVendorSessionID,
+	})
+	if err != nil {
+		if ctx.Err() != nil {
+			cancelContext, cancel := context.WithTimeout(context.WithoutCancel(ctx), supervisorCancellationTimeout)
+			_, cancelErr := client.Cancel(cancelContext, supervisorCancelRequest{
+				SessionID: input.LogicalSessionID, RequestID: cancellationRequestID,
+			})
+			cancel()
+			if cancelErr != nil && !errors.Is(cancelErr, workstore.ErrSessionNotFound) {
+				return ClaudeActivityResult{}, errors.Join(
+					err, fmt.Errorf("durably revoke canceled fenced Claude turn: %w", cancelErr),
+				)
+			}
+		}
+		return ClaudeActivityResult{}, fmt.Errorf("start or attach fenced Claude attempt %d: %w", temporalAttempt, err)
+	}
+	return ClaudeActivityResult{
+		TemporalAttempt: temporalAttempt, PhysicalAttemptID: receipt.PhysicalAttemptID,
+		VendorSessionID: receipt.VendorSessionID, Result: receipt.Outcome.Value,
+		ProcessIdentity: receipt.ProcessIdentity,
 	}, nil
 }
 
@@ -144,18 +185,25 @@ func (a Activities) validate(input ClaudeActivityInput) error {
 		input.LogicalTurnID == "" || input.LogicalEffectID == "" {
 		return errors.New("activity requires complete Claude command, effect, Worker, and logical identities")
 	}
-	if input.RecoveryMode.normalized() == RecoveryModeResumeOnly && !validVendorSessionID(input.SelectedVendorSessionID) {
-		return errors.New("resume-only activity requires a caller-selected Claude session UUID")
+	if input.RecoveryMode.usesSelectedSession() && !validVendorSessionID(input.SelectedVendorSessionID) {
+		return errors.New("selected-session activity requires a caller-selected Claude session UUID")
 	}
 	if input.RecoveryMode.normalized() == RecoveryModeUnsafeFresh && input.SelectedVendorSessionID != "" {
 		return errors.New("unsafe-fresh activity cannot declare a selected Claude session")
+	}
+	if input.RecoveryMode.normalized() == RecoveryModeFenced && a.SupervisorURL == "" {
+		return errors.New("fenced activity requires a supervisor URL")
 	}
 	return nil
 }
 
 func temporalAttemptID(workflowID, runID, activityID string, attempt int32) string {
+	return fmt.Sprintf("%s-attempt-%d", temporalOperationID(workflowID, runID, activityID), attempt)
+}
+
+func temporalOperationID(workflowID, runID, activityID string) string {
 	sum := sha256.Sum256([]byte(workflowID + "\x00" + runID + "\x00" + activityID))
-	return fmt.Sprintf("%s-attempt-%d", hex.EncodeToString(sum[:8]), attempt)
+	return hex.EncodeToString(sum[:8])
 }
 
 func startActivityHeartbeats(ctx context.Context) func() {

@@ -19,6 +19,7 @@ import (
 	"github.com/sjarmak/temporal_projects/benchmarks/agent-durability/oracle"
 	"github.com/sjarmak/temporal_projects/benchmarks/agent-durability/protocol"
 	"github.com/sjarmak/temporal_projects/internal/failureinject"
+	"github.com/sjarmak/temporal_projects/internal/workstore"
 	"go.temporal.io/sdk/client"
 )
 
@@ -39,6 +40,7 @@ type trialSummary struct {
 	WorkspaceAfterHash      string                  `json:"workspace_after_sha256"`
 	WorkspaceEffects        []WorkspaceEffect       `json:"workspace_effects"`
 	Destination             DestinationSnapshot     `json:"destination"`
+	Authority               *workstore.Snapshot     `json:"authority,omitempty"`
 	ReplayVerified          bool                    `json:"replay_verified"`
 }
 
@@ -60,6 +62,10 @@ type claudeTrial struct {
 	attemptRoot             string
 	coordinator             *failureinject.Coordinator
 	barrierServer           *httptest.Server
+	authorityStore          *workstore.Store
+	supervisorServer        *httptest.Server
+	supervisorCancel        context.CancelFunc
+	supervisorDecisions     chan supervisorDecision
 	workerConfig            workerProcessConfig
 	workerOne               *managedWorker
 	workerTwo               *managedWorker
@@ -106,7 +112,8 @@ func newClaudeTrial(ctx context.Context, temporalClient client.Client, temporalA
 		options: options, metadata: metadata, probe: probe, faultBoundary: faultBoundary, trial: trial,
 		staging: filepath.Join(options.EvidenceRoot, ".staging-"+runID), startedAt: time.Now().UTC(),
 	}
-	if mode == RecoveryModeResumeOnly {
+	state.logicalSessionID = fmt.Sprintf("claude-direct-%s-%s-trial-%d", probe, faultBoundary, trial)
+	if mode.usesSelectedSession() {
 		selected, err := newVendorSessionID()
 		if err != nil {
 			return nil, err
@@ -116,7 +123,9 @@ func newClaudeTrial(ctx context.Context, temporalClient client.Client, temporalA
 	if err := state.prepareStorage(); err != nil {
 		return nil, err
 	}
-	state.prepareCoordination()
+	if err := state.prepareCoordination(); err != nil {
+		return nil, err
+	}
 	return state, nil
 }
 
@@ -124,6 +133,8 @@ func trialStorageID(mode RecoveryMode, probe protocol.Probe, faultBoundary Fault
 	prefix := "claude-direct-ambiguous-effect"
 	if mode.normalized() == RecoveryModeResumeOnly {
 		prefix += "-resume-only"
+	} else if mode.normalized() == RecoveryModeFenced {
+		prefix += "-fenced"
 	}
 	return fmt.Sprintf("%s-%s-%s-trial-%d", prefix, probe, faultBoundary, trial)
 }
@@ -144,10 +155,17 @@ func (t *claudeTrial) prepareStorage() error {
 	t.workspaceBeforeHash = hash
 	t.destinationPath = filepath.Join(t.staging, "destination.db")
 	t.attemptRoot = filepath.Join(t.staging, "attempts")
+	if t.options.RecoveryMode.normalized() == RecoveryModeFenced {
+		store, err := workstore.Open(filepath.Join(t.staging, "authority.db"))
+		if err != nil {
+			return fmt.Errorf("open fenced authority store: %w", err)
+		}
+		t.authorityStore = store
+	}
 	return nil
 }
 
-func (t *claudeTrial) prepareCoordination() {
+func (t *claudeTrial) prepareCoordination() error {
 	t.coordinator = failureinject.NewCoordinator()
 	t.barrierServer = httptest.NewServer(t.coordinator.Handler())
 	taskQueue := fmt.Sprintf("claude-direct-%s-%s-trial-%d", t.probe, t.faultBoundary, t.trial)
@@ -159,6 +177,40 @@ func (t *claudeTrial) prepareCoordination() {
 		BarrierURL: t.barrierServer.URL, BarrierPoint: committedEffectBarrier, RunRoot: t.attemptRoot,
 		Model: t.options.Model, MaxBudgetUSD: t.options.MaxBudgetUSD, MaxTurns: t.options.MaxTurns,
 	}
+	if t.options.RecoveryMode.normalized() == RecoveryModeFenced {
+		runConfig := fencedClaudeRunConfig{
+			Command: ClaudeCommand{
+				Binary: t.options.ClaudeBinary, WorkDir: t.fixtureDirectory, Model: t.options.Model,
+				MaxBudgetUSD: t.options.MaxBudgetUSD, MaxTurns: t.options.MaxTurns,
+			},
+			LauncherBinary: t.options.LauncherBinary, FaultBoundary: t.faultBoundary,
+			EffectBinary: t.options.EffectBinary, EffectPayload: "controlled-edit", WorkspacePath: t.workspacePath,
+			BarrierURL: t.barrierServer.URL, BarrierPoint: committedEffectBarrier,
+			RunRoot: t.attemptRoot, LogicalSessionID: t.logicalSessionID,
+			LogicalTurnID: "turn-1", LogicalEffectID: "effect-1",
+			SelectedVendorSessionID: t.selectedVendorSessionID,
+			SupervisorURL: func() string {
+				if t.supervisorServer == nil {
+					return ""
+				}
+				return t.supervisorServer.URL
+			},
+		}
+		if err := runConfig.validate(); err != nil {
+			return err
+		}
+		supervisorContext, cancelSupervisor := context.WithCancel(t.ctx)
+		t.supervisorCancel = cancelSupervisor
+		t.supervisorDecisions = make(chan supervisorDecision, 4)
+		supervisor := newTurnSupervisor(supervisorContext, t.authorityStore, runConfig.run, nil,
+			withSupervisorStartValidator(runConfig.validateStart),
+			withSupervisorDecisionObserver(func(decision supervisorDecision) {
+				t.supervisorDecisions <- decision
+			}))
+		t.supervisorServer = httptest.NewServer(newSupervisorHandler(supervisor))
+		t.workerConfig.SupervisorURL = t.supervisorServer.URL
+	}
+	return nil
 }
 
 func (t *claudeTrial) execute() error {
@@ -169,6 +221,8 @@ func (t *claudeTrial) execute() error {
 		return t.executeUnfaulted()
 	}
 	switch t.faultBoundary {
+	case FaultAfterClaimBeforeExec:
+		return t.executeClaimBeforeExecFault()
 	case FaultBeforeVendorRegistration:
 		return t.executePreRegistrationFault()
 	case FaultAfterToolEffect:
@@ -176,8 +230,30 @@ func (t *claudeTrial) execute() error {
 	case FaultAfterFinalOutput:
 		return t.executeFinalOutputFault()
 	default:
-		return fmt.Errorf("unsupported unsafe fault boundary %q", t.faultBoundary)
+		return fmt.Errorf("unsupported fault boundary %q", t.faultBoundary)
 	}
+}
+
+func (t *claudeTrial) executeClaimBeforeExecFault() error {
+	if t.options.RecoveryMode.normalized() != RecoveryModeFenced {
+		return errors.New("claim-before-exec boundary requires fenced recovery")
+	}
+	if err := t.waitForBoundary(claimBeforeExecBarrier, 1); err != nil {
+		return err
+	}
+	if err := t.recoverFencedWorker(); err != nil {
+		return err
+	}
+	if err := t.coordinator.Release(claimBeforeExecBarrier); err != nil {
+		return err
+	}
+	if err := t.waitForEffects(1); err != nil {
+		return err
+	}
+	if err := t.coordinator.Release(committedEffectBarrier); err != nil {
+		return err
+	}
+	return t.awaitWorkflow()
 }
 
 func (t *claudeTrial) executeUnfaulted() error {
@@ -194,6 +270,15 @@ func (t *claudeTrial) executeEffectFault() error {
 	if err := t.waitForEffects(1); err != nil {
 		return err
 	}
+	if t.options.RecoveryMode.normalized() == RecoveryModeFenced {
+		if err := t.recoverFencedWorker(); err != nil {
+			return err
+		}
+		if err := t.coordinator.Release(committedEffectBarrier); err != nil {
+			return err
+		}
+		return t.awaitWorkflow()
+	}
 	if err := t.replaceWorker(); err != nil {
 		return err
 	}
@@ -209,6 +294,21 @@ func (t *claudeTrial) executeEffectFault() error {
 func (t *claudeTrial) executePreRegistrationFault() error {
 	if err := t.waitForBoundary(preRegistrationBarrier, 1); err != nil {
 		return err
+	}
+	if t.options.RecoveryMode.normalized() == RecoveryModeFenced {
+		if err := t.recoverFencedWorker(); err != nil {
+			return err
+		}
+		if err := t.coordinator.Release(preRegistrationBarrier); err != nil {
+			return err
+		}
+		if err := t.waitForEffects(1); err != nil {
+			return err
+		}
+		if err := t.coordinator.Release(committedEffectBarrier); err != nil {
+			return err
+		}
+		return t.awaitWorkflow()
 	}
 	if err := t.killFirstWorker(); err != nil {
 		return err
@@ -241,6 +341,15 @@ func (t *claudeTrial) executeFinalOutputFault() error {
 	if err := t.waitForBoundary(finalOutputBarrier, 1); err != nil {
 		return err
 	}
+	if t.options.RecoveryMode.normalized() == RecoveryModeFenced {
+		if err := t.recoverFencedWorker(); err != nil {
+			return err
+		}
+		if err := t.coordinator.Release(finalOutputBarrier); err != nil {
+			return err
+		}
+		return t.awaitWorkflow()
+	}
 	if err := t.replaceWorker(); err != nil {
 		return err
 	}
@@ -263,7 +372,6 @@ func (t *claudeTrial) startFirstWorkerAndWorkflow() error {
 		return err
 	}
 	t.workerOne = worker
-	t.logicalSessionID = fmt.Sprintf("claude-direct-%s-%s-trial-%d", t.probe, t.faultBoundary, t.trial)
 	t.workflowID = "claude-direct/" + t.logicalSessionID
 	t.workflowRun, err = t.temporalClient.ExecuteWorkflow(t.ctx, client.StartWorkflowOptions{
 		ID: t.workflowID, TaskQueue: t.workerConfig.TaskQueue, WorkflowExecutionTimeout: t.options.Timeout,
@@ -283,7 +391,41 @@ func (t *claudeTrial) waitForEffects(count int) error {
 		return fmt.Errorf("wait for committed effect %d: %w", count, err)
 	}
 	t.recordArrivals(arrivals)
+	if t.options.RecoveryMode.normalized() == RecoveryModeFenced {
+		snapshot, err := t.authorityStore.Snapshot(t.ctx, t.logicalSessionID)
+		if err != nil {
+			return err
+		}
+		if len(snapshot.Effects) != count {
+			return fmt.Errorf("fenced exact barrier state mismatch: effects=%d want=%d", len(snapshot.Effects), count)
+		}
+		return nil
+	}
 	return verifyStateAtBarrier(t.ctx, t.destinationPath, t.workspacePath, count)
+}
+
+func (t *claudeTrial) waitForSupervisorAttach(attempt int32) error {
+	for {
+		select {
+		case <-t.ctx.Done():
+			return t.ctx.Err()
+		case decision := <-t.supervisorDecisions:
+			if decision.Action == workstore.ActionLaunch && decision.Attempt == 1 && decision.Generation == 1 {
+				continue
+			}
+			if decision.Action != workstore.ActionAttach || decision.Attempt != attempt || decision.Generation != 1 {
+				return fmt.Errorf("unexpected supervisor recovery decision: %+v", decision)
+			}
+			return nil
+		}
+	}
+}
+
+func (t *claudeTrial) recoverFencedWorker() error {
+	if err := t.replaceWorker(); err != nil {
+		return err
+	}
+	return t.waitForSupervisorAttach(2)
 }
 
 func (t *claudeTrial) killFirstWorker() error {
@@ -350,6 +492,7 @@ func (t *claudeTrial) awaitWorkflow() error {
 
 type collectedTrial struct {
 	destination        DestinationSnapshot
+	authority          *workstore.Snapshot
 	attempts           []ClaudeAttemptCapture
 	workspaceEffects   []WorkspaceEffect
 	workspaceAfterHash string
@@ -360,13 +503,22 @@ type collectedTrial struct {
 
 func (t *claudeTrial) collect() (collectedTrial, error) {
 	var output collectedTrial
-	destination, err := ReadDestination(t.ctx, t.destinationPath)
+	var err error
+	if t.options.RecoveryMode.normalized() == RecoveryModeFenced {
+		snapshot, snapshotErr := t.authorityStore.Snapshot(t.ctx, t.logicalSessionID)
+		if snapshotErr != nil {
+			return output, snapshotErr
+		}
+		output.authority = &snapshot
+		output.destination, err = fencedDestinationSnapshot(t.attemptRoot, snapshot)
+	} else {
+		output.destination, err = ReadDestination(t.ctx, t.destinationPath)
+	}
 	if err != nil {
 		return output, err
 	}
-	output.destination = destination
 	output.attempts, err = collectClaudeAttempts(
-		t.ctx, t.attemptRoot, destination, t.options.RecoveryMode.normalized(), t.selectedVendorSessionID,
+		t.ctx, t.attemptRoot, output.destination, t.options.RecoveryMode.normalized(), t.selectedVendorSessionID,
 	)
 	if err != nil {
 		return output, err
@@ -395,6 +547,43 @@ func (t *claudeTrial) collect() (collectedTrial, error) {
 	}
 	output.replayVerified = true
 	return output, nil
+}
+
+func fencedDestinationSnapshot(attemptRoot string, authority workstore.Snapshot) (DestinationSnapshot, error) {
+	if len(authority.Effects) != 1 {
+		return DestinationSnapshot{}, fmt.Errorf("fenced destination requires one accepted effect, got %d", len(authority.Effects))
+	}
+	entries, err := os.ReadDir(attemptRoot)
+	if err != nil {
+		return DestinationSnapshot{}, fmt.Errorf("read fenced attempt root: %w", err)
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		directory := filepath.Join(attemptRoot, entry.Name())
+		request, requestErr := ReadControlledEffectRequest(filepath.Join(directory, effectRequestFile))
+		if requestErr != nil {
+			return DestinationSnapshot{}, requestErr
+		}
+		process, processErr := readJSONFile[ProcessRecord](filepath.Join(directory, entry.Name()+".process-started.json"))
+		if processErr != nil {
+			return DestinationSnapshot{}, processErr
+		}
+		accepted := authority.Effects[0]
+		if request.LogicalEffectID != accepted.ID || request.Payload != accepted.Value ||
+			request.OwnershipGeneration != accepted.Generation ||
+			workstore.HashToken(request.OwnerCapability) != accepted.OwnerTokenHash {
+			return DestinationSnapshot{}, errors.New("fenced effect request does not match authoritative receipt")
+		}
+		return DestinationSnapshot{Attempts: []EffectAttempt{{
+			LogicalSessionID: request.LogicalSessionID, LogicalTurnID: request.LogicalTurnID,
+			LogicalEffectID: request.LogicalEffectID, PhysicalAttemptID: request.PhysicalAttemptID,
+			ActorID: request.ActorID, ProcessIdentity: process.Identity, Applied: true,
+			AppliedAt: accepted.AcceptedAt,
+		}}}, nil
+	}
+	return DestinationSnapshot{}, errors.New("fenced destination lacks an attempt directory")
 }
 
 func (t *claudeTrial) verifyAdmission(attempts []ClaudeAttemptCapture) error {
@@ -450,6 +639,24 @@ func (t *claudeTrial) buildCapture(collected collectedTrial, rawInventoryHash st
 		})
 	}
 	native = append(native, NativeCapture{Kind: "raw-evidence-inventory", Detail: rawInventoryHash})
+	var attachments []AttachmentCapture
+	if collected.authority != nil && len(collected.attempts) == 1 {
+		for _, event := range collected.authority.Events {
+			if event.Kind != "activity_reattached" {
+				continue
+			}
+			attachments = append(attachments, AttachmentCapture{
+				TemporalAttempt: event.Attempt, ActorID: event.WorkerID,
+				ProcessIdentity: collected.attempts[0].ProcessIdentity,
+				Generation:      event.Generation, AttachedAt: event.Time,
+			})
+			native = append(native, NativeCapture{
+				Kind: "supervisor-attach",
+				Detail: fmt.Sprintf("attempt=%d generation=%d owner=%s",
+					event.Attempt, event.Generation, event.OwnerTokenHash),
+			})
+		}
+	}
 	capture := EvidenceCapture{
 		AdapterVersion:     "worker-sha256:" + t.metadata.WorkerSHA256,
 		ClaudeBinarySHA256: t.metadata.ClaudeSHA256, ClaudeVersion: t.metadata.ClaudeVersion,
@@ -458,11 +665,13 @@ func (t *claudeTrial) buildCapture(collected collectedTrial, rawInventoryHash st
 		FaultBoundary: t.faultBoundary,
 		LogicalTurnID: "turn-1", LogicalEffectID: "effect-1", DestinationID: "fixture-" + t.logicalSessionID,
 		RecoveryMode: t.options.RecoveryMode.normalized(), SelectedVendorSessionID: t.selectedVendorSessionID,
-		StartedAt: t.startedAt, Attempts: collected.attempts, FaultAt: t.faultAt, CompletedAt: time.Now().UTC(),
+		StartedAt: t.startedAt, Attempts: collected.attempts, Attachments: attachments,
+		FaultAt: t.faultAt, CompletedAt: time.Now().UTC(),
 		Settings: map[string]string{
 			"fault_selection": string(t.faultBoundary), "permission_mode": "dontAsk",
 			"session_identity": t.sessionIdentitySetting(), "resume_control": t.resumeControlSetting(),
-			"worker_binary_sha256": t.metadata.WorkerSHA256, "effect_binary_sha256": t.metadata.EffectSHA256,
+			"harness_binary_sha256": t.metadata.HarnessSHA256,
+			"worker_binary_sha256":  t.metadata.WorkerSHA256, "effect_binary_sha256": t.metadata.EffectSHA256,
 			"launcher_binary_sha256": t.metadata.LauncherSHA256, "raw_inventory_sha256": rawInventoryHash,
 			"workspace_before_sha256": t.workspaceBeforeHash, "workspace_after_sha256": collected.workspaceAfterHash,
 			"workspace_effect_count":           strconv.Itoa(len(collected.workspaceEffects)),
@@ -470,7 +679,7 @@ func (t *claudeTrial) buildCapture(collected collectedTrial, rawInventoryHash st
 		},
 		Native: native,
 	}
-	if t.probe == protocol.ProbeUnsafe {
+	if t.probe != protocol.ProbeUnfaulted {
 		capture.Boundary = BoundaryCapture{
 			Point: t.faultBoundary, ActorID: t.faultActorID,
 			ProcessIdentity: t.faultProcessIdentity, ReachedAt: t.faultReadyAt,
@@ -480,7 +689,7 @@ func (t *claudeTrial) buildCapture(collected collectedTrial, rawInventoryHash st
 }
 
 func (t *claudeTrial) sessionIdentitySetting() string {
-	if t.options.RecoveryMode.normalized() == RecoveryModeResumeOnly {
+	if t.options.RecoveryMode.usesSelectedSession() {
 		return "caller-selected-before-workflow-start"
 	}
 	return "vendor-assigned-after-start"
@@ -489,6 +698,9 @@ func (t *claudeTrial) sessionIdentitySetting() string {
 func (t *claudeTrial) resumeControlSetting() string {
 	if t.options.RecoveryMode.normalized() == RecoveryModeResumeOnly {
 		return "first-delivery-session-id-later-deliveries-resume"
+	}
+	if t.options.RecoveryMode.normalized() == RecoveryModeFenced {
+		return "supervisor-generation-one-session-id-worker-retries-attach"
 	}
 	return "none"
 }
@@ -508,13 +720,16 @@ func (t *claudeTrial) summary(collected collectedTrial) trialSummary {
 		FaultAt:                 t.faultAt, BarrierArrivals: t.arrivals, WorkflowResult: t.workflowResult,
 		WorkspaceBeforeHash: t.workspaceBeforeHash, WorkspaceAfterHash: collected.workspaceAfterHash,
 		WorkspaceEffects: collected.workspaceEffects, Destination: collected.destination,
+		Authority:      collected.authority,
 		ReplayVerified: collected.replayVerified,
 	}
 }
 
 func (t *claudeTrial) cleanup(runErr *error) {
 	if t.coordinator != nil {
-		for _, point := range []string{committedEffectBarrier, preRegistrationBarrier, finalOutputBarrier} {
+		for _, point := range []string{
+			committedEffectBarrier, claimBeforeExecBarrier, preRegistrationBarrier, finalOutputBarrier,
+		} {
 			err := t.coordinator.Release(point)
 			if err != nil && !errors.Is(err, failureinject.ErrBarrierNotFound) {
 				*runErr = errors.Join(*runErr, fmt.Errorf("release cleanup barrier %s: %w", point, err))
@@ -522,7 +737,7 @@ func (t *claudeTrial) cleanup(runErr *error) {
 		}
 	}
 	if t.barrierServer != nil {
-		t.barrierServer.Close()
+		*runErr = errors.Join(*runErr, closeTestServerBounded(t.barrierServer, "barrier"))
 	}
 	shutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -531,6 +746,36 @@ func (t *claudeTrial) cleanup(runErr *error) {
 	}
 	if t.workerOne != nil {
 		*runErr = errors.Join(*runErr, t.workerOne.stop(shutdown))
+	}
+	if t.supervisorCancel != nil {
+		t.supervisorCancel()
+	}
+	if t.supervisorServer != nil {
+		*runErr = errors.Join(*runErr, closeTestServerBounded(t.supervisorServer, "supervisor"))
+	}
+}
+
+func closeTestServerBounded(server *httptest.Server, name string) error {
+	closed := make(chan struct{})
+	go func() {
+		server.Close()
+		close(closed)
+	}()
+	grace := time.NewTimer(5 * time.Second)
+	defer grace.Stop()
+	select {
+	case <-closed:
+		return nil
+	case <-grace.C:
+	}
+	server.CloseClientConnections()
+	forced := time.NewTimer(2 * time.Second)
+	defer forced.Stop()
+	select {
+	case <-closed:
+		return nil
+	case <-forced.C:
+		return fmt.Errorf("%s server did not close after verified force-close", name)
 	}
 }
 
@@ -660,6 +905,10 @@ func verifyTrialVerdict(mode RecoveryMode, probe protocol.Probe, verdict protoco
 		return nil
 	}
 	if probe == protocol.ProbeUnfaulted && verdict.Class == protocol.VerdictValidPass {
+		return nil
+	}
+	if mode.normalized() == RecoveryModeFenced && probe == protocol.ProbeProtected &&
+		verdict.Class == protocol.VerdictValidPass {
 		return nil
 	}
 	if probe == protocol.ProbeUnsafe && verdict.Class == protocol.VerdictValidFail &&
