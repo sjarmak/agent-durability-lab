@@ -83,7 +83,7 @@ func (h *ActivityHandler) Work(ctx context.Context, input WorkInput) (WorkResult
 	}
 	if input.Case == protocol.CaseQueuedExecutingSupersession && input.Item.ID == "item-001" &&
 		!input.Replacement && input.Probe != protocol.ProbeUnsafe {
-		return WorkResult{}, temporal.NewCanceledError("obsolete generation was fenced before result publication")
+		return WorkResult{}, awaitObsoleteCancellation(ctx, input)
 	}
 	if input.Case == protocol.CaseQueuedExecutingSupersession && input.Item.ID == "item-001" &&
 		input.Probe == protocol.ProbeUnsafe && !input.Replacement {
@@ -156,6 +156,18 @@ func (h *ActivityHandler) Work(ctx context.Context, input WorkInput) (WorkResult
 	return WorkResult{ItemID: input.Item.ID, Ordinal: input.Item.Ordinal, Deliveries: deliveries}, nil
 }
 
+func awaitObsoleteCancellation(ctx context.Context, input WorkInput) error {
+	if input.Case != protocol.CaseQueuedExecutingSupersession || input.Item.ID != "item-001" ||
+		input.Replacement || input.Probe == protocol.ProbeUnsafe {
+		return fmt.Errorf("%w: obsolete protected Work cancellation", protocol.ErrInvalidEvidence)
+	}
+	<-ctx.Done()
+	if err := ctx.Err(); err != context.Canceled {
+		return err
+	}
+	return temporal.NewCanceledError("obsolete generation was fenced before result publication")
+}
+
 func (r *EpisodeRuntime) activityIdentity(ctx context.Context, workerID, itemID string, authority Authority) protocol.Identity {
 	info := activity.GetInfo(ctx)
 	r.mu.Lock()
@@ -186,9 +198,8 @@ func (r *EpisodeRuntime) claimWork(ctx context.Context, input WorkInput, workerI
 	if !input.Replacement && r.spec.Case == protocol.CaseQueuedExecutingSupersession && r.spec.Probe == protocol.ProbeUnsafe {
 		r.mu.Lock()
 		pending := r.obsoletePending[input.Item.ID]
-		if pending != nil && !pending.claimed {
-			pending.claimed = true
-			decision := pending.decision
+		if pending != nil {
+			decision := pending.claim()
 			r.mu.Unlock()
 			return decision, nil
 		}
@@ -197,9 +208,8 @@ func (r *EpisodeRuntime) claimWork(ctx context.Context, input WorkInput, workerI
 	if input.Replacement {
 		r.mu.Lock()
 		pending := r.pending[input.Item.ID]
-		if pending != nil && !pending.claimed {
-			pending.claimed = true
-			decision := pending.decision
+		if pending != nil {
+			decision := pending.claim()
 			r.mu.Unlock()
 			return decision, nil
 		}

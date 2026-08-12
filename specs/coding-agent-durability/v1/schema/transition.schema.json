@@ -1,0 +1,796 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "transition.schema.json",
+  "title": "Coding agent durability transition",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "transition_id",
+    "session_id",
+    "turn_id",
+    "operation_id",
+    "request_hash",
+    "operation",
+    "occurred_at",
+    "actor",
+    "authority_check",
+    "before",
+    "after",
+    "decision"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "transition_id": { "$ref": "identity.schema.json#/$defs/stableId" },
+    "session_id": { "$ref": "identity.schema.json#/$defs/stableId" },
+    "turn_id": { "$ref": "identity.schema.json#/$defs/stableId" },
+    "operation_id": { "$ref": "identity.schema.json#/$defs/stableId" },
+    "request_hash": { "$ref": "identity.schema.json#/$defs/digest" },
+    "operation": {
+      "enum": [
+        "claim",
+        "begin_start",
+        "register",
+        "attach",
+        "replace",
+        "observe_progress",
+        "publish_effect_receipt",
+        "publish_result",
+        "complete",
+        "cancel",
+        "mark_unresolved",
+        "record_stop_delivery",
+        "acknowledge_stop"
+      ]
+    },
+    "occurred_at": { "$ref": "identity.schema.json#/$defs/timestamp" },
+    "actor": { "$ref": "#/$defs/actor" },
+    "authority_check": { "enum": ["coordinator", "current", "stale", "revoked"] },
+    "before": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/state" }] },
+    "after": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/state" }] },
+    "decision": { "$ref": "#/$defs/decision" },
+    "receipt": { "$ref": "#/$defs/receipt" },
+    "rejection": { "$ref": "#/$defs/rejection" }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "$ref": "#/$defs/successfulDecision" },
+      "then": {
+        "required": ["receipt"],
+        "not": { "required": ["rejection"] }
+      },
+      "else": {
+        "required": ["rejection"],
+        "not": { "required": ["receipt"] },
+        "$ref": "#/$defs/rejectedSelfTransition"
+      }
+    },
+    {
+      "if": { "properties": { "authority_check": { "const": "stale" } } },
+      "then": {
+        "properties": {
+          "decision": { "$ref": "#/$defs/staleDecision" },
+          "rejection": { "$ref": "#/$defs/staleRejection" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "authority_check": { "const": "revoked" } } },
+      "then": {
+        "properties": {
+          "decision": { "$ref": "#/$defs/revokedDecision" },
+          "rejection": { "$ref": "#/$defs/revokedRejection" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "authority_check": { "const": "current" } } },
+      "then": { "properties": { "decision": { "$ref": "#/$defs/currentDecision" } } }
+    },
+    {
+      "if": { "properties": { "authority_check": { "const": "coordinator" } } },
+      "then": { "properties": { "decision": { "$ref": "#/$defs/currentDecision" } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": { "enum": ["claim", "replace", "cancel", "mark_unresolved", "record_stop_delivery", "acknowledge_stop"] }
+        }
+      },
+      "then": { "properties": { "actor": { "$ref": "#/$defs/coordinator" } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "operation": { "enum": ["begin_start", "register", "attach", "observe_progress", "publish_effect_receipt", "publish_result", "complete"] }
+        }
+      },
+      "then": { "properties": { "actor": { "$ref": "#/$defs/executor" } } }
+    },
+    {
+      "if": {
+        "allOf": [
+          { "properties": { "operation": { "enum": ["claim", "replace", "cancel", "mark_unresolved", "record_stop_delivery", "acknowledge_stop"] } } },
+          { "$ref": "#/$defs/successfulDecision" }
+        ]
+      },
+      "then": { "properties": { "authority_check": { "const": "coordinator" } } }
+    },
+    {
+      "if": {
+        "allOf": [
+          { "properties": { "operation": { "enum": ["begin_start", "register", "attach", "observe_progress", "publish_effect_receipt", "publish_result", "complete"] } } },
+          { "$ref": "#/$defs/successfulDecision" }
+        ]
+      },
+      "then": { "properties": { "authority_check": { "const": "current" } } }
+    },
+    {
+      "if": { "properties": { "decision": { "properties": { "disposition": { "const": "conflict" } } } } },
+      "then": { "properties": { "rejection": { "$ref": "#/$defs/conflictRejection" } } }
+    },
+    {
+      "if": { "properties": { "decision": { "properties": { "disposition": { "const": "revoked" } } } } },
+      "then": { "properties": { "rejection": { "$ref": "#/$defs/exactRevokedRejection" } } }
+    },
+    {
+      "if": { "properties": { "decision": { "properties": { "disposition": { "const": "canceled" } } } } },
+      "then": { "properties": { "rejection": { "$ref": "#/$defs/exactCanceledRejection" } } }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "claim" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": {
+        "properties": {
+          "actor": { "$ref": "#/$defs/coordinator" },
+          "before": { "type": "null" },
+          "after": { "$ref": "#/$defs/claimedGenerationOne" }
+        }
+      }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "begin_start" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": {
+        "properties": {
+          "actor": { "$ref": "#/$defs/executor" },
+          "before": { "$ref": "#/$defs/claimedCurrent" },
+          "after": { "$ref": "#/$defs/startingCurrent" }
+        }
+      }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "register" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": {
+        "properties": {
+          "actor": { "$ref": "#/$defs/executor" },
+          "before": { "$ref": "#/$defs/startingCurrent" },
+          "after": { "$ref": "#/$defs/runningCurrent" }
+        }
+      }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "attach" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": {
+        "properties": {
+          "actor": { "$ref": "#/$defs/executor" }
+        },
+        "oneOf": [
+          { "$ref": "#/$defs/startingSelfTransition" },
+          { "$ref": "#/$defs/runningSelfTransition" },
+          { "$ref": "#/$defs/completingSelfTransition" }
+        ]
+      }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "replace" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": {
+        "properties": {
+          "actor": { "$ref": "#/$defs/coordinator" },
+          "before": { "$ref": "#/$defs/nonterminalCurrent" },
+          "after": { "$ref": "#/$defs/startingCurrent" }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          { "properties": { "operation": { "enum": ["observe_progress", "publish_effect_receipt"] } } },
+          { "$ref": "#/$defs/successfulDecision" }
+        ]
+      },
+      "then": {
+        "properties": { "actor": { "$ref": "#/$defs/executor" } },
+        "$ref": "#/$defs/runningSelfTransition"
+      }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "publish_result" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": {
+        "properties": {
+          "actor": { "$ref": "#/$defs/executor" },
+          "before": { "$ref": "#/$defs/runningCurrent" },
+          "after": { "$ref": "#/$defs/completingCurrent" }
+        }
+      }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "complete" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": {
+        "properties": {
+          "actor": { "$ref": "#/$defs/executor" },
+          "before": { "$ref": "#/$defs/completingCurrent" },
+          "after": { "$ref": "#/$defs/succeededRevoked" }
+        }
+      }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "cancel" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": {
+        "properties": {
+          "actor": { "$ref": "#/$defs/coordinator" },
+          "before": { "$ref": "#/$defs/nonterminalCurrent" },
+          "after": { "$ref": "#/$defs/canceledRevoked" }
+        }
+      }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "mark_unresolved" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": {
+        "properties": {
+          "actor": { "$ref": "#/$defs/coordinator" },
+          "before": { "$ref": "#/$defs/nonterminalCurrent" },
+          "after": { "$ref": "#/$defs/unresolvedRevoked" }
+        }
+      }
+    },
+    {
+      "if": {
+        "allOf": [
+          { "properties": { "operation": { "enum": ["record_stop_delivery", "acknowledge_stop"] } } },
+          { "$ref": "#/$defs/successfulDecision" }
+        ]
+      },
+      "then": {
+        "properties": { "actor": { "$ref": "#/$defs/coordinator" } },
+        "$ref": "#/$defs/anyLifecycleSelfTransition"
+      }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "claim" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": { "properties": { "receipt": { "$ref": "#/$defs/claimReceipt" } } }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "begin_start" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": { "properties": { "receipt": { "$ref": "#/$defs/startReceipt" } } }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "register" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": { "properties": { "receipt": { "$ref": "#/$defs/registrationReceipt" } } }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "attach" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": { "properties": { "receipt": { "$ref": "#/$defs/attachmentReceipt" } } }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "replace" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": { "properties": { "receipt": { "$ref": "#/$defs/replacementReceipt" } } }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "observe_progress" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": { "properties": { "receipt": { "$ref": "#/$defs/progressReceipt" } } }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "publish_effect_receipt" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": { "properties": { "receipt": { "$ref": "#/$defs/effectReceipt" } } }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "publish_result" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": { "properties": { "receipt": { "$ref": "#/$defs/resultReceipt" } } }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "complete" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": { "properties": { "receipt": { "$ref": "#/$defs/completionReceipt" } } }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "cancel" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": { "properties": { "receipt": { "$ref": "#/$defs/cancellationReceipt" } } }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "mark_unresolved" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": { "properties": { "receipt": { "$ref": "#/$defs/unresolvedReceipt" } } }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "record_stop_delivery" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": { "properties": { "receipt": { "$ref": "#/$defs/stopDeliveryReceipt" } } }
+    },
+    {
+      "if": { "allOf": [{ "properties": { "operation": { "const": "acknowledge_stop" } } }, { "$ref": "#/$defs/successfulDecision" }] },
+      "then": { "properties": { "receipt": { "$ref": "#/$defs/stopAckReceipt" } } }
+    }
+  ],
+  "$defs": {
+    "actor": {
+      "type": "object",
+      "required": ["role", "generation"],
+      "properties": {
+        "role": { "enum": ["coordinator", "executor"] },
+        "generation": { "type": "integer", "minimum": 1 },
+        "owner_capability_digest": { "$ref": "identity.schema.json#/$defs/digest" }
+      },
+      "additionalProperties": false
+    },
+    "coordinator": {
+      "allOf": [
+        { "$ref": "#/$defs/actor" },
+        { "properties": { "role": { "const": "coordinator" } } }
+      ]
+    },
+    "executor": {
+      "allOf": [
+        { "$ref": "#/$defs/actor" },
+        {
+          "required": ["owner_capability_digest"],
+          "properties": { "role": { "const": "executor" } }
+        }
+      ]
+    },
+    "receipt": {
+      "type": "object",
+      "required": ["receipt_id", "receipt_type", "request_hash", "recorded_at", "subject"],
+      "properties": {
+        "receipt_id": { "$ref": "identity.schema.json#/$defs/stableId" },
+        "receipt_type": {
+          "enum": [
+            "claim",
+            "start",
+            "registration",
+            "attachment",
+            "replacement",
+            "progress",
+            "effect",
+            "result",
+            "completion",
+            "cancellation",
+            "unresolved",
+            "stop_delivery",
+            "stop_ack"
+          ]
+        },
+        "request_hash": { "$ref": "identity.schema.json#/$defs/digest" },
+        "recorded_at": { "$ref": "identity.schema.json#/$defs/timestamp" },
+        "subject": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "claimReceipt": { "$ref": "#/$defs/receiptVariantClaim" },
+    "startReceipt": { "$ref": "#/$defs/receiptVariantStart" },
+    "registrationReceipt": { "$ref": "#/$defs/receiptVariantRegistration" },
+    "attachmentReceipt": { "$ref": "#/$defs/receiptVariantAttachment" },
+    "replacementReceipt": { "$ref": "#/$defs/receiptVariantReplacement" },
+    "progressReceipt": { "$ref": "#/$defs/receiptVariantProgress" },
+    "effectReceipt": { "$ref": "#/$defs/receiptVariantEffect" },
+    "resultReceipt": { "$ref": "#/$defs/receiptVariantResult" },
+    "completionReceipt": { "$ref": "#/$defs/receiptVariantCompletion" },
+    "cancellationReceipt": { "$ref": "#/$defs/receiptVariantCancellation" },
+    "unresolvedReceipt": { "$ref": "#/$defs/receiptVariantUnresolved" },
+    "stopDeliveryReceipt": { "$ref": "#/$defs/receiptVariantStopDelivery" },
+    "stopAckReceipt": { "$ref": "#/$defs/receiptVariantStopAck" },
+    "receiptVariantClaim": {
+      "allOf": [{ "$ref": "#/$defs/receipt" }, { "properties": { "receipt_type": { "const": "claim" }, "subject": { "$ref": "#/$defs/claimSubject" } } }]
+    },
+    "receiptVariantStart": {
+      "allOf": [{ "$ref": "#/$defs/receipt" }, { "properties": { "receipt_type": { "const": "start" }, "subject": { "$ref": "#/$defs/startSubject" } } }]
+    },
+    "receiptVariantRegistration": {
+      "allOf": [{ "$ref": "#/$defs/receipt" }, { "properties": { "receipt_type": { "const": "registration" }, "subject": { "$ref": "#/$defs/registrationSubject" } } }]
+    },
+    "receiptVariantAttachment": {
+      "allOf": [{ "$ref": "#/$defs/receipt" }, { "properties": { "receipt_type": { "const": "attachment" }, "subject": { "$ref": "#/$defs/attachmentSubject" } } }]
+    },
+    "receiptVariantReplacement": {
+      "allOf": [{ "$ref": "#/$defs/receipt" }, { "properties": { "receipt_type": { "const": "replacement" }, "subject": { "$ref": "#/$defs/replacementSubject" } } }]
+    },
+    "receiptVariantProgress": {
+      "allOf": [{ "$ref": "#/$defs/receipt" }, { "properties": { "receipt_type": { "const": "progress" }, "subject": { "$ref": "#/$defs/progressSubject" } } }]
+    },
+    "receiptVariantEffect": {
+      "allOf": [{ "$ref": "#/$defs/receipt" }, { "properties": { "receipt_type": { "const": "effect" }, "subject": { "$ref": "#/$defs/effectSubject" } } }]
+    },
+    "receiptVariantResult": {
+      "allOf": [{ "$ref": "#/$defs/receipt" }, { "properties": { "receipt_type": { "const": "result" }, "subject": { "$ref": "#/$defs/resultSubject" } } }]
+    },
+    "receiptVariantCompletion": {
+      "allOf": [{ "$ref": "#/$defs/receipt" }, { "properties": { "receipt_type": { "const": "completion" }, "subject": { "$ref": "#/$defs/completionSubject" } } }]
+    },
+    "receiptVariantCancellation": {
+      "allOf": [{ "$ref": "#/$defs/receipt" }, { "properties": { "receipt_type": { "const": "cancellation" }, "subject": { "$ref": "#/$defs/cancellationSubject" } } }]
+    },
+    "receiptVariantUnresolved": {
+      "allOf": [{ "$ref": "#/$defs/receipt" }, { "properties": { "receipt_type": { "const": "unresolved" }, "subject": { "$ref": "#/$defs/unresolvedSubject" } } }]
+    },
+    "receiptVariantStopDelivery": {
+      "allOf": [{ "$ref": "#/$defs/receipt" }, { "properties": { "receipt_type": { "const": "stop_delivery" }, "subject": { "$ref": "#/$defs/stopDeliverySubject" } } }]
+    },
+    "receiptVariantStopAck": {
+      "allOf": [{ "$ref": "#/$defs/receipt" }, { "properties": { "receipt_type": { "const": "stop_ack" }, "subject": { "$ref": "#/$defs/stopAckSubject" } } }]
+    },
+    "claimSubject": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": { "kind": { "const": "claim" } },
+      "additionalProperties": false
+    },
+    "startSubject": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": { "kind": { "const": "start" } },
+      "additionalProperties": false
+    },
+    "executorIdentity": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["kind", "process_id", "start_identity"],
+          "properties": {
+            "kind": { "const": "process" },
+            "process_id": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "start_identity": { "type": "string", "minLength": 1, "maxLength": 256 }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": ["kind", "provider", "session_id"],
+          "properties": {
+            "kind": { "const": "provider" },
+            "provider": { "type": "string", "minLength": 1, "maxLength": 80 },
+            "session_id": { "type": "string", "minLength": 1, "maxLength": 256 }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "registrationSubject": {
+      "type": "object",
+      "required": ["kind", "executor_identity"],
+      "properties": {
+        "kind": { "const": "registration" },
+        "executor_identity": { "$ref": "#/$defs/executorIdentity" }
+      },
+      "additionalProperties": false
+    },
+    "attachmentSubject": {
+      "type": "object",
+      "required": ["kind", "executor_identity"],
+      "properties": {
+        "kind": { "const": "attachment" },
+        "executor_identity": { "$ref": "#/$defs/executorIdentity" }
+      },
+      "additionalProperties": false
+    },
+    "replacementSubject": {
+      "type": "object",
+      "required": ["kind", "previous_generation", "replacement_generation"],
+      "properties": {
+        "kind": { "const": "replacement" },
+        "previous_generation": { "type": "integer", "minimum": 1 },
+        "replacement_generation": { "type": "integer", "minimum": 2 }
+      },
+      "additionalProperties": false
+    },
+    "progressSubject": {
+      "type": "object",
+      "required": ["kind", "progress_hash"],
+      "properties": {
+        "kind": { "const": "progress" },
+        "progress_hash": { "$ref": "identity.schema.json#/$defs/digest" }
+      },
+      "additionalProperties": false
+    },
+    "effectSubject": {
+      "type": "object",
+      "required": ["kind", "effect_id", "destination_namespace", "destination_capability", "outcome"],
+      "properties": {
+        "kind": { "const": "effect" },
+        "effect_id": { "$ref": "identity.schema.json#/$defs/stableId" },
+        "destination_namespace": { "$ref": "identity.schema.json#/$defs/stableId" },
+        "destination_capability": {
+          "enum": [
+            "atomic_idempotency_key",
+            "transactional_unique_effect_identity",
+            "stable_message_identity",
+            "serialized_correlation_lookup",
+            "conditional_versioned_git_mutation",
+            "content_addressed_blob",
+            "manual_reconciliation"
+          ]
+        },
+        "destination_receipt_id": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "outcome": { "enum": ["committed", "reconciled", "unresolved"] }
+      },
+      "additionalProperties": false
+    },
+    "resultSubject": {
+      "type": "object",
+      "required": ["kind", "result_hash", "system_of_record_check"],
+      "properties": {
+        "kind": { "const": "result" },
+        "result_hash": { "$ref": "identity.schema.json#/$defs/digest" },
+        "system_of_record_check": { "$ref": "identity.schema.json#/$defs/stableId" }
+      },
+      "additionalProperties": false
+    },
+    "completionSubject": {
+      "type": "object",
+      "required": ["kind", "result_receipt_id"],
+      "properties": {
+        "kind": { "const": "completion" },
+        "result_receipt_id": { "$ref": "identity.schema.json#/$defs/stableId" }
+      },
+      "additionalProperties": false
+    },
+    "cancellationSubject": {
+      "type": "object",
+      "required": ["kind", "reason_code"],
+      "properties": {
+        "kind": { "const": "cancellation" },
+        "reason_code": { "$ref": "#/$defs/reasonCode" }
+      },
+      "additionalProperties": false
+    },
+    "unresolvedSubject": {
+      "type": "object",
+      "required": ["kind", "reason_code"],
+      "properties": {
+        "kind": { "const": "unresolved" },
+        "reason_code": { "$ref": "#/$defs/reasonCode" }
+      },
+      "additionalProperties": false
+    },
+    "stopTarget": {
+      "type": "object",
+      "required": ["generation", "executor_identity"],
+      "properties": {
+        "generation": { "type": "integer", "minimum": 1 },
+        "executor_identity": { "$ref": "#/$defs/executorIdentity" }
+      },
+      "additionalProperties": false
+    },
+    "stopDeliverySubject": {
+      "type": "object",
+      "required": ["kind", "target", "delivery_status"],
+      "properties": {
+        "kind": { "const": "stop" },
+        "target": { "$ref": "#/$defs/stopTarget" },
+        "delivery_status": { "const": "delivered" }
+      },
+      "additionalProperties": false
+    },
+    "stopAckSubject": {
+      "type": "object",
+      "required": ["kind", "target", "delivery_status"],
+      "properties": {
+        "kind": { "const": "stop" },
+        "target": { "$ref": "#/$defs/stopTarget" },
+        "delivery_status": { "const": "acknowledged" }
+      },
+      "additionalProperties": false
+    },
+    "reasonCode": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "state": {
+      "type": "object",
+      "required": ["lifecycle", "generation", "owner_capability_digest", "authority_status"],
+      "properties": {
+        "lifecycle": {
+          "enum": ["claimed", "starting", "running", "completing", "succeeded", "canceled", "unresolved"]
+        },
+        "generation": { "type": "integer", "minimum": 1 },
+        "owner_capability_digest": { "$ref": "identity.schema.json#/$defs/digest" },
+        "authority_status": { "enum": ["current", "revoked"] }
+      },
+      "additionalProperties": false
+    },
+    "claimedAnyAuthority": { "allOf": [{ "$ref": "#/$defs/state" }, { "properties": { "lifecycle": { "const": "claimed" } } }] },
+    "startingAnyAuthority": { "allOf": [{ "$ref": "#/$defs/state" }, { "properties": { "lifecycle": { "const": "starting" } } }] },
+    "runningAnyAuthority": { "allOf": [{ "$ref": "#/$defs/state" }, { "properties": { "lifecycle": { "const": "running" } } }] },
+    "completingAnyAuthority": { "allOf": [{ "$ref": "#/$defs/state" }, { "properties": { "lifecycle": { "const": "completing" } } }] },
+    "succeededAnyAuthority": { "allOf": [{ "$ref": "#/$defs/state" }, { "properties": { "lifecycle": { "const": "succeeded" } } }] },
+    "canceledAnyAuthority": { "allOf": [{ "$ref": "#/$defs/state" }, { "properties": { "lifecycle": { "const": "canceled" } } }] },
+    "unresolvedAnyAuthority": { "allOf": [{ "$ref": "#/$defs/state" }, { "properties": { "lifecycle": { "const": "unresolved" } } }] },
+    "decision": {
+      "type": "object",
+      "required": ["disposition", "applied"],
+      "properties": {
+        "disposition": { "enum": ["accepted", "replayed", "conflict", "stale", "revoked", "canceled"] },
+        "applied": { "type": "boolean" },
+        "original_transition_id": { "$ref": "identity.schema.json#/$defs/stableId" }
+      },
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "properties": {
+            "disposition": { "const": "accepted" },
+            "applied": { "const": true }
+          }
+        },
+        {
+          "required": ["original_transition_id"],
+          "properties": {
+            "disposition": { "const": "replayed" },
+            "applied": { "const": false }
+          }
+        },
+        {
+          "properties": {
+            "disposition": { "enum": ["conflict", "stale", "revoked", "canceled"] },
+            "applied": { "const": false }
+          }
+        }
+      ],
+      "allOf": [
+        {
+          "if": { "properties": { "disposition": { "const": "replayed" } } },
+          "then": { "required": ["original_transition_id"] },
+          "else": { "properties": { "original_transition_id": false } }
+        }
+      ]
+    },
+    "successfulDecision": {
+      "properties": {
+        "decision": {
+          "properties": { "disposition": { "enum": ["accepted", "replayed"] } }
+        }
+      }
+    },
+    "currentDecision": {
+      "allOf": [
+        { "$ref": "#/$defs/decision" },
+        { "properties": { "disposition": { "enum": ["accepted", "replayed", "conflict"] } } }
+      ]
+    },
+    "staleDecision": {
+      "allOf": [
+        { "$ref": "#/$defs/decision" },
+        {
+          "properties": {
+            "disposition": { "const": "stale" },
+            "applied": { "const": false }
+          }
+        }
+      ]
+    },
+    "revokedDecision": {
+      "allOf": [
+        { "$ref": "#/$defs/decision" },
+        {
+          "properties": {
+            "disposition": { "enum": ["revoked", "canceled"] },
+            "applied": { "const": false }
+          }
+        }
+      ]
+    },
+    "rejection": {
+      "type": "object",
+      "required": ["result_type", "request_hash", "observed_at", "reason_code"],
+      "properties": {
+        "result_type": { "enum": ["conflict", "stale", "revoked", "canceled"] },
+        "request_hash": { "$ref": "identity.schema.json#/$defs/digest" },
+        "observed_at": { "$ref": "identity.schema.json#/$defs/timestamp" },
+        "reason_code": { "$ref": "#/$defs/reasonCode" },
+        "current_generation": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "staleRejection": {
+      "allOf": [
+        { "$ref": "#/$defs/rejection" },
+        { "required": ["current_generation"], "properties": { "result_type": { "const": "stale" } } }
+      ]
+    },
+    "revokedRejection": {
+      "allOf": [
+        { "$ref": "#/$defs/rejection" },
+        { "properties": { "result_type": { "enum": ["revoked", "canceled"] } } }
+      ]
+    },
+    "exactRevokedRejection": {
+      "allOf": [
+        { "$ref": "#/$defs/rejection" },
+        { "properties": { "result_type": { "const": "revoked" } } }
+      ]
+    },
+    "exactCanceledRejection": {
+      "allOf": [
+        { "$ref": "#/$defs/rejection" },
+        { "properties": { "result_type": { "const": "canceled" } } }
+      ]
+    },
+    "conflictRejection": {
+      "allOf": [
+        { "$ref": "#/$defs/rejection" },
+        { "properties": { "result_type": { "const": "conflict" } } }
+      ]
+    },
+    "rejectedSelfTransition": {
+      "oneOf": [
+        { "properties": { "before": { "type": "null" }, "after": { "type": "null" } } },
+        { "$ref": "#/$defs/claimedLifecycleSelfTransition" },
+        { "$ref": "#/$defs/startingLifecycleSelfTransition" },
+        { "$ref": "#/$defs/runningLifecycleSelfTransition" },
+        { "$ref": "#/$defs/completingLifecycleSelfTransition" },
+        { "$ref": "#/$defs/succeededLifecycleSelfTransition" },
+        { "$ref": "#/$defs/canceledLifecycleSelfTransition" },
+        { "$ref": "#/$defs/unresolvedLifecycleSelfTransition" }
+      ]
+    },
+    "anyLifecycleSelfTransition": {
+      "oneOf": [
+        { "$ref": "#/$defs/claimedLifecycleSelfTransition" },
+        { "$ref": "#/$defs/startingLifecycleSelfTransition" },
+        { "$ref": "#/$defs/runningLifecycleSelfTransition" },
+        { "$ref": "#/$defs/completingLifecycleSelfTransition" },
+        { "$ref": "#/$defs/succeededLifecycleSelfTransition" },
+        { "$ref": "#/$defs/canceledLifecycleSelfTransition" },
+        { "$ref": "#/$defs/unresolvedLifecycleSelfTransition" }
+      ]
+    },
+    "claimedLifecycleSelfTransition": { "properties": { "before": { "$ref": "#/$defs/claimedAnyAuthority" }, "after": { "$ref": "#/$defs/claimedAnyAuthority" } } },
+    "startingLifecycleSelfTransition": { "properties": { "before": { "$ref": "#/$defs/startingAnyAuthority" }, "after": { "$ref": "#/$defs/startingAnyAuthority" } } },
+    "runningLifecycleSelfTransition": { "properties": { "before": { "$ref": "#/$defs/runningAnyAuthority" }, "after": { "$ref": "#/$defs/runningAnyAuthority" } } },
+    "completingLifecycleSelfTransition": { "properties": { "before": { "$ref": "#/$defs/completingAnyAuthority" }, "after": { "$ref": "#/$defs/completingAnyAuthority" } } },
+    "succeededLifecycleSelfTransition": { "properties": { "before": { "$ref": "#/$defs/succeededAnyAuthority" }, "after": { "$ref": "#/$defs/succeededAnyAuthority" } } },
+    "canceledLifecycleSelfTransition": { "properties": { "before": { "$ref": "#/$defs/canceledAnyAuthority" }, "after": { "$ref": "#/$defs/canceledAnyAuthority" } } },
+    "unresolvedLifecycleSelfTransition": { "properties": { "before": { "$ref": "#/$defs/unresolvedAnyAuthority" }, "after": { "$ref": "#/$defs/unresolvedAnyAuthority" } } },
+    "claimedGenerationOne": { "allOf": [{ "$ref": "#/$defs/state" }, { "properties": { "lifecycle": { "const": "claimed" }, "generation": { "const": 1 }, "authority_status": { "const": "current" } } }] },
+    "claimedCurrent": { "$ref": "#/$defs/stateVariantClaimedCurrent" },
+    "startingCurrent": { "$ref": "#/$defs/stateVariantStartingCurrent" },
+    "runningCurrent": { "$ref": "#/$defs/stateVariantRunningCurrent" },
+    "completingCurrent": { "$ref": "#/$defs/stateVariantCompletingCurrent" },
+    "succeededRevoked": { "$ref": "#/$defs/stateVariantSucceededRevoked" },
+    "canceledRevoked": { "$ref": "#/$defs/stateVariantCanceledRevoked" },
+    "unresolvedRevoked": { "$ref": "#/$defs/stateVariantUnresolvedRevoked" },
+    "stateVariantClaimedCurrent": {
+      "allOf": [{ "$ref": "#/$defs/state" }, { "properties": { "lifecycle": { "const": "claimed" }, "authority_status": { "const": "current" } } }]
+    },
+    "stateVariantStartingCurrent": {
+      "allOf": [{ "$ref": "#/$defs/state" }, { "properties": { "lifecycle": { "const": "starting" }, "authority_status": { "const": "current" } } }]
+    },
+    "stateVariantRunningCurrent": {
+      "allOf": [{ "$ref": "#/$defs/state" }, { "properties": { "lifecycle": { "const": "running" }, "authority_status": { "const": "current" } } }]
+    },
+    "stateVariantCompletingCurrent": {
+      "allOf": [{ "$ref": "#/$defs/state" }, { "properties": { "lifecycle": { "const": "completing" }, "authority_status": { "const": "current" } } }]
+    },
+    "stateVariantSucceededRevoked": {
+      "allOf": [{ "$ref": "#/$defs/state" }, { "properties": { "lifecycle": { "const": "succeeded" }, "authority_status": { "const": "revoked" } } }]
+    },
+    "stateVariantCanceledRevoked": {
+      "allOf": [{ "$ref": "#/$defs/state" }, { "properties": { "lifecycle": { "const": "canceled" }, "authority_status": { "const": "revoked" } } }]
+    },
+    "stateVariantUnresolvedRevoked": {
+      "allOf": [{ "$ref": "#/$defs/state" }, { "properties": { "lifecycle": { "const": "unresolved" }, "authority_status": { "const": "revoked" } } }]
+    },
+    "nonterminalCurrent": {
+      "allOf": [
+        { "$ref": "#/$defs/state" },
+        {
+          "properties": {
+            "lifecycle": { "enum": ["claimed", "starting", "running", "completing"] },
+            "authority_status": { "const": "current" }
+          }
+        }
+      ]
+    },
+    "startingSelfTransition": { "$ref": "#/$defs/selfStartingCurrent" },
+    "runningSelfTransition": { "$ref": "#/$defs/selfRunningCurrent" },
+    "completingSelfTransition": { "$ref": "#/$defs/selfCompletingCurrent" },
+    "selfStartingCurrent": { "properties": { "before": { "$ref": "#/$defs/startingCurrent" }, "after": { "$ref": "#/$defs/startingCurrent" } } },
+    "selfRunningCurrent": { "properties": { "before": { "$ref": "#/$defs/runningCurrent" }, "after": { "$ref": "#/$defs/runningCurrent" } } },
+    "selfCompletingCurrent": { "properties": { "before": { "$ref": "#/$defs/completingCurrent" }, "after": { "$ref": "#/$defs/completingCurrent" } } }
+  }
+}

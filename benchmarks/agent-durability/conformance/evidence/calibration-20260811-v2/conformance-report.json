@@ -1,0 +1,496 @@
+{
+  "contract_version": "coding-agent-durability-v1",
+  "profile_kind": "deterministic-calibration-apparatus-v1",
+  "status": "conformant",
+  "claim_boundary": "Validates the deterministic conformance apparatus only; it captures no Temporal Event History and makes no product-binding or live-recovery claim.",
+  "pins": {
+    "executable": {
+      "path": "inputs/executable/coding-agent-conformance",
+      "sha256": "a2844296903a05d27929c9a0c5ee096a5d880477a78c666badf09417217ab0bf"
+    },
+    "sources": [
+      {
+        "path": "benchmarks/agent-durability/contract-v1.json",
+        "sha256": "b6c3ef8039f5990c07c52a4a29d2f3eb543b7b0e7beaf43a51ccac97939dce17"
+      },
+      {
+        "path": "benchmarks/agent-durability/calibration/run.go",
+        "sha256": "2a544d47cb19f1613d6dada1270945b4fb21f0d8f1c9b3361e59764fa99806e3"
+      }
+    ],
+    "schema_manifest": {
+      "path": "schema-manifest.json",
+      "sha256": "2e0d0add405f4f3b65dc016006cd26cbf707ed057d4f13ebb098649659811e03"
+    },
+    "schemas": [
+      {
+        "path": "event.schema.json",
+        "sha256": "10822a7f8bb05e5d6dcb15a06e97ad65d266bdb67f20575796c33e9b589b18a1"
+      },
+      {
+        "path": "evidence.schema.json",
+        "sha256": "f3c922c5aaf170bb1ebbdd4078d0635d03cdda9787c231d34b9134cfe8721474"
+      },
+      {
+        "path": "identity.schema.json",
+        "sha256": "7e55cd410c49f473df4048df980b0131d4d504e2839a8f48dfda39a78877317f"
+      },
+      {
+        "path": "transition.schema.json",
+        "sha256": "99a5a02ec7b42d96d5bf104170deebe51a129d4752ca739bed0dc656cb54523b"
+      }
+    ],
+    "configuration_sha256": "4dc3f5c1923c7b144fcffc854d3b7611651def711137447b81e009b5081f673f"
+  },
+  "episodes": [
+    {
+      "run_id": "surviving-executor-unfaulted-trial-1",
+      "path": "runs/surviving-executor-unfaulted-trial-1",
+      "case": "surviving-executor",
+      "probe": "unfaulted",
+      "trial": 1,
+      "verdict": "valid-pass",
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "surviving-executor-unsafe-trial-1",
+      "path": "runs/surviving-executor-unsafe-trial-1",
+      "case": "surviving-executor",
+      "probe": "unsafe",
+      "trial": 1,
+      "verdict": "valid-fail",
+      "reason_codes": [
+        "competing_owner",
+        "multiple_accepted_outcomes"
+      ],
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "surviving-executor-unsafe-trial-2",
+      "path": "runs/surviving-executor-unsafe-trial-2",
+      "case": "surviving-executor",
+      "probe": "unsafe",
+      "trial": 2,
+      "verdict": "valid-fail",
+      "reason_codes": [
+        "competing_owner",
+        "multiple_accepted_outcomes"
+      ],
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "surviving-executor-unsafe-trial-3",
+      "path": "runs/surviving-executor-unsafe-trial-3",
+      "case": "surviving-executor",
+      "probe": "unsafe",
+      "trial": 3,
+      "verdict": "valid-fail",
+      "reason_codes": [
+        "competing_owner",
+        "multiple_accepted_outcomes"
+      ],
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "surviving-executor-protected-trial-1",
+      "path": "runs/surviving-executor-protected-trial-1",
+      "case": "surviving-executor",
+      "probe": "protected",
+      "trial": 1,
+      "verdict": "valid-pass",
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "surviving-executor-protected-trial-2",
+      "path": "runs/surviving-executor-protected-trial-2",
+      "case": "surviving-executor",
+      "probe": "protected",
+      "trial": 2,
+      "verdict": "valid-pass",
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "surviving-executor-protected-trial-3",
+      "path": "runs/surviving-executor-protected-trial-3",
+      "case": "surviving-executor",
+      "probe": "protected",
+      "trial": 3,
+      "verdict": "valid-pass",
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "ambiguous-effect-unfaulted-trial-1",
+      "path": "runs/ambiguous-effect-unfaulted-trial-1",
+      "case": "ambiguous-effect",
+      "probe": "unfaulted",
+      "trial": 1,
+      "verdict": "valid-pass",
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "ambiguous-effect-unsafe-trial-1",
+      "path": "runs/ambiguous-effect-unsafe-trial-1",
+      "case": "ambiguous-effect",
+      "probe": "unsafe",
+      "trial": 1,
+      "verdict": "valid-fail",
+      "reason_codes": [
+        "duplicate_physical_effect"
+      ],
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "ambiguous-effect-unsafe-trial-2",
+      "path": "runs/ambiguous-effect-unsafe-trial-2",
+      "case": "ambiguous-effect",
+      "probe": "unsafe",
+      "trial": 2,
+      "verdict": "valid-fail",
+      "reason_codes": [
+        "duplicate_physical_effect"
+      ],
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "ambiguous-effect-unsafe-trial-3",
+      "path": "runs/ambiguous-effect-unsafe-trial-3",
+      "case": "ambiguous-effect",
+      "probe": "unsafe",
+      "trial": 3,
+      "verdict": "valid-fail",
+      "reason_codes": [
+        "duplicate_physical_effect"
+      ],
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "ambiguous-effect-protected-trial-1",
+      "path": "runs/ambiguous-effect-protected-trial-1",
+      "case": "ambiguous-effect",
+      "probe": "protected",
+      "trial": 1,
+      "verdict": "valid-pass",
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "ambiguous-effect-protected-trial-2",
+      "path": "runs/ambiguous-effect-protected-trial-2",
+      "case": "ambiguous-effect",
+      "probe": "protected",
+      "trial": 2,
+      "verdict": "valid-pass",
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "ambiguous-effect-protected-trial-3",
+      "path": "runs/ambiguous-effect-protected-trial-3",
+      "case": "ambiguous-effect",
+      "probe": "protected",
+      "trial": 3,
+      "verdict": "valid-pass",
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "stale-generation-unfaulted-trial-1",
+      "path": "runs/stale-generation-unfaulted-trial-1",
+      "case": "stale-generation",
+      "probe": "unfaulted",
+      "trial": 1,
+      "verdict": "valid-pass",
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "stale-generation-unsafe-trial-1",
+      "path": "runs/stale-generation-unsafe-trial-1",
+      "case": "stale-generation",
+      "probe": "unsafe",
+      "trial": 1,
+      "verdict": "valid-fail",
+      "reason_codes": [
+        "current_owner_stopped",
+        "stale_action_accepted"
+      ],
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "stale-generation-unsafe-trial-2",
+      "path": "runs/stale-generation-unsafe-trial-2",
+      "case": "stale-generation",
+      "probe": "unsafe",
+      "trial": 2,
+      "verdict": "valid-fail",
+      "reason_codes": [
+        "current_owner_stopped",
+        "stale_action_accepted"
+      ],
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "stale-generation-unsafe-trial-3",
+      "path": "runs/stale-generation-unsafe-trial-3",
+      "case": "stale-generation",
+      "probe": "unsafe",
+      "trial": 3,
+      "verdict": "valid-fail",
+      "reason_codes": [
+        "current_owner_stopped",
+        "stale_action_accepted"
+      ],
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "stale-generation-protected-trial-1",
+      "path": "runs/stale-generation-protected-trial-1",
+      "case": "stale-generation",
+      "probe": "protected",
+      "trial": 1,
+      "verdict": "valid-pass",
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "stale-generation-protected-trial-2",
+      "path": "runs/stale-generation-protected-trial-2",
+      "case": "stale-generation",
+      "probe": "protected",
+      "trial": 2,
+      "verdict": "valid-pass",
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "stale-generation-protected-trial-3",
+      "path": "runs/stale-generation-protected-trial-3",
+      "case": "stale-generation",
+      "probe": "protected",
+      "trial": 3,
+      "verdict": "valid-pass",
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "cancellation-unreachable-unfaulted-trial-1",
+      "path": "runs/cancellation-unreachable-unfaulted-trial-1",
+      "case": "cancellation-unreachable",
+      "probe": "unfaulted",
+      "trial": 1,
+      "verdict": "valid-pass",
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "cancellation-unreachable-unsafe-trial-1",
+      "path": "runs/cancellation-unreachable-unsafe-trial-1",
+      "case": "cancellation-unreachable",
+      "probe": "unsafe",
+      "trial": 1,
+      "verdict": "valid-fail",
+      "reason_codes": [
+        "post_cancellation_mutation",
+        "post_cancellation_replacement"
+      ],
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "cancellation-unreachable-unsafe-trial-2",
+      "path": "runs/cancellation-unreachable-unsafe-trial-2",
+      "case": "cancellation-unreachable",
+      "probe": "unsafe",
+      "trial": 2,
+      "verdict": "valid-fail",
+      "reason_codes": [
+        "post_cancellation_mutation",
+        "post_cancellation_replacement"
+      ],
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "cancellation-unreachable-unsafe-trial-3",
+      "path": "runs/cancellation-unreachable-unsafe-trial-3",
+      "case": "cancellation-unreachable",
+      "probe": "unsafe",
+      "trial": 3,
+      "verdict": "valid-fail",
+      "reason_codes": [
+        "post_cancellation_mutation",
+        "post_cancellation_replacement"
+      ],
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "cancellation-unreachable-protected-trial-1",
+      "path": "runs/cancellation-unreachable-protected-trial-1",
+      "case": "cancellation-unreachable",
+      "probe": "protected",
+      "trial": 1,
+      "verdict": "valid-pass",
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "cancellation-unreachable-protected-trial-2",
+      "path": "runs/cancellation-unreachable-protected-trial-2",
+      "case": "cancellation-unreachable",
+      "probe": "protected",
+      "trial": 2,
+      "verdict": "valid-pass",
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    },
+    {
+      "run_id": "cancellation-unreachable-protected-trial-3",
+      "path": "runs/cancellation-unreachable-protected-trial-3",
+      "case": "cancellation-unreachable",
+      "probe": "protected",
+      "trial": 3,
+      "verdict": "valid-pass",
+      "replay": {
+        "captured": false,
+        "status": "not_applicable",
+        "explanation": "Deterministic calibration emits a native journal, not a Temporal Event History; replay is not applicable and no recovery guarantee is claimed."
+      }
+    }
+  ],
+  "invalid_controls": [
+    {
+      "id": "malformed",
+      "path": "invalid-controls/malformed",
+      "expected_reason": "evidence_malformed",
+      "verdict": "invalid",
+      "reason_codes": [
+        "evidence_malformed"
+      ]
+    },
+    {
+      "id": "missed-boundary",
+      "path": "invalid-controls/missed-boundary",
+      "expected_reason": "fault_not_bracketed",
+      "verdict": "invalid",
+      "reason_codes": [
+        "fault_not_bracketed"
+      ]
+    },
+    {
+      "id": "wrong-process-identity",
+      "path": "invalid-controls/wrong-process-identity",
+      "expected_reason": "wrong_process_identity",
+      "verdict": "invalid",
+      "reason_codes": [
+        "fault_not_bracketed",
+        "wrong_process_identity"
+      ]
+    },
+    {
+      "id": "contradiction",
+      "path": "invalid-controls/contradiction",
+      "expected_reason": "evidence_inconsistent",
+      "verdict": "invalid",
+      "reason_codes": [
+        "evidence_inconsistent",
+        "fault_not_bracketed"
+      ]
+    }
+  ]
+}

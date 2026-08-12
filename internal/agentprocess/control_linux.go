@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -69,6 +70,96 @@ func Probe(identity ProcessIdentity) (Disposition, error) {
 		return DispositionGone, nil
 	}
 	return DispositionAlive, nil
+}
+
+func ProbeProcessGroup(leader ProcessIdentity) (Disposition, error) {
+	if err := validateProcessIdentity(leader); err != nil {
+		return "", err
+	}
+	if leader.PID != leader.ProcessGroupID {
+		return "", fmt.Errorf("%w: process-group leader must own group %d", ErrInvalidControlRequest, leader.ProcessGroupID)
+	}
+	leaderDisposition, leaderErr := Probe(leader)
+	if leaderDisposition == DispositionAlive {
+		return leaderDisposition, leaderErr
+	}
+	if leaderErr != nil && !errors.Is(leaderErr, ErrProcessIdentityMismatch) {
+		return "", leaderErr
+	}
+	alive, err := processGroupHasLiveMembers(leader.ProcessGroupID)
+	if err != nil {
+		return "", err
+	}
+	return resolveProcessGroupDisposition(leaderDisposition, leaderErr, alive)
+}
+
+func resolveProcessGroupDisposition(leaderDisposition Disposition, leaderErr error,
+	liveMembers bool,
+) (Disposition, error) {
+	if !liveMembers {
+		return DispositionGone, nil
+	}
+	if leaderDisposition == DispositionReused || errors.Is(leaderErr, ErrProcessIdentityMismatch) {
+		return DispositionReused, leaderErr
+	}
+	return DispositionAlive, nil
+}
+
+func processGroupHasLiveMembers(processGroupID int) (bool, error) {
+	entries, err := os.ReadDir("/proc")
+	if err != nil {
+		return false, fmt.Errorf("read procfs: %w", err)
+	}
+	for _, entry := range entries {
+		pid, err := strconv.Atoi(entry.Name())
+		if err != nil || pid <= 0 {
+			continue
+		}
+		stat, err := os.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
+		if err != nil {
+			if processGoneError(err) {
+				continue
+			}
+			return false, fmt.Errorf("read process %d group state: %w", pid, err)
+		}
+		closing := strings.LastIndexByte(string(stat), ')')
+		if closing < 0 {
+			return false, fmt.Errorf("parse process %d group state", pid)
+		}
+		fields := strings.Fields(string(stat[closing+1:]))
+		if len(fields) < 3 {
+			return false, fmt.Errorf("parse process %d group state", pid)
+		}
+		group, err := strconv.Atoi(fields[2])
+		if err != nil {
+			return false, fmt.Errorf("parse process %d group: %w", pid, err)
+		}
+		state := fields[0][0]
+		if group == processGroupID && state != 'Z' && state != 'X' {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func SignalProcessGroup(leader ProcessIdentity, signal ControlSignal) error {
+	if signal != SignalTerminate && signal != SignalKill {
+		return fmt.Errorf("%w: process-group termination signal %q is unsupported", ErrInvalidControlRequest, signal)
+	}
+	disposition, err := ProbeProcessGroup(leader)
+	if err != nil {
+		return err
+	}
+	if disposition != DispositionAlive {
+		return fmt.Errorf("%w: process group %d", ErrProcessGone, leader.ProcessGroupID)
+	}
+	if err := syscall.Kill(-leader.ProcessGroupID, syscall.Signal(linuxSignal(signal))); err != nil {
+		if errors.Is(err, syscall.ESRCH) {
+			return fmt.Errorf("%w: process group %d", ErrProcessGone, leader.ProcessGroupID)
+		}
+		return fmt.Errorf("signal process group %d: %w", leader.ProcessGroupID, err)
+	}
+	return nil
 }
 
 func processGoneError(err error) bool {

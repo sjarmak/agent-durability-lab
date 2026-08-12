@@ -1,6 +1,7 @@
 package benchmark_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -12,6 +13,42 @@ import (
 	"github.com/sjarmak/temporal_projects/benchmarks/agent-durability/oracle"
 	"github.com/sjarmak/temporal_projects/benchmarks/agent-durability/protocol"
 )
+
+func TestOracleRejectsDuplicateJSONKeysEvenWhenLastValueWouldValidate(t *testing.T) {
+	t.Parallel()
+
+	t.Run("JSON object", func(t *testing.T) {
+		runDir := calibrationRun(t, protocol.CaseAmbiguousEffect)
+		path := filepath.Join(runDir, protocol.AuthorityStateFile)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read authority state: %v", err)
+		}
+		manifest := readJSON[protocol.Manifest](t, filepath.Join(runDir, protocol.ManifestFile))
+		field := []byte(`"session_id": "` + manifest.SessionID + `"`)
+		data = bytes.Replace(data, field, append(append([]byte{}, field...), append([]byte(",\n  "), field...)...), 1)
+		if err := os.WriteFile(path, data, 0o600); err != nil {
+			t.Fatalf("write duplicate key: %v", err)
+		}
+		rehashFile(t, runDir, protocol.AuthorityStateFile)
+		assertOracle(t, runDir, protocol.VerdictInvalid, protocol.ReasonEvidenceMalformed)
+	})
+
+	t.Run("JSONL event", func(t *testing.T) {
+		runDir := calibrationRun(t, protocol.CaseAmbiguousEffect)
+		path := filepath.Join(runDir, protocol.CommonEventsFile)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read events: %v", err)
+		}
+		data = bytes.Replace(data, []byte(`"sequence":1`), []byte(`"sequence":1,"sequence":1`), 1)
+		if err := os.WriteFile(path, data, 0o600); err != nil {
+			t.Fatalf("write duplicate key: %v", err)
+		}
+		rehashFile(t, runDir, protocol.CommonEventsFile)
+		assertOracle(t, runDir, protocol.VerdictInvalid, protocol.ReasonEvidenceMalformed)
+	})
+}
 
 func TestCalibrationCasesProduceExpectedIndependentVerdicts(t *testing.T) {
 	t.Parallel()
@@ -68,6 +105,24 @@ func TestUnfaultedCalibrationPassesEveryCase(t *testing.T) {
 		if verdict.Class != protocol.VerdictValidPass {
 			t.Errorf("%s verdict = %q, want %q; reasons=%v", benchmarkCase, verdict.Class, protocol.VerdictValidPass, verdict.ReasonCodes)
 		}
+	}
+}
+
+func TestOracleEvaluateRecomputesWithoutWritingVerdict(t *testing.T) {
+	t.Parallel()
+
+	runDir, err := calibration.Run(context.Background(), calibration.Config{
+		Root: t.TempDir(), Case: protocol.CaseAmbiguousEffect, Probe: protocol.ProbeProtected, Trial: 1,
+	})
+	if err != nil {
+		t.Fatalf("run calibration: %v", err)
+	}
+	verdict := oracle.Evaluate(context.Background(), runDir)
+	if verdict.Class != protocol.VerdictValidPass {
+		t.Fatalf("read-only verdict = %+v", verdict)
+	}
+	if _, err := os.Stat(filepath.Join(runDir, protocol.VerdictFile)); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("read-only evaluation wrote verdict: %v", err)
 	}
 }
 

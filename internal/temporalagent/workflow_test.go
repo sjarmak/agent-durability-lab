@@ -14,6 +14,7 @@ import (
 
 	"github.com/sjarmak/temporal_projects/internal/workstore"
 	"go.temporal.io/sdk/activity"
+	"go.temporal.io/sdk/temporal"
 	"go.temporal.io/sdk/testsuite"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
@@ -80,6 +81,9 @@ func TestWorkflowConfiguresFailureDetectionAndBoundedRetry(t *testing.T) {
 	if info.HeartbeatTimeout != AgentHeartbeatTimeout {
 		t.Fatalf("heartbeat timeout = %s; want %s", info.HeartbeatTimeout, AgentHeartbeatTimeout)
 	}
+	if info.HeartbeatTimeout < 10*time.Second {
+		t.Fatalf("heartbeat timeout = %s; want at least 10s dispatch margin", info.HeartbeatTimeout)
+	}
 	if info.StartToCloseTimeout != AgentStartToCloseTimeout {
 		t.Fatalf("start-to-close timeout = %s; want %s", info.StartToCloseTimeout, AgentStartToCloseTimeout)
 	}
@@ -122,6 +126,17 @@ func TestWorkflowCancellationRunsDisconnectedApplicationCleanup(t *testing.T) {
 				t.Fatal("disconnected cancellation cleanup did not run")
 			}
 		})
+	}
+}
+
+func TestCancellationErrorPrefersWorkflowCancellationOverActivityFailure(t *testing.T) {
+	workflowErr := temporal.NewCanceledError()
+	activityErr := errors.New("heartbeat timeout won the Activity race")
+	if err := cancellationError(workflowErr, activityErr); !temporal.IsCanceledError(err) {
+		t.Fatalf("cancellationError = %v; want Workflow cancellation", err)
+	}
+	if err := cancellationError(nil, activityErr); err != nil {
+		t.Fatalf("uncanceled workflow returned cancellation cause %v", err)
 	}
 }
 

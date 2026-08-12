@@ -452,15 +452,15 @@ func caseFailures(loaded evidence, metrics protocol.Metrics) []string {
 	return uniqueSorted(reasons)
 }
 
-func readJSON(path string, destination any) (returnErr error) {
-	file, err := os.Open(path)
+func readJSON(path string, destination any) error {
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		returnErr = errors.Join(returnErr, file.Close())
-	}()
-	decoder := json.NewDecoder(file)
+	if err := rejectDuplicateObjectKeys(data); err != nil {
+		return err
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(destination); err != nil {
 		return err
@@ -483,6 +483,9 @@ func readEvents(path string, destination *[]protocol.Event) (returnErr error) {
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		var event protocol.Event
+		if err := rejectDuplicateObjectKeys(scanner.Bytes()); err != nil {
+			return err
+		}
 		decoder := json.NewDecoder(bytes.NewReader(scanner.Bytes()))
 		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&event); err != nil {
@@ -491,6 +494,68 @@ func readEvents(path string, destination *[]protocol.Event) (returnErr error) {
 		*destination = append(*destination, event)
 	}
 	return scanner.Err()
+}
+
+func rejectDuplicateObjectKeys(data []byte) error {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	if err := inspectJSONValue(decoder); err != nil {
+		return err
+	}
+	if _, err := decoder.Token(); !errors.Is(err, io.EOF) {
+		if err == nil {
+			return errors.New("trailing JSON content")
+		}
+		return err
+	}
+	return nil
+}
+
+func inspectJSONValue(decoder *json.Decoder) error {
+	token, err := decoder.Token()
+	if err != nil {
+		return err
+	}
+	delimiter, ok := token.(json.Delim)
+	if !ok {
+		return nil
+	}
+	switch delimiter {
+	case '{':
+		keys := make(map[string]struct{})
+		for decoder.More() {
+			token, err := decoder.Token()
+			if err != nil {
+				return err
+			}
+			key, ok := token.(string)
+			if !ok {
+				return errors.New("JSON object key is not a string")
+			}
+			if _, exists := keys[key]; exists {
+				return fmt.Errorf("duplicate JSON object key %q", key)
+			}
+			keys[key] = struct{}{}
+			if err := inspectJSONValue(decoder); err != nil {
+				return err
+			}
+		}
+	case '[':
+		for decoder.More() {
+			if err := inspectJSONValue(decoder); err != nil {
+				return err
+			}
+		}
+	default:
+		return errors.New("unsupported JSON delimiter")
+	}
+	closing, err := decoder.Token()
+	if err != nil {
+		return err
+	}
+	if closing != json.Delim(map[json.Delim]json.Delim{'{': '}', '[': ']'}[delimiter]) {
+		return errors.New("mismatched JSON delimiter")
+	}
+	return nil
 }
 
 func writeVerdict(ctx context.Context, path string, verdict protocol.Verdict) error {

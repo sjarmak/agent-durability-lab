@@ -129,6 +129,15 @@ type pendingLaunch struct {
 	claimed  bool
 }
 
+func (p *pendingLaunch) claim() workstore.Decision {
+	decision := p.decision
+	if p.claimed {
+		decision.Action = workstore.ActionAttach
+	}
+	p.claimed = true
+	return decision
+}
+
 type controlledProcess struct {
 	lease                     workstore.Lease
 	process                   agentprocess.Process

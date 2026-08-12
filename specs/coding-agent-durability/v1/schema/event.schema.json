@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "event.schema.json",
+  "title": "Coding agent durability event",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "event_id",
+    "event_type",
+    "session_id",
+    "turn_id",
+    "operation_id",
+    "generation",
+    "authority_status",
+    "occurred_at",
+    "source",
+    "sequence",
+    "reference"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "event_id": { "$ref": "identity.schema.json#/$defs/stableId" },
+    "event_type": {
+      "enum": [
+        "transition_recorded",
+        "effect_receipt_recorded",
+        "stop_delivery_recorded",
+        "recovery_observed",
+        "evidence_recorded"
+      ]
+    },
+    "session_id": { "$ref": "identity.schema.json#/$defs/stableId" },
+    "turn_id": { "$ref": "identity.schema.json#/$defs/stableId" },
+    "operation_id": { "$ref": "identity.schema.json#/$defs/stableId" },
+    "effect_id": { "$ref": "identity.schema.json#/$defs/stableId" },
+    "generation": { "type": "integer", "minimum": 1 },
+    "authority_status": { "enum": ["current", "revoked"] },
+    "occurred_at": { "$ref": "identity.schema.json#/$defs/timestamp" },
+    "source": { "$ref": "#/$defs/source" },
+    "sequence": { "type": "integer", "minimum": 1 },
+    "reference": { "$ref": "#/$defs/reference" },
+    "reason_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80,
+      "pattern": "^[a-z][a-z0-9_]*$"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "source": {
+      "type": "object",
+      "required": ["layer", "component"],
+      "properties": {
+        "layer": { "enum": ["temporal", "application", "destination", "provider"] },
+        "component": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "temporal_attempt": { "type": "integer", "minimum": 1 },
+        "worker_identity": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "process_identity": { "type": "string", "minLength": 1, "maxLength": 256 }
+      },
+      "additionalProperties": false
+    },
+    "reference": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "transition_id": { "$ref": "identity.schema.json#/$defs/stableId" },
+        "receipt_id": { "$ref": "identity.schema.json#/$defs/stableId" },
+        "artifact_path": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "content_hash": { "$ref": "identity.schema.json#/$defs/digest" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

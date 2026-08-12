@@ -11,8 +11,9 @@ import (
 )
 
 type Client struct {
-	baseURL string
-	http    *http.Client
+	baseURL    string
+	http       *http.Client
+	credential Credential
 }
 
 func NewClient(baseURL string) *Client {
@@ -30,15 +31,10 @@ func (c *Client) Arrive(ctx context.Context, arrival Arrival) error {
 	if err := validateArrival(arrival); err != nil {
 		return err
 	}
-	body, err := json.Marshal(arrival)
+	request, err := c.request(ctx, arrival)
 	if err != nil {
-		return fmt.Errorf("encode barrier arrival: %w", err)
+		return err
 	}
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/v1/arrivals", bytes.NewReader(body))
-	if err != nil {
-		return fmt.Errorf("create barrier request: %w", err)
-	}
-	request.Header.Set("Content-Type", "application/json")
 	response, err := c.http.Do(request)
 	if err != nil {
 		return fmt.Errorf("send barrier arrival: %w", err)
@@ -52,4 +48,20 @@ func (c *Client) Arrive(ctx context.Context, arrival Arrival) error {
 		return fmt.Errorf("barrier response status %d: %s", response.StatusCode, strings.TrimSpace(string(message)))
 	}
 	return nil
+}
+
+func (c *Client) request(ctx context.Context, arrival Arrival) (*http.Request, error) {
+	if c.credential.valid() {
+		return authenticatedRequest(ctx, c.baseURL, c.credential, arrival)
+	}
+	body, err := json.Marshal(arrival)
+	if err != nil {
+		return nil, fmt.Errorf("encode barrier arrival: %w", err)
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/v1/arrivals", bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("create barrier request: %w", err)
+	}
+	request.Header.Set("Content-Type", "application/json")
+	return request, nil
 }

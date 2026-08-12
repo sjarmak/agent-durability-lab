@@ -55,6 +55,7 @@ type HistoryObservation struct {
 	WorkflowCanceled        int `json:"workflow_canceled"`
 	ActivityCancelRequested int `json:"activity_cancel_requested"`
 	ActivityCanceled        int `json:"activity_canceled"`
+	ActivityTimedOut        int `json:"activity_timed_out"`
 	ActivityScheduled       int `json:"activity_scheduled"`
 	ActivityCompleted       int `json:"activity_completed"`
 }

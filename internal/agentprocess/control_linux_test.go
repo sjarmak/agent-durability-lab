@@ -38,6 +38,54 @@ func TestSignalLeaderOnlyLeavesDescendantAlive(t *testing.T) {
 	}
 }
 
+func TestProcessGroupControlSurvivesLeaderExit(t *testing.T) {
+	leader, child, command := startControlProcessTree(t)
+	defer killControlProcessGroup(leader.ProcessGroupID)
+	if _, err := Signal(ControlRequest{
+		Target: controlTarget(leader, child), Scope: ScopeLeader, Signal: SignalTerminate,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := command.Wait(); err != nil {
+		t.Fatal(err)
+	}
+	if disposition, err := ProbeProcessGroup(leader); err != nil || disposition != DispositionAlive {
+		t.Fatalf("group after leader exit = %q, %v", disposition, err)
+	}
+	if err := SignalProcessGroup(leader, SignalKill); err != nil {
+		t.Fatalf("kill leaderless group: %v", err)
+	}
+	assertEventuallyDisposition(t, child, DispositionGone)
+	if disposition, err := ProbeProcessGroup(leader); err != nil || disposition != DispositionGone {
+		t.Fatalf("group after kill = %q, %v", disposition, err)
+	}
+}
+
+func TestProcessGroupDispositionDoesNotHideLiveMembersAfterLeaderReuse(t *testing.T) {
+	mismatch := fmt.Errorf("%w: reused leader", ErrProcessIdentityMismatch)
+	tests := []struct {
+		name              string
+		leaderDisposition Disposition
+		leaderErr         error
+		liveMembers       bool
+		want              Disposition
+		wantMismatch      bool
+	}{
+		{name: "leader gone group empty", leaderDisposition: DispositionGone, want: DispositionGone},
+		{name: "leader gone descendants live", leaderDisposition: DispositionGone, liveMembers: true, want: DispositionAlive},
+		{name: "leader reused group empty", leaderDisposition: DispositionReused, leaderErr: mismatch, want: DispositionGone},
+		{name: "leader reused group occupied", leaderDisposition: DispositionReused, leaderErr: mismatch, liveMembers: true, want: DispositionReused, wantMismatch: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := resolveProcessGroupDisposition(test.leaderDisposition, test.leaderErr, test.liveMembers)
+			if got != test.want || errors.Is(err, ErrProcessIdentityMismatch) != test.wantMismatch {
+				t.Fatalf("group disposition = %q, %v; want %q mismatch=%t", got, err, test.want, test.wantMismatch)
+			}
+		})
+	}
+}
+
 func TestSignalProcessTreeReachesLeaderAndDescendant(t *testing.T) {
 	leader, child, command := startControlProcessTree(t)
 	defer killControlProcessGroup(leader.ProcessGroupID)

@@ -17,13 +17,17 @@ const (
 )
 
 const (
-	AgentHeartbeatTimeout          = time.Second
-	AgentStartToCloseTimeout       = 30 * time.Second
-	agentScheduleToClose           = 2 * time.Minute
-	agentRetryInitial              = 100 * time.Millisecond
-	agentRetryMaximum              = time.Second
-	agentRetryAttempts       int32 = 3
+	AgentHeartbeatTimeout             = 10 * time.Second
+	AgentStartToCloseTimeout          = 30 * time.Second
+	legacyAgentHeartbeatTimeout       = time.Second
+	agentScheduleToClose              = 2 * time.Minute
+	agentRetryInitial                 = 100 * time.Millisecond
+	agentRetryMaximum                 = time.Second
+	agentRetryAttempts          int32 = 3
 )
+
+const agentHeartbeatDispatchMarginChange = "agent-heartbeat-dispatch-margin-v1"
+const agentCancellationTimeoutRaceChange = "agent-cancellation-timeout-race-v1"
 
 type WorkflowInput struct {
 	SessionID                        string         `json:"session_id"`
@@ -90,14 +94,27 @@ func WorkerDeathWorkflow(ctx workflow.Context, input WorkflowInput) (workstore.O
 	if input.ReplaceOwnerOnRetry && input.ReplacePendingLaunchOnRetry {
 		return workstore.Outcome{}, errors.New("replacement policies are mutually exclusive")
 	}
-	activityCtx := workflow.WithActivityOptions(ctx, agentActivityOptions(input.SessionID, input.WaitForCancellation))
+	activityOptions := agentActivityOptions(input.SessionID, input.WaitForCancellation)
+	if workflow.GetVersion(ctx, agentHeartbeatDispatchMarginChange, workflow.DefaultVersion, 1) == workflow.DefaultVersion {
+		activityOptions.HeartbeatTimeout = legacyAgentHeartbeatTimeout
+	}
+	activityCtx := workflow.WithActivityOptions(ctx, activityOptions)
 	activityInput := ActivityInput(input)
 	var outcome workstore.Outcome
 	err := workflow.ExecuteActivity(activityCtx, ActivityName, activityInput).Get(activityCtx, &outcome)
 	if err == nil {
 		return outcome, nil
 	}
-	if !input.EnableCancellationCleanup || !temporal.IsCanceledError(err) {
+	if !input.EnableCancellationCleanup {
+		return workstore.Outcome{}, fmt.Errorf("run detached agent: %w", err)
+	}
+	cancelErr := err
+	if workflow.GetVersion(ctx, agentCancellationTimeoutRaceChange, workflow.DefaultVersion, 1) != workflow.DefaultVersion {
+		cancelErr = cancellationError(ctx.Err(), err)
+	} else if !temporal.IsCanceledError(err) {
+		cancelErr = nil
+	}
+	if cancelErr == nil {
 		return workstore.Outcome{}, fmt.Errorf("run detached agent: %w", err)
 	}
 
@@ -118,7 +135,17 @@ func WorkerDeathWorkflow(ctx workflow.Context, input WorkflowInput) (workstore.O
 	if cleanupErr := workflow.ExecuteActivity(cleanupCtx, CancelActivityName, cleanupInput).Get(cleanupCtx, &cleanupResult); cleanupErr != nil {
 		return workstore.Outcome{}, fmt.Errorf("cancel detached agent after Workflow cancellation: %w", cleanupErr)
 	}
-	return workstore.Outcome{}, fmt.Errorf("run detached agent: %w", err)
+	return workstore.Outcome{}, fmt.Errorf("run detached agent: %w", cancelErr)
+}
+
+func cancellationError(workflowErr, activityErr error) error {
+	if temporal.IsCanceledError(workflowErr) {
+		return workflowErr
+	}
+	if temporal.IsCanceledError(activityErr) {
+		return activityErr
+	}
+	return nil
 }
 
 func agentActivityOptions(sessionID string, waitForCancellation bool) workflow.ActivityOptions {

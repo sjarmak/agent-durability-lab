@@ -1,0 +1,67 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "temporal-coding-agent"
+version = "0.1.0"
+description = "Incubating Python binding for the coding-agent durability protocol"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+  "jsonschema>=4.23,<5",
+  "referencing>=0.35,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.13",
+  "pytest>=8.3",
+  "pytest-cov>=6.0",
+  "ruff>=0.8",
+  "types-jsonschema>=4.23",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/temporal_coding_agent"]
+
+[tool.pytest.ini_options]
+addopts = [
+  "--strict-markers",
+  "--strict-config",
+  "--cov=temporal_coding_agent",
+  "--cov-branch",
+  "--cov-report=term-missing",
+  "--cov-fail-under=80",
+]
+testpaths = ["tests"]
+markers = [
+  "integration: shared contract fixture tests",
+  "e2e: complete durability transition flows",
+  "unit: isolated model and kernel tests",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["temporal_coding_agent"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["temporal_coding_agent"]
+
+[[tool.mypy.overrides]]
+module = ["jsonschema", "jsonschema.exceptions"]
+ignore_missing_imports = true

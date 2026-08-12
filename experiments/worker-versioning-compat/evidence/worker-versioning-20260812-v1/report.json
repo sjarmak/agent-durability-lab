@@ -1,0 +1,137 @@
+{
+  "environment": {
+    "captured_at": "2026-08-12T08:54:18.072087414Z",
+    "go_version": "go1.25.12",
+    "sdk_version": "v1.47.0",
+    "temporal_cli": "temporal version 1.8.0 (Server 1.31.2, UI 2.50.1)",
+    "os": "linux",
+    "architecture": "amd64"
+  },
+  "scenarios": [
+    {
+      "scenario": "auto-compatible",
+      "workflow_id": "worker-versioning-20260812-v1-auto-compatible",
+      "run_id": "019ff52d-fe93-7ecc-99a9-6f9f8ed741d9",
+      "workflow_result": {
+        "workflow_builds": [
+          "worker-v1",
+          "worker-v1"
+        ],
+        "receipts": [
+          {
+            "session_id": "session-1",
+            "worker_build": "worker-v1",
+            "agent_build": "agent-v1",
+            "action": "started",
+            "temporal_attempt": 1,
+            "workflow_id": "worker-versioning-20260812-v1-auto-compatible",
+            "run_id": "019ff52d-fe93-7ecc-99a9-6f9f8ed741d9",
+            "phase": 1
+          },
+          {
+            "session_id": "session-1",
+            "worker_build": "worker-v2",
+            "agent_build": "agent-v1",
+            "action": "attached",
+            "temporal_attempt": 1,
+            "workflow_id": "worker-versioning-20260812-v1-auto-compatible",
+            "run_id": "019ff52d-fe93-7ecc-99a9-6f9f8ed741d9",
+            "phase": 2
+          }
+        ]
+      },
+      "registry": {
+        "session_id": "session-1",
+        "agent_build": "agent-v1",
+        "started_by_worker": "worker-v1",
+        "started_at": "2026-08-12T08:54:20.256754968Z",
+        "attachments": [
+          {
+            "worker_build": "worker-v2",
+            "attached_at": "2026-08-12T08:54:23.539725679Z"
+          }
+        ]
+      },
+      "history_worker_builds": [
+        "worker-v1",
+        "worker-v2"
+      ],
+      "expected_failure": false,
+      "incompatible_rejected": false
+    },
+    {
+      "scenario": "pinned-compatible",
+      "workflow_id": "worker-versioning-20260812-v1-pinned-compatible",
+      "run_id": "019ff52e-16be-7909-b4cb-72a303f25ab8",
+      "workflow_result": {
+        "workflow_builds": [
+          "worker-v1",
+          "worker-v1"
+        ],
+        "receipts": [
+          {
+            "session_id": "session-1",
+            "worker_build": "worker-v1",
+            "agent_build": "agent-v1",
+            "action": "started",
+            "temporal_attempt": 1,
+            "workflow_id": "worker-versioning-20260812-v1-pinned-compatible",
+            "run_id": "019ff52e-16be-7909-b4cb-72a303f25ab8",
+            "phase": 1
+          },
+          {
+            "session_id": "session-1",
+            "worker_build": "worker-v1",
+            "agent_build": "agent-v1",
+            "action": "attached",
+            "temporal_attempt": 1,
+            "workflow_id": "worker-versioning-20260812-v1-pinned-compatible",
+            "run_id": "019ff52e-16be-7909-b4cb-72a303f25ab8",
+            "phase": 2
+          }
+        ]
+      },
+      "registry": {
+        "session_id": "session-1",
+        "agent_build": "agent-v1",
+        "started_by_worker": "worker-v1",
+        "started_at": "2026-08-12T08:54:26.516676548Z",
+        "attachments": [
+          {
+            "worker_build": "worker-v1",
+            "attached_at": "2026-08-12T08:54:29.20127617Z"
+          }
+        ]
+      },
+      "history_worker_builds": [
+        "worker-v1"
+      ],
+      "expected_failure": false,
+      "incompatible_rejected": false
+    },
+    {
+      "scenario": "auto-incompatible",
+      "workflow_id": "worker-versioning-20260812-v1-auto-incompatible",
+      "run_id": "019ff52e-27cf-7890-8a7c-6ca56fbac9c4",
+      "workflow_result": {
+        "workflow_builds": null,
+        "receipts": null
+      },
+      "registry": {
+        "session_id": "session-1",
+        "agent_build": "agent-v1",
+        "started_by_worker": "worker-v1",
+        "started_at": "2026-08-12T08:54:30.869292221Z",
+        "attachments": null
+      },
+      "history_worker_builds": [
+        "worker-v1",
+        "worker-v3"
+      ],
+      "expected_failure": true,
+      "incompatible_rejected": true
+    }
+  ],
+  "compatible_histories_replay": true,
+  "incompatible_workflow_rejected": true
+}

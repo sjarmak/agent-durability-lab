@@ -1,6 +1,7 @@
 package failureinject
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -29,8 +30,9 @@ type Arrival struct {
 }
 
 type Coordinator struct {
-	mu     sync.Mutex
-	points map[string]*pointState
+	mu             sync.Mutex
+	points         map[string]*pointState
+	authentication *authentication
 }
 
 type pointState struct {
@@ -102,9 +104,22 @@ func (c *Coordinator) Release(point string) error {
 func (c *Coordinator) handleArrival(response http.ResponseWriter, request *http.Request) {
 	request.Body = http.MaxBytesReader(response, request.Body, 64<<10)
 	defer func() { _ = request.Body.Close() }()
+	body, err := io.ReadAll(request.Body)
+	if err != nil {
+		http.Error(response, "invalid arrival", http.StatusBadRequest)
+		return
+	}
+	var nonce string
+	if c.authentication != nil {
+		nonce, err = c.authentication.verify(request, body)
+		if err != nil {
+			http.Error(response, "unauthorized arrival", http.StatusUnauthorized)
+			return
+		}
+	}
 
 	var arrival Arrival
-	decoder := json.NewDecoder(request.Body)
+	decoder := json.NewDecoder(bytes.NewReader(body))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&arrival); err != nil {
 		http.Error(response, "invalid arrival", http.StatusBadRequest)
@@ -119,7 +134,11 @@ func (c *Coordinator) handleArrival(response http.ResponseWriter, request *http.
 		http.Error(response, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err := c.arrive(request.Context(), arrival); err != nil {
+	if err := c.authorizeAndArrive(request.Context(), nonce, arrival); err != nil {
+		if errors.Is(err, ErrUnauthorizedBarrier) {
+			http.Error(response, err.Error(), http.StatusForbidden)
+			return
+		}
 		if errors.Is(err, ErrInvalidBarrier) {
 			http.Error(response, err.Error(), http.StatusConflict)
 			return
@@ -129,10 +148,44 @@ func (c *Coordinator) handleArrival(response http.ResponseWriter, request *http.
 	response.WriteHeader(http.StatusNoContent)
 }
 
+func (c *Coordinator) authorizeAndArrive(ctx context.Context, nonce string, arrival Arrival) error {
+	if c.authentication == nil {
+		return c.arrive(ctx, arrival)
+	}
+	expectation := Expectation{
+		Point: arrival.Point, SessionID: arrival.SessionID,
+		Generation: arrival.Generation, ActorID: arrival.ActorID,
+	}
+	c.mu.Lock()
+	if _, registered := c.authentication.expected[expectation]; !registered {
+		c.mu.Unlock()
+		return fmt.Errorf("%w: arrival identity was not preregistered", ErrUnauthorizedBarrier)
+	}
+	if _, replayed := c.authentication.usedNonces[nonce]; replayed {
+		c.mu.Unlock()
+		return fmt.Errorf("%w: arrival nonce was replayed", ErrInvalidBarrier)
+	}
+	if _, reused := c.authentication.usedArrivalIDs[arrival.ID]; reused {
+		c.mu.Unlock()
+		return fmt.Errorf("%w: arrival ID %q was replayed", ErrInvalidBarrier, arrival.ID)
+	}
+	state := c.ensurePointLocked(arrival.Point)
+	delete(c.authentication.expected, expectation)
+	c.authentication.usedNonces[nonce] = struct{}{}
+	c.authentication.usedArrivalIDs[arrival.ID] = struct{}{}
+	released := c.recordArrivalLocked(state, arrival)
+	c.mu.Unlock()
+	return waitForRelease(ctx, released)
+}
+
 func (c *Coordinator) arrive(ctx context.Context, arrival Arrival) error {
 	c.mu.Lock()
 	state := c.ensurePointLocked(arrival.Point)
 	if existing, found := state.byID[arrival.ID]; found {
+		if c.authentication != nil {
+			c.mu.Unlock()
+			return fmt.Errorf("%w: arrival ID %q was replayed", ErrInvalidBarrier, arrival.ID)
+		}
 		if !sameArrival(existing, arrival) {
 			c.mu.Unlock()
 			return fmt.Errorf("%w: arrival ID %q was reused with different identity", ErrInvalidBarrier, arrival.ID)
@@ -141,14 +194,18 @@ func (c *Coordinator) arrive(ctx context.Context, arrival Arrival) error {
 		c.mu.Unlock()
 		return waitForRelease(ctx, released)
 	}
+	released := c.recordArrivalLocked(state, arrival)
+	c.mu.Unlock()
+	return waitForRelease(ctx, released)
+}
+
+func (c *Coordinator) recordArrivalLocked(state *pointState, arrival Arrival) <-chan struct{} {
 	arrival.Time = time.Now().UTC()
 	state.byID[arrival.ID] = arrival
 	state.arrivals = append(state.arrivals, arrival)
 	close(state.changed)
 	state.changed = make(chan struct{})
-	released := state.released
-	c.mu.Unlock()
-	return waitForRelease(ctx, released)
+	return state.released
 }
 
 func (c *Coordinator) ensurePointLocked(point string) *pointState {

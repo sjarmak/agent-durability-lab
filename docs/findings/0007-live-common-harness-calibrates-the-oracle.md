@@ -61,6 +61,15 @@ system adapters must kill their actual durable executor at the same named
 boundary. Three development trials per arm establish repeatability, not a
 publishable failure-rate estimate.
 
+The later
+[`coding-agent conformance apparatus`](../../benchmarks/agent-durability/conformance/README.md)
+reuses these four case oracles as a product-development gate. Its preserved
+deterministic calibration contains one unfaulted plus three unsafe and three
+protected episodes per case, along with four retained invalid controls. That
+report validates schedule, writer, and oracle behavior only: it captures no
+Temporal history and lacks the portable turn, operation, effect, and capability
+bindings, so it does not extend this finding to a coding-agent integration.
+
 The first live suite, `live-common-20260807-v1`, is preserved but superseded. It
 recorded the generic adapter version `v1` instead of an immutable source
 identity. Review added mandatory adapter provenance and regenerated v2; no v1

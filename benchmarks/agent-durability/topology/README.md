@@ -46,11 +46,27 @@ Run the complete source-level acceptance suite with:
 
 ```bash
 go test -race ./benchmarks/agent-durability/topology/...
-go test -race \
-  -coverpkg=./benchmarks/agent-durability/topology/agent,./benchmarks/agent-durability/topology/evidence,./benchmarks/agent-durability/topology/internal/sealedfs,./benchmarks/agent-durability/topology/matrix,./benchmarks/agent-durability/topology/oracle,./benchmarks/agent-durability/topology/protocol,./benchmarks/agent-durability/topology/runner,./benchmarks/agent-durability/topology/semantics \
-  -coverprofile=coverage.topology.out \
-  ./benchmarks/agent-durability/topology/...
+make coverage-topology
 ```
+
+The default topology coverage target runs package and unit tests, the sealed
+pilot audit, and the five live correctness/replay integrations. It merges only
+those source-bound profiles into `coverage.topology.out` and requires at least
+80% statement coverage. It does not execute the deferred population shapes and
+does not renew current-source timing or performance evidence.
+
+On a host that satisfies the controlled-compute envelope below, run the
+separate timing profile with:
+
+```bash
+make coverage-topology-timing TOPOLOGY_CONTROLLED_HOST=1
+```
+
+That target requires the explicit acknowledgment and three admitted host
+samples before running the correctness gate and all four registered timing
+shapes. It writes the
+distinct `coverage.topology.timing.out`; it neither changes their latency
+oracles nor converts coverage execution into admitted population evidence.
 
 Run a new append-only canonical mechanism suite with separate evidence and work
 roots:
@@ -83,9 +99,10 @@ make topology-matrix-conformance \
 ```
 
 All three evidence targets build the bound harness and agent executables with
-`go build -trimpath`. This is part of the provenance contract: rebuilding the
-accepted matrix from its current source and module state reproduces the two
-recorded executable digests byte for byte.
+`go build -trimpath`. The recorded digests bind each accepted root to the exact
+executables used when it was captured. A current-source claim additionally
+requires a fresh build to match those digests; a preserved root does not become
+current-source evidence merely because it still passes its disk audit.
 
 The accepted 2026-08-09 development root is
 [`semantics-20260809-v2`](evidence/semantics-20260809-v2). It contains 44
@@ -96,9 +113,12 @@ dependency observations, five case metrics, and native history. This is
 mechanism-conformance evidence, not pilot, publication, or performance evidence.
 Its effective-input and replay records bind the SHA-256 digest of the actual
 conformance executable; the agent field independently binds the simulator.
+Later supersession cancellation/replay hardening changed the conformance
+executable. V2 remains admitted, source-pinned historical mechanism evidence,
+but it is not current-source evidence for the present worktree.
 
 The accepted recovery mechanism root is
-[`recovery-20260809-v6`](evidence/recovery-20260809-v6). It contains 52
+[`recovery-20260811-v7`](evidence/recovery-20260811-v7). It contains 52
 append-only run directories: all 26 frozen recovery case/boundary/probe
 combinations in both topology arms at fan-out 32. Each run carries the same 15
 inventory-sealed files, plus the case-specific recovery item ledger, retry and
@@ -106,6 +126,15 @@ dependency records, decomposed latency/load/history metrics, exact fault data,
 real process identities, and captured native history. This is recovery
 mechanism-conformance evidence, not a repeated scale population or relative
 cost result.
+
+The complete v6 root remains append-only but is superseded. Cookbook
+integration found that it preceded the final raw recovery-metric
+reconstruction: the current independent oracle rejected an unsafe outage run
+with `recovery_metric_mismatch`. V7 reran the unchanged 26-pair schedule from
+the then-final harness/oracle bytes and passed the separate disk-only verdict
+and history-replay gate. The later supersession-only executable change also
+means v7 is now source-pinned historical evidence, not current-source evidence;
+its recovery observations and append-only bytes remain unchanged.
 
 The accepted integrated apparatus root is
 [`matrix-20260809-v7`](evidence/matrix-20260809-v7). It seals the complete
@@ -245,10 +274,11 @@ store and destination fence/receipt protocol, not Activity retry alone.
 ## Deferred population run
 
 The timing-sensitive pilot, freeze verification, and 8/32/128 population run
-are intentionally deferred. This workstation is shared with Gas City and other
-coding-agent sessions, so host contention can change queue, retry, recovery,
-and control-lane latency enough to invalidate a topology comparison. No new
-evidence root or efficiency claim should be created from that environment.
+are intentionally deferred research, not a v1 product-release dependency. This
+workstation is shared with Gas City and other coding-agent sessions, so host
+contention can change queue, retry, recovery, and control-lane latency enough
+to invalidate a topology comparison. No new evidence root or efficiency claim
+should be created from that environment.
 
 Resume this work only on a controlled Linux amd64 host with 16 dedicated,
 non-burstable vCPUs, 32 GiB of memory, at least 20 GiB of free local storage,
@@ -266,4 +296,5 @@ co-scheduled with unrelated work, an evidence episode is incomplete, replay or
 audit fails, or a registered latency bound is exceeded. Provisioning a paid AWS,
 Google Cloud, or other external host requires fresh explicit approval; until
 approved or suitable already-owned compute is available, this work remains
-TBD without blocking repository-local stabilization work.
+TBD without blocking repository-local correctness coverage, the v1 product
+gate, or SDK/cookbook stabilization.

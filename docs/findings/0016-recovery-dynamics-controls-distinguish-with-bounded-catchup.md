@@ -11,7 +11,7 @@ same Work Activity, inputs, options, queues, retry owner and budgets, authority
 and destination protocol, and Worker Activity concurrency of eight.
 
 The accepted append-only development root
-[`recovery-20260809-v6`](../../benchmarks/agent-durability/topology/evidence/recovery-20260809-v6)
+[`recovery-20260811-v7`](../../benchmarks/agent-durability/topology/evidence/recovery-20260811-v7)
 contains one canonical fan-out-32 pair for all 26 recovery
 case/boundary/probe combinations: 52 runs and 780 inventory-sealed artifacts.
 All 52 runs were valid, every admitted item reached an explicit succeeded or
@@ -73,9 +73,22 @@ The complete
 [`recovery-20260809-v5`](../../benchmarks/agent-durability/topology/evidence/recovery-20260809-v5)
 root remains unchanged. Final static review after that run removed two unused
 recovery-state fields and made ignored HTTP response-body close errors explicit.
-Although behavior-neutral, those cleanups changed the executable digest. V6 is
-therefore the fresh source-bound population; its independent disk audit verified
-all 52 inventories and replay records.
+Although behavior-neutral, those cleanups changed the executable digest and
+required v6.
+
+During coding-agent cookbook integration, the final independent oracle rejected
+one v6 unsafe outage run with `recovery_metric_mismatch`: v6 preceded the
+current raw-metric reconstruction even though it had passed its contemporary
+audit. The v6 root remains unchanged as superseded evidence. V7 is the
+source-pinned population from the then-final harness and oracle bytes. Its
+runner reported 26 pairs, 52 preserved runs, 32 valid passes, 20 valid
+failures, and zero invalid/errors; a separate disk-only gate recomputed every
+inventory and verdict and replayed every captured history. Later
+supersession-only cancellation/replay hardening changed the shared executable
+digest without changing the recovery mechanism or the preserved root. V7
+therefore remains admitted historical mechanism evidence, but it is not
+current-source evidence for the present worktree; renewing that claim requires
+a fresh append-only population.
 
 ## Inference
 
@@ -115,7 +128,7 @@ native Temporal guarantee.
 
 ## Falsifier
 
-This finding is false if any stored v6 inventory fails verification or replay;
+This finding is false if any stored v7 inventory fails verification or replay;
 if either topology receives different Work input/options, retry policy, Worker
 concurrency, authority, or destination semantics; if a protected run loses or
 double-accounts an item, exceeds a registered request/concurrency/admission/

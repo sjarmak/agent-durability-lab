@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "evidence.schema.json",
+  "title": "Coding agent durability conformance evidence",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "episode_id",
+    "profile",
+    "variant",
+    "invariant",
+    "failure_boundary",
+    "oracle",
+    "falsifier",
+    "source_pins",
+    "identities",
+    "observations",
+    "outcome",
+    "responsibility",
+    "artifacts",
+    "replay"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "episode_id": { "$ref": "identity.schema.json#/$defs/stableId" },
+    "profile": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "variant": { "enum": ["unsafe", "protected", "unfaulted"] },
+    "invariant": { "$ref": "#/$defs/assertion" },
+    "failure_boundary": { "$ref": "#/$defs/assertion" },
+    "oracle": { "$ref": "#/$defs/assertion" },
+    "falsifier": { "$ref": "#/$defs/assertion" },
+    "source_pins": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/sourcePin" }
+    },
+    "identities": { "$ref": "identity.schema.json" },
+    "observations": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "event.schema.json" }
+    },
+    "outcome": { "enum": ["pass", "fail", "inconclusive"] },
+    "responsibility": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/responsibility" }
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/artifact" }
+    },
+    "replay": { "$ref": "#/$defs/replay" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "assertion": { "type": "string", "minLength": 1, "maxLength": 1000 },
+    "sourcePin": {
+      "type": "object",
+      "required": ["repository", "revision"],
+      "properties": {
+        "repository": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "revision": { "type": "string", "minLength": 7, "maxLength": 128 },
+        "artifact_hash": { "$ref": "identity.schema.json#/$defs/digest" }
+      },
+      "additionalProperties": false
+    },
+    "responsibility": {
+      "type": "object",
+      "required": ["layer", "guarantee"],
+      "properties": {
+        "layer": { "enum": ["temporal", "application", "destination", "provider"] },
+        "guarantee": { "type": "string", "minLength": 1, "maxLength": 500 }
+      },
+      "additionalProperties": false
+    },
+    "artifact": {
+      "type": "object",
+      "required": ["path", "content_hash"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "content_hash": { "$ref": "identity.schema.json#/$defs/digest" },
+        "media_type": { "type": "string", "minLength": 1, "maxLength": 120 }
+      },
+      "additionalProperties": false
+    },
+    "replay": {
+      "type": "object",
+      "required": ["history_path", "history_hash", "status"],
+      "properties": {
+        "history_path": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "history_hash": { "$ref": "identity.schema.json#/$defs/digest" },
+        "status": { "enum": ["passed", "failed", "not_applicable"] },
+        "explanation": { "type": "string", "minLength": 1, "maxLength": 500 }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "not_applicable" } } },
+          "then": { "required": ["explanation"] }
+        }
+      ]
+    }
+  }
+}

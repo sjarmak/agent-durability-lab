@@ -767,6 +767,16 @@ func TestStoreHonorsCanceledContext(t *testing.T) {
 	}
 }
 
+func TestReadSnapshotDoesNotCreateMissingStore(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "missing.db")
+	if _, err := ReadSnapshot(context.Background(), path, "session-1"); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("ReadSnapshot missing store = %v; want os.ErrNotExist", err)
+	}
+	if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("missing store was created: %v", err)
+	}
+}
+
 func TestEvidenceExportRejectsMissingSession(t *testing.T) {
 	store := openTestStore(t)
 	err := store.ExportJSONL(context.Background(), "missing", filepath.Join(t.TempDir(), "events.jsonl"))

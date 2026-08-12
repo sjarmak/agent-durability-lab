@@ -39,9 +39,17 @@ canceled.
 That zero-versus-one count describes the preserved population, not a required
 absence guarantee. On 2026-08-09, a race-instrumented maintenance gate observed
 one prompt Activity-canceled event in a `false` healthy-safe arm. The corrected
-oracle permits zero or one when the Workflow does not wait and continues to
-require exactly one when it does. This correction changes no preserved run or
-application-safety conclusion.
+oracle permits zero or one when the Workflow does not wait. For current
+wait-enabled runs it requires one terminal cancellation observation:
+Activity-canceled in healthy and frozen scenarios, and either Activity-canceled
+or Activity heartbeat-timeout after Worker death. A loaded ordinary-CI gate on
+2026-08-11 exposed the latter race: Workflow cancellation was requested after
+Worker 1 died, the dead Activity could not acknowledge it, and its heartbeat
+timeout became terminal before Worker 2 cleanup. Current Workflow code treats
+the canceled Workflow context as authoritative, performs disconnected cleanup,
+and returns cancellation; replay-versioned legacy histories retain their prior
+behavior. These maintenance corrections change no preserved run or
+application-safety conclusion and do not constitute a new admitted population.
 
 This changes what Temporal waits to observe. It does not change whether the
 detached process retains application authority. The six controls violate the
@@ -111,5 +119,5 @@ accepts a post-cancel mutation, replacement starts after terminal cancellation,
 acknowledgement appears without the exact target receiving a stop, Worker 2
 cannot clean up Worker 1's surviving child, a frozen child mutates before
 resume, a stale stop reaches generation 2, a claimed process-tree stop leaves a
-recorded descendant alive, or a history lacks the wait-policy event shape stated
-above.
+recorded descendant alive, or a history lacks the scenario-specific wait-policy
+terminal shape stated above.

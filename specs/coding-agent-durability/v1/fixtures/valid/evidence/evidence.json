@@ -1,0 +1,79 @@
+{
+  "schema_version": "1.0.0",
+  "episode_id": "episode:protected-001",
+  "profile": "effect-after-commit-before-activity-completion",
+  "variant": "protected",
+  "invariant": "One logical operation produces at most one committed destination effect.",
+  "failure_boundary": "The Worker exits after the destination commits and before Activity completion is recorded.",
+  "oracle": "The unsafe control duplicates; the protected variant reuses the committed receipt.",
+  "falsifier": "The protected variant commits a second destination effect or lacks replayable evidence.",
+  "source_pins": [
+    {
+      "repository": "github.com/sjarmak/temporal_projects",
+      "revision": "0123456789abcdef",
+      "artifact_hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+    }
+  ],
+  "identities": {
+    "schema_version": "1.0.0",
+    "session_id": "session:reviewer",
+    "turn_id": "turn:42",
+    "operation_id": "operation:tool-call-7",
+    "effect_id": "effect:tool-call-7",
+    "authority": {
+      "generation": 2,
+      "owner_capability_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "status": "current"
+    }
+  },
+  "observations": [
+    {
+      "schema_version": "1.0.0",
+      "event_id": "event:receipt-7",
+      "event_type": "effect_receipt_recorded",
+      "session_id": "session:reviewer",
+      "turn_id": "turn:42",
+      "operation_id": "operation:tool-call-7",
+      "effect_id": "effect:tool-call-7",
+      "generation": 2,
+      "authority_status": "current",
+      "occurred_at": "2026-08-11T12:00:00Z",
+      "source": {
+        "layer": "destination",
+        "component": "idempotency-store"
+      },
+      "sequence": 7,
+      "reference": {
+        "receipt_id": "receipt:tool-call-7",
+        "content_hash": "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+      }
+    }
+  ],
+  "outcome": "pass",
+  "responsibility": [
+    {
+      "layer": "temporal",
+      "guarantee": "The Activity procedure is redelivered after Worker loss."
+    },
+    {
+      "layer": "application",
+      "guarantee": "The stable operation ID is reused across delivery attempts."
+    },
+    {
+      "layer": "destination",
+      "guarantee": "The committed receipt is returned for a repeated operation ID."
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "evidence/episode-protected-001/events.jsonl",
+      "content_hash": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      "media_type": "application/x-ndjson"
+    }
+  ],
+  "replay": {
+    "history_path": "evidence/episode-protected-001/history.json",
+    "history_hash": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+    "status": "passed"
+  }
+}

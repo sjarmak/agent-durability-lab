@@ -154,11 +154,14 @@ func (a Activities) RunAgent(ctx context.Context, input ActivityInput) (workstor
 	if err := a.validate(input); err != nil {
 		return workstore.Outcome{}, err
 	}
+	info := activity.GetInfo(ctx)
+	if !input.BlockAttempt1BeforeHeartbeat || info.Attempt > 1 {
+		activity.RecordHeartbeat(ctx, HeartbeatDetails{SessionID: input.SessionID, Phase: "starting"})
+	}
 	store, err := workstore.Open(a.StorePath)
 	if err != nil {
 		return workstore.Outcome{}, fmt.Errorf("open application work store: %w", err)
 	}
-	info := activity.GetInfo(ctx)
 	ownerToken, err := newOwnerToken()
 	if err != nil {
 		return workstore.Outcome{}, err

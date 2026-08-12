@@ -1,6 +1,7 @@
 # Durable vendor coding-agent sessions
 
-**Status:** active experiment; unsafe direct-Claude arm complete, 2026-08-08
+**Status:** matched Claude Code and Codex CLI studies complete; protocol-native
+follow-ups remain open, 2026-08-12
 **Tracking:** `temporal_projects-5im`
 **Vendors in the first study:** Claude Code and Codex
 
@@ -479,7 +480,19 @@ their own verdict or evidence format.
    rejected logged-out attempt and admitted fixed-profile evidence. See
    [Finding 0020](../findings/0020-application-fenced-claude-supervisor-survives-worker-loss.md).
 7. Repeat the matched CLI experiment with `codex exec`, including the
-   pre-registration gap.
+   pre-registration gap. **Complete:** `temporal_projects-5im.9` produced 51
+   source-pinned v12 hermetic and 51 matched authenticated Codex CLI `0.147.0`
+   trials using the fixed `codex-2` profile and requested `gpt-5.6-sol` model.
+   Unsafe fresh and explicit resume each distinguished six post-effect failures;
+   resume preserved thread identity but did not prevent a second physical
+   effect. The fenced arm passed 27/27 in both environments across attachment,
+   concurrent recovery, cancellation, and threadless process replacement. All
+   102 histories replayed, independent audits verified every raw inventory, and
+   deterministic transports reconstructed the admitted evidence. Later
+   authenticated-barrier hardening makes this historical evidence for exact
+   v12 binaries; a new population is required for a current-source claim. See
+   [Finding 0021](../findings/0021-codex-thread-resume-is-not-turn-authority.md)
+   and the [Codex experiment](../../experiments/durable-vendor-sessions/codex-direct/README.md).
 8. Add Codex App Server and Claude Agent SDK/`SessionStore` protocol-native arms
    only where they distinguish a recovery guarantee.
    Evaluate Claude Code 2.1.226's background-session daemon (`--bg`, `attach`,
@@ -552,12 +565,13 @@ This plan does not claim that:
 - placing a CLI inside an Activity makes an interactive agent application
   correct after recovery.
 
-The hermetic and authenticated Claude Code `2.1.227` results support the bounded
-claim: Temporal can durably redeliver the procedure while an application
-supervisor supplies stable identity, current-owner fencing, attachment, and
-destination reconciliation on the tested single host. Supervisor/host loss,
-cross-host routing, deployment/version change, and destination-general
-enforcement remain unresolved.
+The authenticated Claude Code `2.1.227` and Codex CLI `0.147.0` results support
+the bounded claim: Temporal can durably redeliver the procedure while an
+application supervisor supplies stable identity, current-owner fencing,
+attachment, and destination reconciliation on the tested single host.
+Supervisor/host loss, cross-host routing, deployment/version change,
+authentication/session portability, and destination-general enforcement remain
+unresolved.
 
 ## Related research
 
@@ -571,9 +585,11 @@ enforcement remain unresolved.
 - [Finding 0006: Cancellation requires application revocation](../findings/0006-cancellation-requires-application-revocation.md)
 - [Finding 0007: Live common harness calibration](../findings/0007-live-common-harness-calibrates-the-oracle.md)
 - [Finding 0020: Application-fenced Claude supervisor](../findings/0020-application-fenced-claude-supervisor-survives-worker-loss.md)
+- [Finding 0021: Codex thread resume is not turn authority](../findings/0021-codex-thread-resume-is-not-turn-authority.md)
+- [Finding 0022: Worker Versioning does not version the detached agent contract](../findings/0022-worker-versioning-does-not-version-the-detached-agent-contract.md)
 
-Related open work includes agent-session compatibility across Worker Versioning
-(`temporal_projects-0xm`), partial Workflow Stream recovery
+Completed adjacent work now covers agent-session compatibility across Worker Versioning
+(`temporal_projects-0xm`). Related open work includes partial Workflow Stream recovery
 (`temporal_projects-cg5`), destination-enforced revocation
 (`temporal_projects-k4x`), and recurring-fault degradation
 (`temporal_projects-uju`).

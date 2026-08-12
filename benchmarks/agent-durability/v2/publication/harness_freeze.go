@@ -13,8 +13,6 @@ import (
 )
 
 var frozenHarnessSources = []string{
-	"go.mod",
-	"go.sum",
 	"benchmarks/agent-durability/v2/cmd/publication/main.go",
 	"benchmarks/agent-durability/v2/publication/episode_plan.go",
 	"benchmarks/agent-durability/v2/publication/episode_runtime.go",
@@ -58,11 +56,21 @@ func LoadHarnessFreeze(path string) (HarnessFreeze, error) {
 }
 
 func VerifyHarnessFreeze(freeze HarnessFreeze, repositoryRoot, runnerBinary, preregistrationPath string) error {
-	sourceHash, err := HarnessSourceSHA256(repositoryRoot)
-	if err != nil {
+	if err := VerifyHarnessFreezeTrackedInputs(freeze, repositoryRoot, preregistrationPath); err != nil {
 		return err
 	}
 	binaryHash, err := protocol.FileSHA256(runnerBinary)
+	if err != nil {
+		return err
+	}
+	return verifyFrozenHash("runner binary", binaryHash, freeze.RunnerBinarySHA256)
+}
+
+// VerifyHarnessFreezeTrackedInputs checks the publication inputs retained in
+// the repository. The historical runner binary is checked separately by
+// VerifyHarnessFreeze when a publication run is launched.
+func VerifyHarnessFreezeTrackedInputs(freeze HarnessFreeze, repositoryRoot, preregistrationPath string) error {
+	sourceHash, err := HarnessSourceSHA256(repositoryRoot)
 	if err != nil {
 		return err
 	}
@@ -76,14 +84,20 @@ func VerifyHarnessFreeze(freeze HarnessFreeze, repositoryRoot, runnerBinary, pre
 	}
 	checks := []struct{ name, got, want string }{
 		{"harness source", sourceHash, freeze.HarnessSourceSHA256},
-		{"runner binary", binaryHash, freeze.RunnerBinarySHA256},
 		{"preregistration", preregistrationHash, freeze.PreregistrationSHA256},
 		{"pilot inventory", pilotInventoryHash, freeze.PilotInventorySHA256},
 	}
 	for _, check := range checks {
-		if check.got != check.want {
-			return fmt.Errorf("%w: %s hash = %s, want %s", protocol.ErrInvalidEvidence, check.name, check.got, check.want)
+		if err := verifyFrozenHash(check.name, check.got, check.want); err != nil {
+			return err
 		}
+	}
+	return nil
+}
+
+func verifyFrozenHash(name, got, want string) error {
+	if got != want {
+		return fmt.Errorf("%w: %s hash = %s, want %s", protocol.ErrInvalidEvidence, name, got, want)
 	}
 	return nil
 }

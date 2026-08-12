@@ -79,6 +79,10 @@ acknowledgement, cleanup Activity, and Workflow close occurred.
 Cleanup after Workflow-context cancellation uses a disconnected Workflow
 context. That preserves Temporal procedure for the cleanup Activity; the cleanup
 Activity still needs the application store and OS control mechanisms below.
+For current Workflow histories, Workflow-context cancellation remains the
+cleanup trigger even if a dead Activity's heartbeat timeout becomes its terminal
+event before cancellation acknowledgement. The replay-versioned legacy path
+retains the behavior captured by older histories.
 
 ## Process-control mechanism under test
 
@@ -162,11 +166,18 @@ Activity cancel request but no Activity-canceled event; disconnected cleanup
 still completes. Every `true` history contains the Activity-canceled event
 before cleanup. A later race-instrumented gate observed one prompt
 Activity-canceled event in a `false` arm. The maintained oracle therefore
-allows zero or one for `false` and still requires exactly one for `true`:
+allows zero or one for `false`. For `true`, it requires exactly one terminal
+cancellation observation: Activity-canceled in healthy and frozen scenarios,
+and either Activity-canceled or Activity heartbeat-timeout after Worker death:
 `false` means the Workflow does not await the event, not that Temporal cannot
 record it. The
 application invariant has the same result in both policies because it is
 linearized in the work store, not inferred from the Temporal policy.
+
+That worker-death timeout shape was exposed by an ordinary-CI live gate after
+the preserved v2 population was admitted. It is current gate evidence, not a
+new append-only evidence population; the v2 histories remain the source-pinned
+historical observation described above.
 
 An earlier preserved development run intentionally blocked the Activity before
 its first heartbeat while using `WaitForCancellation=true`. Cancellation could

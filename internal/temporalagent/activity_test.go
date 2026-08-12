@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http/httptest"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -14,9 +15,46 @@ import (
 	"github.com/sjarmak/temporal_projects/internal/agentprocess"
 	"github.com/sjarmak/temporal_projects/internal/failureinject"
 	"github.com/sjarmak/temporal_projects/internal/workstore"
+	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/converter"
 	"go.temporal.io/sdk/testsuite"
 )
+
+func TestActivityHeartbeatsBeforeOpeningTheDurableStore(t *testing.T) {
+	parent := filepath.Join(t.TempDir(), "not-a-directory")
+	if err := os.WriteFile(parent, []byte("file"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	activities := Activities{
+		StorePath: filepath.Join(parent, "work.db"), AgentBinary: "agent", BarrierURL: "http://barrier",
+		RunDirectory: t.TempDir(), WorkerID: "worker-test", AgentBuild: "test-build",
+	}
+	var suite testsuite.WorkflowTestSuite
+	environment := suite.NewTestActivityEnvironment()
+	environment.RegisterActivity(activities.RunAgent)
+	heartbeats := make(chan HeartbeatDetails, 1)
+	environment.SetOnActivityHeartbeatListener(func(_ *activity.Info, details converter.EncodedValues) {
+		var heartbeat HeartbeatDetails
+		if err := details.Get(&heartbeat); err != nil {
+			t.Errorf("decode heartbeat: %v", err)
+			return
+		}
+		heartbeats <- heartbeat
+	})
+	if _, err := environment.ExecuteActivity(activities.RunAgent, ActivityInput{
+		SessionID: "session-1", Mode: workstore.ModeFenced,
+	}); err == nil {
+		t.Fatal("Activity opened a store beneath a regular file")
+	}
+	select {
+	case heartbeat := <-heartbeats:
+		if heartbeat.SessionID != "session-1" || heartbeat.Phase != "starting" {
+			t.Fatalf("startup heartbeat = %+v", heartbeat)
+		}
+	default:
+		t.Fatal("Activity performed durable setup before its first heartbeat")
+	}
+}
 
 func TestActivityLaunchesAgentAndReturnsCanonicalOutcome(t *testing.T) {
 	store, err := workstore.Open(filepath.Join(t.TempDir(), "work.db"))

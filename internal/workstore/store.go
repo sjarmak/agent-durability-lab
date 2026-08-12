@@ -450,6 +450,22 @@ func (s *Store) Snapshot(ctx context.Context, sessionID string) (Snapshot, error
 	return snapshot, nil
 }
 
+// ReadSnapshot reconstructs one persisted session without creating or updating
+// the store. It is intended for independent evidence readers.
+func ReadSnapshot(ctx context.Context, path, sessionID string) (Snapshot, error) {
+	if path == "" {
+		return Snapshot{}, fmt.Errorf("%w: path is required", ErrInvalidRequest)
+	}
+	info, err := os.Lstat(path)
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("inspect work store: %w", err)
+	}
+	if !info.Mode().IsRegular() {
+		return Snapshot{}, fmt.Errorf("%w: work store is not a regular file", ErrInvalidRequest)
+	}
+	return (&Store{path: path}).Snapshot(ctx, sessionID)
+}
+
 func (s *Store) changeExecutor(
 	ctx context.Context,
 	lease Lease,

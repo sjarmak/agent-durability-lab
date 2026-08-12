@@ -26,10 +26,12 @@ not proof of an application-level guarantee.
    Completion/cancellation ordering and delayed stale-stop isolation are covered
    by deterministic store/process tests. Cross-host and hostile containment
    remain open.
-6. [Durable Claude Code and Codex sessions](plans/durable-vendor-agent-sessions.md):
-   distinguish transcript resume from turn/process recovery and workspace/effect
-   correctness; compare unsafe CLI retry, vendor resume, and a fenced
-   start-or-attach supervisor.
+6. **Observed on one pinned Linux host with authenticated Claude Code `2.1.227`
+   and Codex CLI `0.147.0`:** transcript/session/thread resume is not turn or
+   effect authority; a fenced application supervisor passed the declared
+   boundaries. [The matched study](plans/durable-vendor-agent-sessions.md) leaves
+   Codex App Server, Claude Agent SDK/`SessionStore`, cross-host recovery, and
+   version/session portability open.
 7. Workflow and Activity evolution across deployments: replay compatibility,
    Worker Versioning, and agent-session compatibility contracts.
 8. Partial streamed output: consumer-observed prefixes, retry duplication,

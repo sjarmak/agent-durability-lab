@@ -117,7 +117,11 @@ includes weaker destination semantics and preserves the assumptions and remainin
 ambiguity for each mechanism.
 
 The launch-gap experiments cover both sides of `exec`. Their central result is
-that durable launch state is not process truth. The post-`exec` arm uses a
-trusted loopback barrier as discovery evidence and observes cooperative stale
-child exit by exact Linux PID/start identity. Cross-host discovery, arbitrary
-credential revocation, and cleanup of an uncooperative child remain open.
+that durable launch state is not process truth. Historical post-`exec` evidence
+uses a trusted loopback barrier as discovery evidence. Current Codex experiment
+code can instead pre-register the exact point/session/generation/actor tuple and
+authenticate every HTTP barrier arrival with a random per-run credential passed
+through inherited file descriptors. The credential and request authenticator are
+not evidence fields. This authenticates the local fault boundary; it does not
+turn the barrier into process truth, provide cross-host discovery, revoke copied
+provider credentials, or clean up an uncooperative child.

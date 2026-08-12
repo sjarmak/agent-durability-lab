@@ -27,6 +27,19 @@ population has the same logical verdict counts but is superseded for claims:
 its source field hashed a version label and its replay-worker field named the
 simulator. It remains untouched as the original raw result.
 
+Final product-integration verification later captured an ordering-sensitive
+replay failure in an unfaulted Child-Workflow supersession run: durable fencing
+could release obsolete Work concurrently with parent cancellation, so live
+execution could omit an Activity-cancel command that replay then emitted. The
+corrected Activity waits for genuine parent cancellation after the fence and
+preserves deadline failures instead of relabeling them as cancellation. The
+five queued/executing scenarios, ten repeated live unfaulted capture/replays,
+three unsafe scale trials, and three protected fan-out-128 trials passed under
+the race detector after the correction. This executable change leaves v2 as
+valid source-pinned historical evidence, but not current-source evidence for
+the present worktree; a new append-only population is required for a renewed
+current-source claim.
+
 The negative controls exposed each registered semantics boundary: premature
 join after retry or terminal failure, retry double-counting in reduction, stale
 generation effects after queued or executing supersession, repeated destructive
