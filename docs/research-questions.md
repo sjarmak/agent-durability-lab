@@ -34,8 +34,11 @@ not proof of an application-level guarantee.
    version/session portability open.
 7. Workflow and Activity evolution across deployments: replay compatibility,
    Worker Versioning, and agent-session compatibility contracts.
-8. Partial streamed output: consumer-observed prefixes, retry duplication,
-   ordering, reconstruction, and durable cursor placement.
+8. **Observed for one pinned Workflow Streams preview:** pre-flush process buffers
+   disappeared, post-flush prefixes survived and were republished by a fresh Activity
+   publisher, and explicit retry reset reconstructed one output. Closed-Workflow
+   retention, reconnect, Continue-As-New composition, and external cursor durability
+   remain open. See [Finding 0023](findings/0023-workflow-stream-retries-need-output-reconstruction.md).
 9. Large artifacts: write/reference/persist/acknowledge failure windows and orphan
    reconciliation.
 10. Workflows versus Standalone Activities and Nexus: when durable execution is

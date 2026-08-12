@@ -1,0 +1,142 @@
+{
+  "completed_at": "2026-08-12T10:36:42.711469Z",
+  "fault_arrival": {
+    "attempt": 1,
+    "point": "post-flush-duplicate",
+    "worker_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2/worker-1/pid-925813",
+    "workflow_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2"
+  },
+  "fault_at": "2026-08-12T10:36:32.695224Z",
+  "record": {
+    "acknowledged_offset": 6,
+    "batches": [
+      {
+        "activity_attempt": 1,
+        "offsets": [
+          0,
+          1
+        ],
+        "publisher_id": "bda0e1b5a29c4081",
+        "sequence": 1
+      },
+      {
+        "activity_attempt": 2,
+        "offsets": [
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "publisher_id": "f3365ad83ca24e8e",
+        "sequence": 1
+      }
+    ],
+    "expected_output": "ABC",
+    "final_attempt": 2,
+    "final_worker_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2/worker-2/pid-925936",
+    "observations": [
+      {
+        "event": {
+          "attempt": 1,
+          "chunk_index": 0,
+          "kind": "chunk",
+          "logical_output_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2/output",
+          "text": "A",
+          "worker_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2/worker-1/pid-925813"
+        },
+        "offset": 0
+      },
+      {
+        "event": {
+          "attempt": 1,
+          "chunk_index": 1,
+          "kind": "chunk",
+          "logical_output_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2/output",
+          "text": "B",
+          "worker_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2/worker-1/pid-925813"
+        },
+        "offset": 1
+      },
+      {
+        "event": {
+          "attempt": 2,
+          "chunk_index": null,
+          "kind": "retry",
+          "logical_output_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2/output",
+          "text": "",
+          "worker_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2/worker-2/pid-925936"
+        },
+        "offset": 2
+      },
+      {
+        "event": {
+          "attempt": 2,
+          "chunk_index": 0,
+          "kind": "chunk",
+          "logical_output_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2/output",
+          "text": "A",
+          "worker_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2/worker-2/pid-925936"
+        },
+        "offset": 3
+      },
+      {
+        "event": {
+          "attempt": 2,
+          "chunk_index": 1,
+          "kind": "chunk",
+          "logical_output_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2/output",
+          "text": "B",
+          "worker_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2/worker-2/pid-925936"
+        },
+        "offset": 4
+      },
+      {
+        "event": {
+          "attempt": 2,
+          "chunk_index": 2,
+          "kind": "chunk",
+          "logical_output_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2/output",
+          "text": "C",
+          "worker_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2/worker-2/pid-925936"
+        },
+        "offset": 5
+      },
+      {
+        "event": {
+          "attempt": 2,
+          "chunk_index": null,
+          "kind": "complete",
+          "logical_output_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2/output",
+          "text": "",
+          "worker_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2/worker-2/pid-925936"
+        },
+        "offset": 6
+      }
+    ],
+    "run_id": "019ff58b-922c-736b-92f4-b40cac46ef9b",
+    "scenario": "post-flush-duplicate",
+    "trial": 2,
+    "workflow_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2"
+  },
+  "replacement_at": "2026-08-12T10:36:32.867074Z",
+  "started_at": "2026-08-12T10:36:32.683434Z",
+  "verdict": {
+    "naive_duplicate_control_failed": true,
+    "naive_output": "ABABC",
+    "retry_aware_output": "ABC",
+    "valid": true
+  },
+  "worker_processes": [
+    {
+      "exit_code": -9,
+      "pid": 925813,
+      "worker_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2/worker-1"
+    },
+    {
+      "exit_code": -15,
+      "pid": 925936,
+      "worker_id": "workflow-stream-retry-20260812-v2-post-flush-duplicate-trial-2/worker-2"
+    }
+  ]
+}

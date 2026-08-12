@@ -1,13 +1,13 @@
 # Current Temporal surface relevant to the lab
 
-Snapshot date: 2026-08-07. Product documentation is design input, not evidence of
+Snapshot date: 2026-08-12. Product documentation is design input, not evidence of
 application-level correctness.
 
 | Capability | Current status | Research implication |
 | --- | --- | --- |
 | Worker Versioning | GA as of 2026-03-30 | Routes compatible Workflow/Activity tasks; does not revoke credentials or authority from an old detached agent process. |
 | Standalone Activities | Public Preview; Server 1.31+ and CLI 1.7+ | Direct durable retry without a Workflow. The external-effect ambiguity remains, making this a useful later comparison for durable execution versus orchestration. |
-| Workflow Streams | Public Preview | The Workflow-hosted log deduplicates a publisher ID/sequence, but Activity retries create fresh publishers and surface output from both attempts. Process-buffered events can be lost. |
+| Workflow Streams | Public Preview | The Workflow-hosted log deduplicates a publisher ID/sequence, but Activity retries create fresh publishers and surface output from both attempts. [Finding 0023](findings/0023-workflow-stream-retries-need-output-reconstruction.md) observed process-buffer loss before flush, retained prefixes after flush, and the need for explicit retry reconstruction. |
 | External Storage | Public Preview | Claim-check payload offload, not an artifact publication/acknowledgement protocol. Object-write/reference-history/orphan windows still need experiments. |
 | Serverless Workers | AWS Lambda Public Preview; GCP Cloud Run Pre-release | Hard invocation lifetimes and ephemeral processes change which external agent-session patterns are viable. Not the first-milestone baseline. |
 | Python OpenAI Agents SDK integration | Public Preview; used by the Temporal-reviewed Durable Agentic Harness sample | Makes model calls and selected tools visible as Activities inside a Workflow. It is a useful native baseline, but its Worker-kill demo does not establish external-process ownership, effect deduplication, client-start idempotency, or durable UI delivery. |

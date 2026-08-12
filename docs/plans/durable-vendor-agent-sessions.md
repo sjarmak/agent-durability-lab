@@ -587,9 +587,10 @@ unresolved.
 - [Finding 0020: Application-fenced Claude supervisor](../findings/0020-application-fenced-claude-supervisor-survives-worker-loss.md)
 - [Finding 0021: Codex thread resume is not turn authority](../findings/0021-codex-thread-resume-is-not-turn-authority.md)
 - [Finding 0022: Worker Versioning does not version the detached agent contract](../findings/0022-worker-versioning-does-not-version-the-detached-agent-contract.md)
+- [Finding 0023: Workflow Stream retries need output reconstruction](../findings/0023-workflow-stream-retries-need-output-reconstruction.md)
 
 Completed adjacent work now covers agent-session compatibility across Worker Versioning
-(`temporal_projects-0xm`). Related open work includes partial Workflow Stream recovery
-(`temporal_projects-cg5`), destination-enforced revocation
-(`temporal_projects-k4x`), and recurring-fault degradation
+(`temporal_projects-0xm`) and partial Workflow Stream recovery
+(`temporal_projects-cg5`). Related open work includes destination-enforced revocation
+(`temporal_projects-k4x`) and recurring-fault degradation
 (`temporal_projects-uju`).

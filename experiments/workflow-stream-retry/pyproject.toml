@@ -1,0 +1,51 @@
+[project]
+name = "temporal-workflow-stream-retry"
+version = "0.1.0"
+description = "Workflow Stream retry reconstruction evidence experiment"
+requires-python = ">=3.12,<3.13"
+dependencies = ["temporalio==1.31.0"]
+
+[dependency-groups]
+dev = [
+  "mypy==1.18.2",
+  "pytest==9.1.1",
+  "pytest-asyncio==1.4.0",
+  "pytest-cov==7.1.0",
+  "ruff==0.16.2",
+]
+
+[build-system]
+requires = ["hatchling==1.29.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["workflow_stream_retry"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-markers"
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["workflow_stream_retry"]
+omit = [
+  "workflow_stream_retry/audit.py",
+  "workflow_stream_retry/run_experiment.py",
+  "workflow_stream_retry/worker.py",
+]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
