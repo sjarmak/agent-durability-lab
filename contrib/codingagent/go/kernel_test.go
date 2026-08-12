@@ -103,7 +103,7 @@ func TestKernelAppliesAllTransitionsAndPreservesOldValues(t *testing.T) {
 	if !ok || stopDelivery.Target != currentStop || stopDelivery.Status != StopDelivered {
 		t.Fatalf("stop receipt lost target: %#v", receipt)
 	}
-	replaced, receipt = applyAcceptedReceipt(t, replaced, command(OperationAcknowledgeStop, "ack", 2, Capability{}).
+	_, receipt = applyAcceptedReceipt(t, replaced, command(OperationAcknowledgeStop, "ack", 2, Capability{}).
 		AsCoordinator().WithStop(currentStop, StopAcknowledged))
 	stopAcknowledgement, ok := receipt.Subject.(StopSubject)
 	if !ok || stopAcknowledgement.Target != currentStop || stopAcknowledgement.Status != StopAcknowledged {

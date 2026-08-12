@@ -238,7 +238,7 @@ func auditRun(runDirectory string, recipe Recipe, mode string) (int, error) {
 		return 0, fmt.Errorf("history completed count/attempt or timeout oracle is invalid")
 	}
 	if runObservations.WorkflowOutcome != second.Receipt {
-		return 0, fmt.Errorf("Workflow outcome does not equal attempt 2 receipt")
+		return 0, fmt.Errorf("workflow outcome does not equal attempt 2 receipt")
 	}
 	if !reflect.DeepEqual(runObservations.DestinationState, independentState) {
 		return 0, fmt.Errorf("embedded and independently exported destination states differ")
@@ -416,19 +416,19 @@ func workflowInputFromHistory(raw temporalHistory) (recordedWorkflowInput, error
 		}
 		payloads := event.WorkflowExecutionStartedEventAttributes.Input.Payloads
 		if len(payloads) != 1 || payloads[0].Data == "" {
-			return recordedWorkflowInput{}, errors.New("Workflow start input must contain one payload")
+			return recordedWorkflowInput{}, errors.New("workflow start input must contain one payload")
 		}
 		data, err := base64.StdEncoding.DecodeString(payloads[0].Data)
 		if err != nil {
-			return recordedWorkflowInput{}, fmt.Errorf("decode Workflow input payload: %w", err)
+			return recordedWorkflowInput{}, fmt.Errorf("decode workflow input payload: %w", err)
 		}
 		var input recordedWorkflowInput
 		if err := json.Unmarshal(data, &input); err != nil {
-			return recordedWorkflowInput{}, fmt.Errorf("decode Workflow input JSON: %w", err)
+			return recordedWorkflowInput{}, fmt.Errorf("decode workflow input JSON: %w", err)
 		}
 		return input, nil
 	}
-	return recordedWorkflowInput{}, errors.New("Workflow start event is missing")
+	return recordedWorkflowInput{}, errors.New("workflow start event is missing")
 }
 
 func requireRawEvidence(runDirectory string) error {

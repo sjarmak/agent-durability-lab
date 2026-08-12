@@ -16,9 +16,9 @@ const capabilityBytes = 32
 // Capability is a 256-bit bearer secret. Only its digest belongs in Temporal
 // history, protocol records, logs, or evidence.
 type Capability struct {
-	secret        [capabilityBytes]byte
-	valid         bool
-	nonComparable [0]func()
+	secret [capabilityBytes]byte
+	valid  bool
+	_      [0]func() // Keep bearer values non-comparable by construction.
 }
 
 func NewCapability() (Capability, error) {
