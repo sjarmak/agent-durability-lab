@@ -105,3 +105,65 @@ prefix disappears, offsets reorder, a retry reuses the old publisher identity, t
 post-flush control stops producing exactly `ABABC`, retry-aware reconstruction differs
 from `ABC`, the terminal result disagrees with the acknowledged stream, or any captured
 history fails replay.
+
+## SDK product candidate
+
+The follow-on product experiment compares three arms under unfaulted,
+pre-flush `SIGKILL`, post-prefix-flush `SIGKILL`, and
+terminal-flushed-before-ack `SIGKILL` boundaries:
+
+- `raw`: the unmodified Workflow Streams publication/subscription contract;
+- `manual`: an expert application-owned generation/hash/ack protocol; and
+- `product`: the proposed generic SDK publisher, incremental reconstructor, and
+  Workflow-side exact terminal acknowledgement validator.
+
+Each arm/scenario pair runs three times. The live runner preserves exact Worker
+process identities, barrier receipts, consumer observations, Signal batch actors,
+Activity retry causes, terminal receipts, acknowledgement outcomes, Event History,
+history event/JSON sizes, replay, source/runtime pins, and a strict manifest. It
+also measures application-owned protocol lines, state fields, and branches under
+an explicit AST-counting definition.
+
+The current candidate patch and reproduction instructions are in
+[`../../contrib/sdk-python-retry-aware-streams`](../../contrib/sdk-python-retry-aware-streams).
+Run the product population with the pinned Python 3.12 environment and patched
+SDK source on `PYTHONPATH`:
+
+```bash
+PYTHONPATH=/path/to/sdk-python:$PWD .venv/bin/python \
+  -m workflow_stream_retry.run_product_experiment \
+  --output evidence/workflow-stream-product-YYYYMMDD-vN \
+  --sdk-python-root /path/to/sdk-python
+```
+
+Superseded product roots are retained append-only with their correction reasons.
+Only the root named in Finding 0023 is admitted. This comparison makes no
+latency, throughput, external-delivery, provider-effect, or exactly-once claim.
+
+The admitted candidate population is
+[`workflow-stream-product-20260812-v4`](evidence/workflow-stream-product-20260812-v4).
+Its strict 74-file inventory contains 36 independently audited and replayed
+histories. Manifest SHA-256:
+`1c5248343f3216c2113337cafe3cf43566a2e7698c88a5b0b5c03c29766aff18`;
+report SHA-256:
+`b4d9db78c9625478e33e924804aaeb6a038ba5e47a3602a3c30499b330bfc6c9`.
+
+Observed in that population:
+
+- raw reconstruction duplicated output in all six post-flush and
+  terminal-before-ack trials, and accepted the stale attempt-1 terminal in all
+  three terminal-before-ack trials;
+- manual and product reconstructed `ABC` in all 24 protected trials and each
+  rejected all three stale attempt-1 terminal acknowledgements;
+- product used 18 stream Signal batches, exactly matching manual's 18. It added
+  no history events and 3,805 JSON bytes across 12 trials versus manual;
+- the registered application-owned recovery surface fell from 243 nonblank
+  protocol lines, 12 state fields, and 18 AST branches in manual to three SDK
+  operations and no application-owned protocol implementation in product; and
+- combined exact-population and focused branch-aware coverage was 89% for the
+  relevant product mechanism.
+
+Product evidence roots v1-v3 remain append-only and superseded: v1 misnamed the
+actual CLI used by the ephemeral service, v2 used Python 3.11 despite the
+experiment's Python 3.12 contract, and v3 preceded the final diff/schedule/
+acknowledgement/timestamp audit binding. None is used in the admitted claim.

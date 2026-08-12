@@ -23,11 +23,19 @@ async def launch_worker(
     task_queue: str,
     worker_id: str,
     barrier: BarrierServer | None,
+    module: str = "workflow_stream_retry.worker",
 ) -> WorkerProcess:
     environment = dict(os.environ)
     environment.pop("WORKFLOW_STREAM_BARRIER_SOCKET", None)
     environment.pop("WORKFLOW_STREAM_BARRIER_CREDENTIAL", None)
     environment.pop("WORKFLOW_STREAM_BARRIER_CREDENTIAL_FD", None)
+    environment.pop("COVERAGE_PROCESS_START", None)
+    coverage_config = environment.pop("WORKFLOW_STREAM_COVERAGE_CONFIG", "")
+    if coverage_config:
+        coverage_path = Path(coverage_config)
+        if not coverage_path.is_absolute() or not coverage_path.is_file():
+            raise ValueError("Worker coverage config must be an absolute regular file")
+        environment["COVERAGE_PROCESS_START"] = coverage_config
     credential_read: int | None = None
     if barrier is not None:
         environment["WORKFLOW_STREAM_BARRIER_SOCKET"] = str(barrier.socket_path)
@@ -41,7 +49,7 @@ async def launch_worker(
         process = await asyncio.create_subprocess_exec(
             sys.executable,
             "-m",
-            "workflow_stream_retry.worker",
+            module,
             "--address",
             address,
             "--task-queue",
@@ -62,9 +70,7 @@ async def launch_worker(
         ready_line = await asyncio.wait_for(process.stdout.readline(), timeout=10)
         if not ready_line:
             stderr = await process.stderr.read() if process.stderr is not None else b""
-            raise RuntimeError(
-                f"worker exited before readiness: {stderr.decode(errors='replace')}"
-            )
+            raise RuntimeError(f"worker exited before readiness: {stderr.decode(errors='replace')}")
         ready_pid = _decode_ready(ready_line, process.pid, worker_id)
         return WorkerProcess(process, worker_id, ready_pid)
     except BaseException:

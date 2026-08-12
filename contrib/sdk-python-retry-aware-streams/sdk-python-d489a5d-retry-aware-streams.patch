@@ -1,0 +1,1516 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 614fd8e01d0e85eaf5f2d3cda52be48bc525867c..1123f0b72e583f7b5ac62ff567d58f321f7b3fdb 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -20,6 +20,14 @@ to include examples, links to docs, or any other relevant information.
+ 
+ ### Added
+ 
++- Experimental retry-aware logical output envelopes for Workflow Streams.
++  ``WorkflowStreamClient.logical_output_publisher`` emits fenced output
++  generations, and ``LogicalOutputReconstructor`` returns validated begin,
++  chunk, and terminal updates while checking sequence, content, terminal
++  receipt, and exact consumer acknowledgement. The OpenAI Agents
++  integration can opt in with
++  ``ModelActivityParameters(streaming_retry_aware=True)`` so an Activity retry
++  replaces rather than duplicates a partial model-event stream.
+ - `temporalio.workflow.uuid7()` generates a determinism-safe, time-sortable
+   UUIDv7 (RFC 9562) from workflow time and the workflow's deterministic random
+   generator, complementing the existing `workflow.uuid4()`
+diff --git a/temporalio/contrib/openai_agents/README.md b/temporalio/contrib/openai_agents/README.md
+index 83539044cccf61370b6c5a62ffbd72bce04801a4..127e2ed9bac5957432115dc68b8110cca1f3a84a 100644
+--- a/temporalio/contrib/openai_agents/README.md
++++ b/temporalio/contrib/openai_agents/README.md
+@@ -683,6 +683,37 @@ retries the same way as any other workflow_streams publisher — see
+ the conventional `RETRY` event pattern for surfacing the transition to
+ consumers.
+ 
++For SDK-managed reconstruction, opt in to retry-aware logical output:
++
++```python
++model_params = ModelActivityParameters(
++    streaming_topic="events",
++    streaming_retry_aware=True,
++)
++```
++
++The streaming Activity then publishes `LogicalOutputEvent` envelopes instead
++of raw model events. Every Activity attempt uses the same deterministic logical
++output ID, a generation equal to the Activity attempt, and a fresh delivery
++publisher ID. External subscribers pass the envelopes through
++`LogicalOutputReconstructor(result_type=TResponseStreamEvent)`; a newer
++generation produces a begin update that resets any partial failed attempt,
++chunk updates support incremental rendering, and the terminal update exposes
++the complete result plus an exact offset/hash acknowledgement.
++
++This adapter does not return the successful Activity attempt's terminal receipt
++to Workflow code. Therefore it supports retry-aware reconstruction, but not the
++Workflow-side successful-attempt acknowledgement check shown in the generic
++Workflow Streams example. Applications that require that check must use the
++generic logical output publisher from an Activity whose result includes its
++`LogicalOutputTerminal` receipt.
++
++This option changes the external topic's item type, so existing raw-event
++subscribers must remain in the default mode or be migrated with the publisher.
++`RunResultStreaming.stream_events()` is unchanged and still yields only the
++successful Activity result. See
++[Retry-aware logical output](../workflow_streams/README.md#retry-aware-logical-output).
++
+ ## Feature Support
+ 
+ This integration is presently subject to certain limitations.
+diff --git a/temporalio/contrib/openai_agents/_invoke_model_activity.py b/temporalio/contrib/openai_agents/_invoke_model_activity.py
+index 5435b63691ed540fecf7e15a950ee0825358c376..a409923460676c690312200cb7dd79e69804fa08 100644
+--- a/temporalio/contrib/openai_agents/_invoke_model_activity.py
++++ b/temporalio/contrib/openai_agents/_invoke_model_activity.py
+@@ -209,6 +209,8 @@ class StreamingActivityModelInput(ActivityModelInput, total=False):
+ 
+     streaming_topic: Required[str]
+     streaming_batch_interval: timedelta
++    streaming_retry_aware: bool
++    streaming_logical_output_id: str
+ 
+ 
+ async def _empty_on_invoke_tool(_ctx: RunContextWrapper[Any], _input: str) -> str:
+@@ -398,7 +400,24 @@ class ModelActivity:
+         # Leave the topic untyped (default Any); subscribers that want
+         # typed decode can pass result_type=TResponseStreamEvent on
+         # their own subscribe call.
+-        events_topic = stream.topic(topic)
++        retry_aware = input.get("streaming_retry_aware", False)
++        if retry_aware:
++            logical_output_id = input.get("streaming_logical_output_id")
++            if not logical_output_id:
++                raise ValueError(
++                    "retry-aware model streaming requires a logical output ID"
++                )
++            attempt = activity.info().attempt
++            logical_output = stream.logical_output_publisher(
++                topic,
++                logical_output_id=logical_output_id,
++                generation=attempt,
++                activity_attempt=attempt,
++            )
++            events_topic = None
++        else:
++            logical_output = None
++            events_topic = stream.topic(topic)
+         async with stream:
+             try:
+                 async for event in model.stream_response(
+@@ -417,8 +436,14 @@ class ModelActivity:
+                     # schema may still be an unbuilt placeholder.
+                     type(event).model_rebuild()
+                     events.append(event)
+-                    events_topic.publish(event)
++                    if logical_output is not None:
++                        logical_output.publish(event)
++                    else:
++                        assert events_topic is not None
++                        events_topic.publish(event)
+             except APIStatusError as e:
+                 _raise_for_openai_status(e)
++            if logical_output is not None:
++                logical_output.complete()
+ 
+         return events
+diff --git a/temporalio/contrib/openai_agents/_model_parameters.py b/temporalio/contrib/openai_agents/_model_parameters.py
+index c7dcf0a3557e2d1fa6dc23b8d6dd6f822de492a9..7fc5bbe045eab13cdbf48eb3fe8651c0158edead 100644
+--- a/temporalio/contrib/openai_agents/_model_parameters.py
++++ b/temporalio/contrib/openai_agents/_model_parameters.py
+@@ -94,3 +94,15 @@ class ModelActivityParameters:
+     .. warning::
+         Streaming support is experimental and may change in future
+         versions."""
++
++    streaming_retry_aware: bool = False
++    """Publish model events in retry-aware logical output envelopes.
++
++    When enabled, each Activity attempt emits a new logical output generation.
++    External subscribers decode :class:`LogicalOutputEvent` values and use
++    :class:`LogicalOutputReconstructor` to discard partial failed attempts.
++    The default remains the existing raw-event stream for compatibility.
++
++    .. warning::
++        Streaming support is experimental and may change in future
++        versions."""
+diff --git a/temporalio/contrib/openai_agents/_temporal_model_stub.py b/temporalio/contrib/openai_agents/_temporal_model_stub.py
+index d184daa4a6d63c3c4c836dd9a8913c615ae9ef71..555e959d1b971d38c95ea72fe46c33c063f5dd74 100644
+--- a/temporalio/contrib/openai_agents/_temporal_model_stub.py
++++ b/temporalio/contrib/openai_agents/_temporal_model_stub.py
+@@ -276,7 +276,12 @@ class _TemporalModelStub(Model):  # type:ignore[reportUnusedClass]
+             **base_input,
+             "streaming_topic": topic,
+             "streaming_batch_interval": self.model_params.streaming_batch_interval,
++            "streaming_retry_aware": self.model_params.streaming_retry_aware,
+         }
++        if self.model_params.streaming_retry_aware:
++            streaming_input["streaming_logical_output_id"] = (
++                f"{workflow.info().workflow_id}/model-output/{workflow.uuid4()}"
++            )
+ 
+         events = await workflow.execute_activity_method(
+             ModelActivity.invoke_model_activity_streaming,
+diff --git a/temporalio/contrib/workflow_streams/README.md b/temporalio/contrib/workflow_streams/README.md
+index 2fb4f94855f0441bcc7d52354e167ffcbb979d6a..91f3a72bbba638c23a402107f542d4c932506326 100644
+--- a/temporalio/contrib/workflow_streams/README.md
++++ b/temporalio/contrib/workflow_streams/README.md
+@@ -31,3 +31,82 @@ snippets throughout.
+ 
+ For runnable end-to-end examples, see the
+ [Workflow Streams samples](https://github.com/temporalio/samples-python/tree/main/workflow-streams).
++
++## Retry-aware logical output
++
++A Workflow Stream preserves every batch admitted before an Activity failure.
++If the Activity retries, a new process-local publisher can repeat the logical
++prefix. Stream publisher deduplication prevents duplicate delivery of one
++batch; it does not merge separate publishers into one model response.
++
++Use a logical output publisher when replacement attempts should supersede an
++earlier partial output:
++
++```python
++from temporalio import activity
++from temporalio.contrib.workflow_streams import WorkflowStreamClient
++
++stream = WorkflowStreamClient.from_within_activity()
++output = stream.logical_output_publisher(
++    "model-events",
++    logical_output_id=input.logical_output_id,
++    generation=activity.info().attempt,
++    activity_attempt=activity.info().attempt,
++    type=str,
++)
++async with stream:
++    output.publish("Hello ")
++    output.publish("world")
++    terminal = output.complete()
++# Context exit flushes before the Activity can return terminal.
++```
++
++Each generation begins with an explicit structural event. A consumer validates
++the envelope and resets only for a newer generation:
++
++```python
++from temporalio.contrib.workflow_streams import (
++    LogicalOutputEvent,
++    LogicalOutputEventKind,
++    LogicalOutputReconstructor,
++)
++
++reconstructor = LogicalOutputReconstructor("turn-42/output", result_type=str)
++rendered = []
++async for item in stream.subscribe("model-events", result_type=LogicalOutputEvent):
++    update = reconstructor.apply(item)
++    if update.kind is LogicalOutputEventKind.BEGIN:
++        rendered.clear()  # discard any partial, older generation
++    elif update.kind is LogicalOutputEventKind.CHUNK:
++        rendered.append(update.chunk)
++    elif update.result is not None:
++        acknowledgement = update.result.acknowledgement
++        break
++```
++
++The acknowledgement binds the logical output ID, generation, publisher,
++terminal sequence, global stream offset, chunk count, and content hash.
++`update.result.validate_acknowledgement(...)` rejects an acknowledgement for any
++other terminal observed by that consumer. In the Workflow, compare the
++successful Activity attempt's terminal receipt with the exact log item:
++
++```python
++@workflow.update
++def acknowledge(
++    self,
++    input: tuple[LogicalOutputTerminal, LogicalOutputAcknowledgement],
++) -> None:
++    terminal, acknowledgement = input
++    self.stream.validate_logical_output_acknowledgement(
++        terminal, acknowledgement
++    )
++```
++
++That comparison rejects a terminal from an attempt that published successfully
++but died before returning its receipt. The application still decides where the
++acknowledgement is stored and whether the Workflow waits for it before closing.
++
++This protocol reconstructs one logical output; it does not make external
++delivery or model-provider effects exactly once. Preserve
++`LogicalOutputEvent.publisher_id` and `activity_attempt` when diagnosing
++retry behavior.
+diff --git a/temporalio/contrib/workflow_streams/__init__.py b/temporalio/contrib/workflow_streams/__init__.py
+index 41f670f0c085a35ce4f8bcc99fa58434d32980e0..299c36765afb1092d546d15fede6ebf5f5cfa7d9 100644
+--- a/temporalio/contrib/workflow_streams/__init__.py
++++ b/temporalio/contrib/workflow_streams/__init__.py
+@@ -13,6 +13,17 @@ See :py:class:`WorkflowStream` for the workflow-side stream object and
+ """
+ 
+ from temporalio.contrib.workflow_streams._client import WorkflowStreamClient
++from temporalio.contrib.workflow_streams._logical_output import (
++    LogicalOutputAcknowledgement,
++    LogicalOutputEvent,
++    LogicalOutputEventKind,
++    LogicalOutputProtocolError,
++    LogicalOutputPublisher,
++    LogicalOutputReconstructor,
++    LogicalOutputResult,
++    LogicalOutputTerminal,
++    LogicalOutputUpdate,
++)
+ from temporalio.contrib.workflow_streams._stream import WorkflowStream
+ from temporalio.contrib.workflow_streams._topic_handle import (
+     TopicHandle,
+@@ -29,6 +40,15 @@ from temporalio.contrib.workflow_streams._types import (
+ )
+ 
+ __all__ = [
++    "LogicalOutputAcknowledgement",
++    "LogicalOutputEvent",
++    "LogicalOutputEventKind",
++    "LogicalOutputProtocolError",
++    "LogicalOutputPublisher",
++    "LogicalOutputReconstructor",
++    "LogicalOutputResult",
++    "LogicalOutputTerminal",
++    "LogicalOutputUpdate",
+     "PollInput",
+     "PollResult",
+     "PublishEntry",
+diff --git a/temporalio/contrib/workflow_streams/_client.py b/temporalio/contrib/workflow_streams/_client.py
+index 605bf3f03543288890bf6f4ad6a718fd7d3e57bd..958c3b5e64bc961928d2e239a6d3a46185c075f5 100644
+--- a/temporalio/contrib/workflow_streams/_client.py
++++ b/temporalio/contrib/workflow_streams/_client.py
+@@ -41,6 +41,11 @@ from temporalio.client import (
+ from temporalio.converter import DataConverter, PayloadConverter
+ from temporalio.service import RPCError, RPCStatusCode
+ 
++from ._logical_output import (
++    LogicalOutputEvent,
++    LogicalOutputPublisher,
++    LogicalOutputReconstructor,
++)
+ from ._topic_handle import TopicHandle
+ from ._types import (
+     STREAM_DRAINING_ERROR_TYPE,
+@@ -131,6 +136,7 @@ class WorkflowStreamClient:
+         self._pending_seq: int = 0
+         self._pending_since: float | None = None
+         self._topic_types: dict[str, type[Any]] = {}
++        self._logical_output_topic_types: dict[str, type[Any]] = {}
+         # Run id the most recent poll's update was admitted to. Captured before
+         # waiting for the outcome so a mid-poll continue-as-new can be detected by
+         # describing that specific run. None until the first poll is admitted.
+@@ -325,6 +331,84 @@ class WorkflowStreamClient:
+         self._topic_types[name] = bound
+         return TopicHandle(self, name, bound)
+ 
++    @overload
++    def logical_output_publisher(
++        self,
++        name: str,
++        *,
++        logical_output_id: str,
++        generation: int,
++        type: type[T],
++        activity_attempt: int | None = None,
++    ) -> LogicalOutputPublisher[T]: ...
++
++    @overload
++    def logical_output_publisher(
++        self,
++        name: str,
++        *,
++        logical_output_id: str,
++        generation: int,
++        type: None = None,
++        activity_attempt: int | None = None,
++    ) -> LogicalOutputPublisher[Any]: ...
++
++    def logical_output_publisher(
++        self,
++        name: str,
++        *,
++        logical_output_id: str,
++        generation: int,
++        type: type[T] | None = None,
++        activity_attempt: int | None = None,
++    ) -> LogicalOutputPublisher[T] | LogicalOutputPublisher[Any]:
++        """Create a typed publisher for one retry-aware logical output.
++
++        Each Activity retry must create a new client and call this method with
++        the same logical_output_id and a higher generation. Construction emits
++        a begin event that tells reconstructors to discard an earlier partial
++        generation. Call complete after the final chunk, then await
++        flush() before returning the terminal receipt from an Activity.
++
++        The outer stream topic carries LogicalOutputEvent envelopes. The type
++        argument describes the chunk inside each envelope and is used to reject
++        inconsistent bindings on this client.
++        """
++        bound: Any = Any if type is None else type
++        existing = self._logical_output_topic_types.get(name)
++        if existing is not None and existing != bound:
++            raise RuntimeError(
++                f"Logical output topic {name!r} is already bound to type "
++                f"{existing!r} on this client; refusing to rebind to {bound!r}."
++            )
++        raw_existing = self._topic_types.get(name)
++        if raw_existing is not None and raw_existing is not LogicalOutputEvent:
++            raise RuntimeError(
++                f"Topic {name!r} is already bound as a raw stream topic on "
++                "this client; use a separate topic for logical output envelopes."
++            )
++        self._logical_output_topic_types[name] = bound
++        self._topic_types[name] = LogicalOutputEvent
++        return LogicalOutputPublisher(
++            topic=name,
++            logical_output_id=logical_output_id,
++            generation=generation,
++            publisher_id=self._publisher_id,
++            activity_attempt=activity_attempt,
++            payload_converter=self._payload_converter(),
++            publish_event=lambda event: self._publish_to_topic(name, event),
++        )
++
++    def logical_output_reconstructor(
++        self, logical_output_id: str, *, result_type: type[T]
++    ) -> LogicalOutputReconstructor[T]:
++        """Create a reconstructor using this client's payload converter."""
++        return LogicalOutputReconstructor(
++            logical_output_id,
++            result_type=result_type,
++            payload_converter=self._payload_converter(),
++        )
++
+     async def flush(self) -> None:
+         """Flush buffered (and pending) items and wait for server confirmation.
+ 
+diff --git a/temporalio/contrib/workflow_streams/_logical_output.py b/temporalio/contrib/workflow_streams/_logical_output.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..aa28199b8958acb4faa086f268bde75eebd9c32d
+--- /dev/null
++++ b/temporalio/contrib/workflow_streams/_logical_output.py
+@@ -0,0 +1,510 @@
++"""Retry-aware logical output protocol built on Workflow Streams."""
++
++from __future__ import annotations
++
++import binascii
++import hashlib
++from collections.abc import Callable
++from dataclasses import dataclass
++from enum import StrEnum
++from typing import Any, Generic, TypeVar
++
++from google.protobuf.message import DecodeError
++
++from temporalio.api.common.v1 import Payload
++from temporalio.converter import DataConverter, PayloadConverter
++
++from ._types import WorkflowStreamItem, _decode_payload, _encode_payload
++
++T = TypeVar("T")
++
++_PROTOCOL_VERSION = 1
++
++
++class LogicalOutputEventKind(StrEnum):
++    """Structural event kinds in one logical output generation."""
++
++    BEGIN = "begin"
++    CHUNK = "chunk"
++    COMPLETE = "complete"
++
++
++@dataclass(frozen=True)
++class LogicalOutputEvent:
++    """Wire envelope for one retry-aware logical output event.
++
++    publisher_id identifies one delivery process. logical_output_id identifies
++    the application output across replacement publishers, while generation
++    fences an older publisher after a retry.
++    """
++
++    logical_output_id: str
++    generation: int
++    sequence: int
++    publisher_id: str
++    kind: LogicalOutputEventKind
++    activity_attempt: int | None = None
++    chunk_index: int | None = None
++    data: str = ""
++    chunk_count: int | None = None
++    content_sha256: str = ""
++    protocol_version: int = _PROTOCOL_VERSION
++
++
++@dataclass(frozen=True)
++class LogicalOutputTerminal:
++    """Publisher receipt for a completed logical output generation."""
++
++    topic: str
++    logical_output_id: str
++    generation: int
++    terminal_sequence: int
++    chunk_count: int
++    content_sha256: str
++    publisher_id: str
++
++    def validate_acknowledgement(
++        self,
++        acknowledgement: LogicalOutputAcknowledgement,
++        *,
++        observed_terminal: WorkflowStreamItem[LogicalOutputEvent],
++    ) -> None:
++        """Reject an acknowledgement not bound to this observed terminal."""
++        expected = (
++            self.topic,
++            self.logical_output_id,
++            self.generation,
++            self.terminal_sequence,
++            self.chunk_count,
++            self.content_sha256,
++            self.publisher_id,
++        )
++        actual = (
++            acknowledgement.topic,
++            acknowledgement.logical_output_id,
++            acknowledgement.generation,
++            acknowledgement.terminal_sequence,
++            acknowledgement.chunk_count,
++            acknowledgement.content_sha256,
++            acknowledgement.publisher_id,
++        )
++        event = observed_terminal.data
++        observed = (
++            observed_terminal.topic,
++            event.logical_output_id,
++            event.generation,
++            event.sequence,
++            event.chunk_count,
++            event.content_sha256,
++            event.publisher_id,
++        )
++        if (
++            actual != expected
++            or acknowledgement.terminal_offset != observed_terminal.offset
++            or observed != expected
++            or event.kind is not LogicalOutputEventKind.COMPLETE
++            or event.chunk_index is not None
++            or bool(event.data)
++        ):
++            raise LogicalOutputProtocolError(
++                "logical output acknowledgement does not match the successful "
++                "observed terminal generation, sequence, offset, hash, and publisher"
++            )
++
++
++@dataclass(frozen=True)
++class LogicalOutputAcknowledgement:
++    """Consumer acknowledgement of one exact observed terminal event."""
++
++    topic: str
++    logical_output_id: str
++    generation: int
++    terminal_sequence: int
++    terminal_offset: int
++    chunk_count: int
++    content_sha256: str
++    publisher_id: str
++
++
++class LogicalOutputProtocolError(ValueError):
++    """A logical output event or acknowledgement violated the protocol."""
++
++
++@dataclass(frozen=True)
++class LogicalOutputResult(Generic[T]):
++    """A fully reconstructed logical output and its observed terminal."""
++
++    items: tuple[T, ...]
++    terminal: LogicalOutputTerminal
++    terminal_offset: int
++
++    @property
++    def acknowledgement(self) -> LogicalOutputAcknowledgement:
++        """Return an acknowledgement bound to this exact terminal observation."""
++        return LogicalOutputAcknowledgement(
++            topic=self.terminal.topic,
++            logical_output_id=self.terminal.logical_output_id,
++            generation=self.terminal.generation,
++            terminal_sequence=self.terminal.terminal_sequence,
++            terminal_offset=self.terminal_offset,
++            chunk_count=self.terminal.chunk_count,
++            content_sha256=self.terminal.content_sha256,
++            publisher_id=self.terminal.publisher_id,
++        )
++
++    def validate_acknowledgement(
++        self, acknowledgement: LogicalOutputAcknowledgement
++    ) -> None:
++        """Reject an acknowledgement for anything but this exact terminal."""
++        if acknowledgement != self.acknowledgement:
++            raise LogicalOutputProtocolError(
++                "logical output acknowledgement does not match the exact "
++                "terminal generation, sequence, offset, hash, and publisher"
++            )
++
++
++@dataclass(frozen=True)
++class LogicalOutputUpdate(Generic[T]):
++    """One validated incremental update to a reconstructed logical output.
++
++    A begin update tells consumers to discard chunks rendered for an older
++    generation. A chunk update carries the newly decoded value, and a complete
++    update carries the final result and exact acknowledgement receipt.
++    """
++
++    kind: LogicalOutputEventKind
++    logical_output_id: str
++    generation: int
++    sequence: int
++    publisher_id: str
++    activity_attempt: int | None
++    offset: int
++    chunk: T | None = None
++    result: LogicalOutputResult[T] | None = None
++
++
++def _update_content_hash(hasher: Any, payload: Payload) -> None:
++    encoded = payload.SerializeToString()
++    # Length-prefix each payload so different chunk boundaries cannot hash to
++    # the same byte concatenation.
++    hasher.update(len(encoded).to_bytes(8, "big"))
++    hasher.update(encoded)
++
++
++class LogicalOutputPublisher(Generic[T]):
++    """Publish one fenced logical output generation.
++
++    Create this with WorkflowStreamClient.logical_output_publisher, then
++    publish chunks and call complete. Construction emits the structural begin
++    event, so a replacement Activity generation explicitly resets a consumer.
++    """
++
++    def __init__(
++        self,
++        *,
++        topic: str,
++        logical_output_id: str,
++        generation: int,
++        publisher_id: str,
++        activity_attempt: int | None,
++        payload_converter: PayloadConverter,
++        publish_event: Callable[[LogicalOutputEvent], None],
++    ) -> None:
++        """Initialize one generation and emit its begin event."""
++        if not logical_output_id.strip():
++            raise ValueError("logical_output_id must be non-empty")
++        if type(generation) is not int or generation < 1:
++            raise ValueError("generation must be a positive integer")
++        if not publisher_id:
++            raise ValueError("publisher_id must be non-empty")
++        if activity_attempt is not None and (
++            type(activity_attempt) is not int or activity_attempt < 1
++        ):
++            raise ValueError("activity_attempt must be a positive integer")
++        self._topic = topic
++        self._logical_output_id = logical_output_id
++        self._generation = generation
++        self._publisher_id = publisher_id
++        self._activity_attempt = activity_attempt
++        self._payload_converter = payload_converter
++        self._publish_event = publish_event
++        self._chunk_count = 0
++        self._hasher = hashlib.sha256()
++        self._complete = False
++        self._publish_event(self._event(LogicalOutputEventKind.BEGIN, sequence=0))
++
++    def publish(self, value: T) -> None:
++        """Publish the next typed chunk in this generation."""
++        self._require_open()
++        payload: Payload
++        if isinstance(value, Payload):
++            payload = value
++        else:
++            payload = self._payload_converter.to_payloads([value])[0]
++        chunk_index = self._chunk_count
++        sequence = chunk_index + 1
++        event = self._event(
++            LogicalOutputEventKind.CHUNK,
++            sequence=sequence,
++            chunk_index=chunk_index,
++            data=_encode_payload(payload),
++        )
++        self._publish_event(event)
++        _update_content_hash(self._hasher, payload)
++        self._chunk_count += 1
++
++    def complete(self) -> LogicalOutputTerminal:
++        """Publish a terminal event and return its generation-bound receipt."""
++        self._require_open()
++        sequence = self._chunk_count + 1
++        content_sha256 = self._hasher.hexdigest()
++        self._publish_event(
++            self._event(
++                LogicalOutputEventKind.COMPLETE,
++                sequence=sequence,
++                chunk_count=self._chunk_count,
++                content_sha256=content_sha256,
++            )
++        )
++        self._complete = True
++        return LogicalOutputTerminal(
++            topic=self._topic,
++            logical_output_id=self._logical_output_id,
++            generation=self._generation,
++            terminal_sequence=sequence,
++            chunk_count=self._chunk_count,
++            content_sha256=content_sha256,
++            publisher_id=self._publisher_id,
++        )
++
++    def _event(
++        self,
++        kind: LogicalOutputEventKind,
++        *,
++        sequence: int,
++        chunk_index: int | None = None,
++        data: str = "",
++        chunk_count: int | None = None,
++        content_sha256: str = "",
++    ) -> LogicalOutputEvent:
++        return LogicalOutputEvent(
++            logical_output_id=self._logical_output_id,
++            generation=self._generation,
++            sequence=sequence,
++            publisher_id=self._publisher_id,
++            kind=kind,
++            activity_attempt=self._activity_attempt,
++            chunk_index=chunk_index,
++            data=data,
++            chunk_count=chunk_count,
++            content_sha256=content_sha256,
++        )
++
++    def _require_open(self) -> None:
++        if self._complete:
++            raise LogicalOutputProtocolError(
++                "logical output generation is already complete"
++            )
++
++
++class LogicalOutputReconstructor(Generic[T]):
++    """Validate and reconstruct one logical output across publisher retries."""
++
++    def __init__(
++        self,
++        logical_output_id: str,
++        *,
++        result_type: type[T],
++        payload_converter: PayloadConverter | None = None,
++    ) -> None:
++        """Initialize a reconstructor for one stable logical output ID."""
++        if not logical_output_id.strip():
++            raise ValueError("logical_output_id must be non-empty")
++        self._logical_output_id = logical_output_id
++        self._result_type = result_type
++        self._payload_converter = (
++            payload_converter or DataConverter.default.payload_converter
++        )
++        self._generation: int | None = None
++        self._publisher_id: str | None = None
++        self._topic: str | None = None
++        self._activity_attempt: int | None = None
++        self._items: list[T] = []
++        self._hasher = hashlib.sha256()
++        self._complete = False
++
++    def apply(
++        self, item: WorkflowStreamItem[LogicalOutputEvent]
++    ) -> LogicalOutputUpdate[T]:
++        """Apply one item and return its validated incremental update."""
++        event = item.data
++        self._validate_common(event)
++        if event.kind is LogicalOutputEventKind.BEGIN:
++            self._apply_begin(item.topic, event)
++            chunk = None
++            result = None
++        else:
++            self._validate_current(item.topic, event)
++            if self._complete:
++                raise LogicalOutputProtocolError(
++                    "logical output generation is already complete"
++                )
++            if event.kind is LogicalOutputEventKind.CHUNK:
++                chunk = self._apply_chunk(event)
++                result = None
++            elif event.kind is LogicalOutputEventKind.COMPLETE:
++                chunk = None
++                result = self._apply_complete(item.offset, event)
++            else:
++                raise LogicalOutputProtocolError(
++                    f"unknown logical output event kind {event.kind!r}"
++                )
++        return LogicalOutputUpdate(
++            kind=event.kind,
++            logical_output_id=event.logical_output_id,
++            generation=event.generation,
++            sequence=event.sequence,
++            publisher_id=event.publisher_id,
++            activity_attempt=event.activity_attempt,
++            offset=item.offset,
++            chunk=chunk,
++            result=result,
++        )
++
++    def _validate_common(self, event: LogicalOutputEvent) -> None:
++        if event.protocol_version != _PROTOCOL_VERSION:
++            raise LogicalOutputProtocolError(
++                f"unsupported logical output protocol version {event.protocol_version}"
++            )
++        if event.logical_output_id != self._logical_output_id:
++            raise LogicalOutputProtocolError(
++                "logical output ID differs from the reconstructor"
++            )
++        if type(event.generation) is not int or event.generation < 1:
++            raise LogicalOutputProtocolError("generation must be a positive integer")
++        if type(event.sequence) is not int or event.sequence < 0:
++            raise LogicalOutputProtocolError("sequence must be a nonnegative integer")
++        if not event.publisher_id:
++            raise LogicalOutputProtocolError("publisher_id must be non-empty")
++        if event.activity_attempt is not None and (
++            type(event.activity_attempt) is not int or event.activity_attempt < 1
++        ):
++            raise LogicalOutputProtocolError(
++                "activity attempt must be a positive integer"
++            )
++
++    def _apply_begin(self, topic: str, event: LogicalOutputEvent) -> None:
++        if (
++            event.sequence != 0
++            or event.chunk_index is not None
++            or event.data
++            or event.chunk_count is not None
++            or event.content_sha256
++        ):
++            raise LogicalOutputProtocolError(
++                "begin event has invalid structural fields"
++            )
++        if self._generation is not None:
++            if event.generation < self._generation:
++                raise LogicalOutputProtocolError(
++                    f"stale generation {event.generation}; current generation "
++                    f"is {self._generation}"
++                )
++            if event.generation == self._generation:
++                if event.publisher_id != self._publisher_id:
++                    raise LogicalOutputProtocolError(
++                        "competing publisher attempted the current generation"
++                    )
++                raise LogicalOutputProtocolError(
++                    "sequence 0 was repeated in the current generation"
++                )
++        self._generation = event.generation
++        self._publisher_id = event.publisher_id
++        self._topic = topic
++        self._activity_attempt = event.activity_attempt
++        self._items = []
++        self._hasher = hashlib.sha256()
++        self._complete = False
++
++    def _validate_current(self, topic: str, event: LogicalOutputEvent) -> None:
++        if self._generation is None:
++            raise LogicalOutputProtocolError(
++                "logical output generation did not begin before data"
++            )
++        if event.generation < self._generation:
++            raise LogicalOutputProtocolError(
++                f"stale generation {event.generation}; current generation "
++                f"is {self._generation}"
++            )
++        if event.generation > self._generation:
++            raise LogicalOutputProtocolError(
++                "logical output generation did not begin before data"
++            )
++        if event.publisher_id != self._publisher_id:
++            raise LogicalOutputProtocolError(
++                "competing publisher attempted the current generation"
++            )
++        if topic != self._topic:
++            raise LogicalOutputProtocolError("logical output topic changed")
++        if event.activity_attempt != self._activity_attempt:
++            raise LogicalOutputProtocolError(
++                "activity attempt changed within one logical output generation"
++            )
++        expected_sequence = len(self._items) + 1
++        if event.sequence != expected_sequence:
++            raise LogicalOutputProtocolError(
++                f"logical output sequence {event.sequence} does not match "
++                f"expected {expected_sequence}"
++            )
++
++    def _apply_chunk(self, event: LogicalOutputEvent) -> T:
++        if event.chunk_index != len(self._items):
++            raise LogicalOutputProtocolError(
++                f"chunk index {event.chunk_index} does not match "
++                f"expected {len(self._items)}"
++            )
++        if event.chunk_count is not None or event.content_sha256:
++            raise LogicalOutputProtocolError("chunk event has terminal fields")
++        if not event.data:
++            raise LogicalOutputProtocolError("chunk event lacks data")
++        try:
++            payload = _decode_payload(event.data)
++            value = self._payload_converter.from_payload(payload, self._result_type)
++        except (ValueError, TypeError, binascii.Error, DecodeError) as err:
++            raise LogicalOutputProtocolError(
++                "chunk event contains an invalid encoded payload"
++            ) from err
++        _update_content_hash(self._hasher, payload)
++        self._items.append(value)
++        return value
++
++    def _apply_complete(
++        self, terminal_offset: int, event: LogicalOutputEvent
++    ) -> LogicalOutputResult[T]:
++        if event.chunk_index is not None or event.data:
++            raise LogicalOutputProtocolError("complete event contains chunk data")
++        if event.chunk_count != len(self._items):
++            raise LogicalOutputProtocolError(
++                f"terminal chunk count {event.chunk_count} does not match "
++                f"reconstructed count {len(self._items)}"
++            )
++        expected_hash = self._hasher.hexdigest()
++        if event.content_sha256 != expected_hash:
++            raise LogicalOutputProtocolError(
++                "terminal content hash does not match reconstructed chunks"
++            )
++        self._complete = True
++        terminal = LogicalOutputTerminal(
++            topic=self._topic or "",
++            logical_output_id=event.logical_output_id,
++            generation=event.generation,
++            terminal_sequence=event.sequence,
++            chunk_count=len(self._items),
++            content_sha256=event.content_sha256,
++            publisher_id=event.publisher_id,
++        )
++        return LogicalOutputResult(
++            items=tuple(self._items),
++            terminal=terminal,
++            terminal_offset=terminal_offset,
++        )
+diff --git a/temporalio/contrib/workflow_streams/_stream.py b/temporalio/contrib/workflow_streams/_stream.py
+index ae8608c3b92a938b090a301b557754af6a154c59..c8ed79c43eaf2ed5feedd22b0298e3715b293471 100644
+--- a/temporalio/contrib/workflow_streams/_stream.py
++++ b/temporalio/contrib/workflow_streams/_stream.py
+@@ -35,6 +35,12 @@ from temporalio import workflow
+ from temporalio.api.common.v1 import Payload
+ from temporalio.exceptions import ApplicationError
+ 
++from ._logical_output import (
++    LogicalOutputAcknowledgement,
++    LogicalOutputEvent,
++    LogicalOutputProtocolError,
++    LogicalOutputTerminal,
++)
+ from ._topic_handle import WorkflowTopicHandle
+ from ._types import (
+     STREAM_DRAINING_ERROR_TYPE,
+@@ -363,6 +369,47 @@ class WorkflowStream:
+         self._log = self._log[log_index:]
+         self._base_offset = up_to_offset
+ 
++    def validate_logical_output_acknowledgement(
++        self,
++        terminal: LogicalOutputTerminal,
++        acknowledgement: LogicalOutputAcknowledgement,
++    ) -> None:
++        """Validate an acknowledgement against this Workflow's exact log item.
++
++        Use the terminal receipt returned by the successful publishing
++        Activity attempt. This rejects an otherwise valid terminal observed
++        from an attempt that later failed, as well as an acknowledgement that
++        names the wrong global stream offset.
++
++        Raises:
++            ApplicationError: If the acknowledged offset is unavailable or its
++                event does not match the successful terminal receipt.
++        """
++        log_index = acknowledgement.terminal_offset - self._base_offset
++        if log_index < 0 or log_index >= len(self._log):
++            raise ApplicationError(
++                "Logical output acknowledgement offset is not present in the stream",
++                type="LogicalOutputAcknowledgementRejected",
++            )
++        item = self._log[log_index]
++        try:
++            event = workflow.payload_converter().from_payload(
++                item.data, LogicalOutputEvent
++            )
++            terminal.validate_acknowledgement(
++                acknowledgement,
++                observed_terminal=WorkflowStreamItem(
++                    topic=item.topic,
++                    data=event,
++                    offset=acknowledgement.terminal_offset,
++                ),
++            )
++        except (LogicalOutputProtocolError, TypeError, ValueError) as err:
++            raise ApplicationError(
++                str(err),
++                type="LogicalOutputAcknowledgementRejected",
++            ) from err
++
+     def _on_publish(self, payload: PublishInput) -> None:
+         """Receive publications from external clients (activities, starters).
+ 
+diff --git a/tests/contrib/openai_agents/test_openai_streaming.py b/tests/contrib/openai_agents/test_openai_streaming.py
+index ab711cd862d5cf6776d7063e809eba03035fa229..9d408b34e20bdf45aae1c44ddc40989b5d40a573 100644
+--- a/tests/contrib/openai_agents/test_openai_streaming.py
++++ b/tests/contrib/openai_agents/test_openai_streaming.py
+@@ -45,9 +45,17 @@ from openai.types.shared.response_format_text import ResponseFormatText
+ 
+ from temporalio import workflow
+ from temporalio.client import Client, WorkflowFailureError
++from temporalio.common import RetryPolicy
+ from temporalio.contrib.openai_agents import ModelActivityParameters
+ from temporalio.contrib.openai_agents.testing import AgentEnvironment
+-from temporalio.contrib.workflow_streams import WorkflowStream, WorkflowStreamClient
++from temporalio.contrib.workflow_streams import (
++    LogicalOutputEvent,
++    LogicalOutputEventKind,
++    LogicalOutputReconstructor,
++    LogicalOutputResult,
++    WorkflowStream,
++    WorkflowStreamClient,
++)
+ from tests.helpers import new_worker
+ 
+ logger = logging.getLogger(__name__)
+@@ -170,6 +178,48 @@ class StreamingTestModel(Model):
+         )
+ 
+ 
++class RetryStreamingTestModel(StreamingTestModel):
++    """Model that exposes a partial first Activity attempt before succeeding."""
++
++    def __init__(self) -> None:
++        self.calls = 0
++
++    async def stream_response(
++        self,
++        system_instructions: str | None,
++        input: str | list[TResponseInputItem],
++        model_settings: ModelSettings,
++        tools: list[Tool],
++        output_schema: AgentOutputSchemaBase | None,
++        handoffs: list[Handoff],
++        tracing: ModelTracing,
++        **kwargs: Any,
++    ) -> AsyncIterator[TResponseStreamEvent]:
++        self.calls += 1
++        if self.calls == 1:
++            yield ResponseTextDeltaEvent(
++                content_index=0,
++                delta="stale ",
++                item_id="stale-item",
++                output_index=0,
++                sequence_number=0,
++                type="response.output_text.delta",
++                logprobs=[],
++            )
++            raise RuntimeError("injected model stream failure")
++        async for event in super().stream_response(
++            system_instructions,
++            input,
++            model_settings,
++            tools,
++            output_schema,
++            handoffs,
++            tracing,
++            **kwargs,
++        ):
++            yield event
++
++
+ @workflow.defn
+ class StreamingOpenAIWorkflow:
+     """Test workflow that opts into streaming via ``Runner.run_streamed``.
+@@ -293,6 +343,86 @@ async def test_streaming_publishes_raw_events(client: Client):
+     assert workflow_event_types == published_types
+ 
+ 
++@pytest.mark.asyncio
++async def test_retry_aware_streaming_reconstructs_replacement_activity_attempt(
++    client: Client,
++):
++    """An opt-in logical stream resets a partial failed model attempt."""
++    model = RetryStreamingTestModel()
++    async with AgentEnvironment(
++        model=model,
++        model_params=ModelActivityParameters(
++            start_to_close_timeout=timedelta(seconds=30),
++            retry_policy=RetryPolicy(
++                initial_interval=timedelta(milliseconds=10),
++                maximum_attempts=2,
++            ),
++            streaming_topic="events",
++            streaming_retry_aware=True,
++        ),
++    ) as env:
++        client = env.applied_on_client(client)
++        workflow_id = f"openai-retry-aware-streaming-test-{uuid.uuid4()}"
++
++        async with new_worker(
++            client, StreamingOpenAIWorkflow, max_cached_workflows=0
++        ) as worker:
++            handle = await client.start_workflow(
++                StreamingOpenAIWorkflow.run,
++                "Hello",
++                id=workflow_id,
++                task_queue=worker.task_queue,
++                execution_timeout=timedelta(seconds=30),
++            )
++            stream = WorkflowStreamClient.create(client, workflow_id)
++            envelopes: list[LogicalOutputEvent] = []
++
++            async def collect_events() -> LogicalOutputResult[TResponseStreamEvent]:
++                reconstructor: (
++                    LogicalOutputReconstructor[TResponseStreamEvent] | None
++                ) = None
++                async for item in stream.subscribe(
++                    ["events"],
++                    result_type=LogicalOutputEvent,
++                    poll_cooldown=timedelta(milliseconds=10),
++                ):
++                    envelopes.append(item.data)
++                    if reconstructor is None:
++                        assert item.data.kind is LogicalOutputEventKind.BEGIN
++                        reconstructor = stream.logical_output_reconstructor(
++                            item.data.logical_output_id,
++                            result_type=TResponseStreamEvent,  # type: ignore[arg-type]
++                        )
++                    reconstructed = reconstructor.apply(item).result
++                    if reconstructed is not None:
++                        return reconstructed
++                raise AssertionError("logical output stream closed before completion")
++
++            collect_task = asyncio.create_task(collect_events())
++            result = await handle.result()
++            reconstructed = await asyncio.wait_for(collect_task, timeout=10.0)
++
++    assert result == "Hello world!"
++    assert model.calls == 2
++    assert [event.type for event in reconstructed.items] == [
++        "response.output_text.delta",
++        "response.output_text.delta",
++        "response.completed",
++    ]
++    assert [
++        event.delta
++        for event in reconstructed.items
++        if event.type == "response.output_text.delta"
++    ] == ["Hello ", "world!"]
++    begins = [
++        event for event in envelopes if event.kind is LogicalOutputEventKind.BEGIN
++    ]
++    assert [event.generation for event in begins] == [1, 2]
++    assert [event.activity_attempt for event in begins] == [1, 2]
++    assert len({event.publisher_id for event in begins}) == 2
++    assert len({event.logical_output_id for event in begins}) == 1
++
++
+ @pytest.mark.asyncio
+ async def test_streaming_requires_topic(client: Client):
+     """``Runner.run_streamed`` fails fast when the plugin has no topic
+diff --git a/tests/contrib/workflow_streams/test_logical_output.py b/tests/contrib/workflow_streams/test_logical_output.py
+new file mode 100644
+index 0000000000000000000000000000000000000000..b8fb1be240602e3054de0faf2d61bc8dbeafb834
+--- /dev/null
++++ b/tests/contrib/workflow_streams/test_logical_output.py
+@@ -0,0 +1,383 @@
++"""Behavioral contract for retry-aware logical Workflow Stream output."""
++
++from __future__ import annotations
++
++import base64
++import uuid
++from dataclasses import replace
++from datetime import timedelta
++from typing import Any
++
++import pytest
++
++from temporalio import workflow
++from temporalio.api.common.v1 import Payload
++from temporalio.client import Client, WorkflowUpdateFailedError
++from temporalio.contrib.workflow_streams import (
++    LogicalOutputAcknowledgement,
++    LogicalOutputEvent,
++    LogicalOutputEventKind,
++    LogicalOutputProtocolError,
++    LogicalOutputReconstructor,
++    LogicalOutputTerminal,
++    WorkflowStream,
++    WorkflowStreamClient,
++    WorkflowStreamItem,
++)
++from temporalio.converter import DataConverter
++from tests.helpers import new_worker
++
++
++class CapturingHandle:
++    """Minimal Workflow handle that preserves published Signal payloads."""
++
++    id = "logical-output-workflow"
++
++    def __init__(self) -> None:
++        self.signals: list[tuple[str, Any]] = []
++
++    async def signal(self, name: str, arg: Any) -> None:
++        self.signals.append((name, arg))
++
++
++@workflow.defn
++class ExactLogicalOutputAckWorkflow:
++    """Workflow that accepts only the terminal present at an acknowledged offset."""
++
++    @workflow.init
++    def __init__(self) -> None:
++        self.stream = WorkflowStream()
++        self._done = False
++
++    @workflow.run
++    async def run(self) -> None:
++        await workflow.wait_condition(lambda: self._done)
++
++    @workflow.update
++    def acknowledge(
++        self,
++        input: tuple[LogicalOutputTerminal, LogicalOutputAcknowledgement],
++    ) -> None:
++        terminal, acknowledgement = input
++        self.stream.validate_logical_output_acknowledgement(terminal, acknowledgement)
++        self._done = True
++
++
++def _decode_events(handle: CapturingHandle) -> list[LogicalOutputEvent]:
++    converter = DataConverter.default.payload_converter
++    events: list[LogicalOutputEvent] = []
++    for signal_name, publish_input in handle.signals:
++        assert signal_name == "__temporal_workflow_stream_publish"
++        for entry in publish_input.items:
++            payload = Payload()
++            payload.ParseFromString(base64.b64decode(entry.data))
++            events.append(converter.from_payload(payload, LogicalOutputEvent))
++    return events
++
++
++async def _publish_generation(
++    logical_output_id: str,
++    generation: int,
++    chunks: list[str],
++    *,
++    complete: bool,
++    attempt: int | None = None,
++) -> tuple[list[LogicalOutputEvent], Any]:
++    handle = CapturingHandle()
++    client = WorkflowStreamClient(handle)  # type: ignore[arg-type]
++    publisher = client.logical_output_publisher(
++        "events",
++        logical_output_id=logical_output_id,
++        generation=generation,
++        type=str,
++        activity_attempt=attempt,
++    )
++    for chunk in chunks:
++        publisher.publish(chunk)
++    terminal = publisher.complete() if complete else None
++    await client.flush()
++    return _decode_events(handle), terminal
++
++
++@pytest.mark.asyncio
++async def test_logical_output_reconstructs_only_the_latest_generation() -> None:
++    first, _ = await _publish_generation(
++        "output-1", 1, ["A", "B"], complete=False, attempt=1
++    )
++    replacement, published_terminal = await _publish_generation(
++        "output-1", 2, ["A", "B", "C"], complete=True, attempt=2
++    )
++
++    reconstructor = LogicalOutputReconstructor("output-1", result_type=str)
++    updates = []
++    offset = 0
++    for event in [*first, *replacement]:
++        updates.append(
++            reconstructor.apply(
++                WorkflowStreamItem(topic="events", data=event, offset=offset)
++            )
++        )
++        offset += 1
++
++    result = updates[-1].result
++    assert result is not None
++    assert result.items == ("A", "B", "C")
++    assert result.terminal == published_terminal
++    assert result.terminal_offset == offset - 1
++    assert result.acknowledgement.logical_output_id == "output-1"
++    assert result.acknowledgement.generation == 2
++    assert result.acknowledgement.terminal_offset == offset - 1
++    result.validate_acknowledgement(result.acknowledgement)
++    assert [update.kind for update in updates] == [
++        LogicalOutputEventKind.BEGIN,
++        LogicalOutputEventKind.CHUNK,
++        LogicalOutputEventKind.CHUNK,
++        LogicalOutputEventKind.BEGIN,
++        LogicalOutputEventKind.CHUNK,
++        LogicalOutputEventKind.CHUNK,
++        LogicalOutputEventKind.CHUNK,
++        LogicalOutputEventKind.COMPLETE,
++    ]
++    assert [update.chunk for update in updates if update.chunk is not None] == [
++        "A",
++        "B",
++        "A",
++        "B",
++        "C",
++    ]
++
++
++@pytest.mark.asyncio
++async def test_logical_output_preserves_delivery_and_attempt_identity() -> None:
++    events, terminal = await _publish_generation(
++        "output-identity", 7, ["chunk"], complete=True, attempt=11
++    )
++
++    assert [event.kind for event in events] == [
++        LogicalOutputEventKind.BEGIN,
++        LogicalOutputEventKind.CHUNK,
++        LogicalOutputEventKind.COMPLETE,
++    ]
++    assert [event.sequence for event in events] == [0, 1, 2]
++    assert [event.chunk_index for event in events] == [None, 0, None]
++    assert {event.logical_output_id for event in events} == {"output-identity"}
++    assert {event.generation for event in events} == {7}
++    assert {event.publisher_id for event in events} == {terminal.publisher_id}
++    assert {event.activity_attempt for event in events} == {11}
++    assert events[-1].chunk_count == 1
++    assert events[-1].content_sha256 == terminal.content_sha256
++    assert events[1].data
++
++
++@pytest.mark.asyncio
++async def test_logical_output_rejects_stale_and_competing_publishers() -> None:
++    first, _ = await _publish_generation("output-1", 1, ["old"], complete=False)
++    replacement, _ = await _publish_generation("output-1", 2, ["new"], complete=True)
++    competing, _ = await _publish_generation(
++        "output-1", 2, ["competing"], complete=True
++    )
++    reconstructor = LogicalOutputReconstructor("output-1", result_type=str)
++    reconstructor.apply(WorkflowStreamItem("events", first[0], 0))
++    reconstructor.apply(WorkflowStreamItem("events", first[1], 1))
++    reconstructor.apply(WorkflowStreamItem("events", replacement[0], 2))
++
++    with pytest.raises(LogicalOutputProtocolError, match="stale generation"):
++        reconstructor.apply(WorkflowStreamItem("events", first[1], 3))
++    with pytest.raises(LogicalOutputProtocolError, match="competing publisher"):
++        reconstructor.apply(WorkflowStreamItem("events", competing[0], 4))
++
++    # Rejections do not corrupt the accepted replacement generation.
++    result = None
++    for offset, event in enumerate(replacement[1:], start=5):
++        result = reconstructor.apply(WorkflowStreamItem("events", event, offset)).result
++    assert result is not None
++    assert result.items == ("new",)
++
++
++@pytest.mark.asyncio
++async def test_logical_output_rejects_wrong_identity_sequence_and_terminal() -> None:
++    events, _ = await _publish_generation("output-1", 1, ["A"], complete=True)
++
++    wrong_id = LogicalOutputReconstructor("expected", result_type=str)
++    with pytest.raises(LogicalOutputProtocolError, match="logical output ID"):
++        wrong_id.apply(WorkflowStreamItem("events", events[0], 0))
++
++    invalid_attempt = LogicalOutputReconstructor("output-1", result_type=str)
++    with pytest.raises(LogicalOutputProtocolError, match="activity attempt"):
++        invalid_attempt.apply(
++            WorkflowStreamItem("events", replace(events[0], activity_attempt=0), 0)
++        )
++
++    gap = LogicalOutputReconstructor("output-1", result_type=str)
++    gap.apply(WorkflowStreamItem("events", events[0], 0))
++    with pytest.raises(LogicalOutputProtocolError, match="sequence"):
++        gap.apply(WorkflowStreamItem("events", replace(events[1], sequence=5), 1))
++
++    bad_hash = LogicalOutputReconstructor("output-1", result_type=str)
++    bad_hash.apply(WorkflowStreamItem("events", events[0], 0))
++    bad_hash.apply(WorkflowStreamItem("events", events[1], 1))
++    with pytest.raises(LogicalOutputProtocolError, match="content hash"):
++        bad_hash.apply(
++            WorkflowStreamItem(
++                "events",
++                replace(events[2], content_sha256="0" * 64),
++                2,
++            )
++        )
++
++    bad_count = LogicalOutputReconstructor("output-1", result_type=str)
++    bad_count.apply(WorkflowStreamItem("events", events[0], 0))
++    bad_count.apply(WorkflowStreamItem("events", events[1], 1))
++    with pytest.raises(LogicalOutputProtocolError, match="chunk count"):
++        bad_count.apply(
++            WorkflowStreamItem("events", replace(events[2], chunk_count=2), 2)
++        )
++
++
++@pytest.mark.asyncio
++async def test_logical_output_acknowledgement_is_exact() -> None:
++    events, _ = await _publish_generation("output-1", 3, ["A"], complete=True)
++    reconstructor = LogicalOutputReconstructor("output-1", result_type=str)
++    result = None
++    for offset, event in enumerate(events, start=20):
++        result = reconstructor.apply(WorkflowStreamItem("events", event, offset)).result
++    assert result is not None
++
++    acknowledgement = result.acknowledgement
++    observed_terminal = WorkflowStreamItem(
++        "events", events[-1], acknowledgement.terminal_offset
++    )
++    result.terminal.validate_acknowledgement(
++        acknowledgement, observed_terminal=observed_terminal
++    )
++    mutations = [
++        replace(acknowledgement, logical_output_id="other"),
++        replace(acknowledgement, generation=2),
++        replace(acknowledgement, terminal_sequence=99),
++        replace(acknowledgement, terminal_offset=99),
++        replace(acknowledgement, content_sha256="f" * 64),
++        replace(acknowledgement, publisher_id="other"),
++    ]
++    for mutation in mutations:
++        with pytest.raises(LogicalOutputProtocolError, match="acknowledgement"):
++            result.validate_acknowledgement(mutation)
++        with pytest.raises(LogicalOutputProtocolError, match="acknowledgement"):
++            result.terminal.validate_acknowledgement(
++                mutation, observed_terminal=observed_terminal
++            )
++
++
++@pytest.mark.asyncio
++async def test_successful_replacement_terminal_rejects_stale_attempt_ack() -> None:
++    first, _ = await _publish_generation("output-1", 1, ["stale"], complete=True)
++    replacement, replacement_terminal = await _publish_generation(
++        "output-1", 2, ["current"], complete=True
++    )
++    reconstructor = LogicalOutputReconstructor("output-1", result_type=str)
++    first_result = None
++    for offset, event in enumerate(first):
++        first_result = reconstructor.apply(
++            WorkflowStreamItem("events", event, offset)
++        ).result
++    assert first_result is not None
++
++    replacement_result = None
++    for offset, event in enumerate(replacement, start=len(first)):
++        replacement_result = reconstructor.apply(
++            WorkflowStreamItem("events", event, offset)
++        ).result
++    assert replacement_result is not None
++
++    with pytest.raises(LogicalOutputProtocolError, match="acknowledgement"):
++        replacement_terminal.validate_acknowledgement(
++            first_result.acknowledgement,
++            observed_terminal=WorkflowStreamItem(
++                "events", first[-1], first_result.terminal_offset
++            ),
++        )
++    replacement_terminal.validate_acknowledgement(
++        replacement_result.acknowledgement,
++        observed_terminal=WorkflowStreamItem(
++            "events", replacement[-1], replacement_result.terminal_offset
++        ),
++    )
++
++
++@pytest.mark.asyncio
++async def test_workflow_validates_acknowledged_terminal_at_exact_stream_offset(
++    client: Client,
++) -> None:
++    workflow_id = f"logical-output-ack-{uuid.uuid4()}"
++    async with new_worker(client, ExactLogicalOutputAckWorkflow) as worker:
++        handle = await client.start_workflow(
++            ExactLogicalOutputAckWorkflow.run,
++            id=workflow_id,
++            task_queue=worker.task_queue,
++            execution_timeout=timedelta(seconds=30),
++        )
++        stream = WorkflowStreamClient.create(client, workflow_id)
++        output = stream.logical_output_publisher(
++            "events",
++            logical_output_id=f"{workflow_id}/output",
++            generation=1,
++            type=str,
++        )
++        output.publish("A")
++        terminal = output.complete()
++        await stream.flush()
++
++        reconstructor = stream.logical_output_reconstructor(
++            f"{workflow_id}/output", result_type=str
++        )
++        result = None
++        async for item in stream.subscribe(
++            "events",
++            result_type=LogicalOutputEvent,
++            poll_cooldown=timedelta(milliseconds=10),
++        ):
++            result = reconstructor.apply(item).result
++            if result is not None:
++                break
++        assert result is not None
++
++        with pytest.raises(WorkflowUpdateFailedError):
++            await handle.execute_update(
++                ExactLogicalOutputAckWorkflow.acknowledge,
++                (
++                    terminal,
++                    replace(
++                        result.acknowledgement,
++                        terminal_offset=result.terminal_offset - 1,
++                    ),
++                ),
++            )
++        await handle.execute_update(
++            ExactLogicalOutputAckWorkflow.acknowledge,
++            (terminal, result.acknowledgement),
++        )
++        await handle.result()
++
++
++@pytest.mark.asyncio
++async def test_logical_output_publisher_rejects_invalid_lifecycle() -> None:
++    handle = CapturingHandle()
++    client = WorkflowStreamClient(handle)  # type: ignore[arg-type]
++
++    with pytest.raises(ValueError, match="logical_output_id"):
++        client.logical_output_publisher(
++            "events", logical_output_id="", generation=1, type=str
++        )
++    with pytest.raises(ValueError, match="generation"):
++        client.logical_output_publisher(
++            "events", logical_output_id="output", generation=0, type=str
++        )
++
++    publisher = client.logical_output_publisher(
++        "events", logical_output_id="output", generation=1, type=str
++    )
++    publisher.publish("A")
++    publisher.complete()
++    with pytest.raises(LogicalOutputProtocolError, match="already complete"):
++        publisher.publish("B")
++    with pytest.raises(LogicalOutputProtocolError, match="already complete"):
++        publisher.complete()

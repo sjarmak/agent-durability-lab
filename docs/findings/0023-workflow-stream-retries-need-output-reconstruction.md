@@ -39,6 +39,27 @@ and report SHA-256
 The independent auditor reconstructs raw publish Signals, exact publisher/attempt/process
 identity, results, retry cause, offsets, acknowledgement, provenance, and replay.
 
+The follow-on SDK product population
+[`workflow-stream-product-20260812-v4`](../../experiments/workflow-stream-retry/evidence/workflow-stream-product-20260812-v4)
+contains 36 histories across raw, expert-manual, and SDK-product arms; four
+boundaries; and three repetitions. Its 74-file manifest SHA-256 is
+`1c5248343f3216c2113337cafe3cf43566a2e7698c88a5b0b5c03c29766aff18`,
+and report SHA-256 is
+`b4d9db78c9625478e33e924804aaeb6a038ba5e47a3602a3c30499b330bfc6c9`.
+All 36 histories replayed and passed independent source/runtime/process/history
+audit.
+
+The raw arm duplicated logical output in six post-admission fault trials and
+accepted all three stale attempt-1 terminal acknowledgements. Both protected
+arms reconstructed `ABC` in all 24 trials and rejected all six stale
+acknowledgement attempts. Product used 18 stream batches, the same as manual;
+across 12 trials it recorded 333 versus 333 history events and 393,714 versus
+389,909 history JSON bytes. Under the registered application-owned protocol
+definition, the manual reference contains 243 nonblank lines, 12 state fields,
+and 18 AST branches; product application code delegates those responsibilities
+to three SDK operations and owns no corresponding protocol implementation.
+Combined population and focused relevant coverage is 89%.
+
 ## Product pattern
 
 Treat stream publisher identity as delivery identity, not logical output identity:
@@ -54,6 +75,16 @@ Treat stream publisher identity as delivery identity, not logical output identit
 This belongs in SDK guidance and coding-agent cookbooks. A convenience API could expose a
 logical-output generation/reset envelope, but should not hide the underlying publisher ID,
 sequence, or acknowledgement boundary.
+
+That convenience API is now implemented as an upstream candidate against pinned
+`temporalio/sdk-python@d489a5d`: a provider-neutral logical output envelope,
+publisher, incremental begin/chunk/terminal reconstructor, hashed terminal receipt,
+and Workflow-side exact acknowledgement validator. The existing OpenAI Agents
+integration has an opt-in retry-aware stream mode while preserving raw mode as the
+default. The adapter reconstructs retries, but its current model Activity result does
+not expose the successful terminal receipt; applications requiring Workflow-side
+successful-attempt acknowledgement validation use the generic Activity API and return
+that receipt explicitly.
 
 ## Responsibility split
 
