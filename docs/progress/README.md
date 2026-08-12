@@ -21,4 +21,5 @@ their status, but it does not rewrite what was known at the earlier date.
 
 | Date | Snapshot |
 | --- | --- |
+| 2026-08-12 | [Topology conformance, vendor-agent fencing, deployment compatibility, Workflow Stream recovery, and coding-agent product synthesis](2026-08-12.md) |
 | 2026-08-09 | [Worker, effect, cancellation, vendor-session, sandbox, and cross-system benchmark results](2026-08-09.md) |
