@@ -97,8 +97,10 @@ or destination classes:
 - treat stream publisher identity as delivery identity: carry a stable logical output ID,
   mark retry generations, await flush before declaring a prefix admitted, reconstruct on
   reset, and acknowledge the terminal offset before Workflow close; and
-- preserve typed events and content-addressed references rather than placing
-  large transcripts or artifacts in Event History.
+- publish large artifacts as content-addressed bytes, then an immutable logical reference,
+  then a stable consumer acknowledgement; reconcile pending/unreachable records explicitly;
+  and preserve only typed events and compact references in Event History. SDK External
+  Storage claims are transport references, not application acknowledgements.
 
 ### Experimental
 
@@ -253,7 +255,8 @@ applicable, and a responsibility split.
    typed output, stream state, Continue-As-New, replay, and ambiguous tool
    effects.
 2. **Effect-safe tools** — idempotent API, non-idempotent API reconciliation,
-   transactional database, Git, message publication, and artifact creation.
+   transactional database, Git, message publication, and the observed large-artifact
+   blob/reference/acknowledgement protocol.
 3. **External CLI ownership** — direct relaunch and resume-only controls
    followed by start-or-attach and fenced completion; normative contract at the
    tested single-host boundaries, with provider compatibility bounded.
@@ -298,6 +301,7 @@ may not choose it.
 | Preserve native agent procedure without overstating tool safety | [Finding 0008](../findings/0008-temporal-native-agent-loop-recovers-structure-not-effects.md) restored completed model/tool results while unsafe tool effects duplicated; one controlled Continue-As-New carried approval/stream state | Python native-loop exemplar and replay requirement; Continue-As-New state transfer remains experimental | Normative for completed-step replay at the pinned exemplar; continuation experimental |
 | Revoke authority separately from cancellation procedure | [Finding 0006](../findings/0006-cancellation-requires-application-revocation.md) observed all Temporal-only controls mutate after cancellation and no protected post-revocation mutation | Cancellation state machine, exact cleanup recipe | Normative |
 | Keep sandbox operation identity and ownership separate | [Finding 0009](../findings/0009-sandbox-lifecycle-does-not-close-provider-gaps.md) distinguished outer Update identity, inner provider receipts, attached-writer fences, and orphan reconciliation | Sandbox cookbook and separate resource/session contracts | Normative for tested boundaries |
+| Keep large artifact bytes, references, and consumption acknowledgements separate | [Finding 0024](../findings/0024-large-artifacts-need-reference-and-acknowledgement-protocols.md) admitted 36 blob/reference/Activity/ack/External Storage runs: all 18 protected arms converged and all nine distinguishing unsafe reference/ack/offload controls duplicated | Typed artifact reference and acknowledgement pattern; effect-safe-tools cookbook; External Storage remains transport-only | Normative for the tested application protocol; remote stores and SDK offload are bounded/experimental |
 | Reject direct CLI relaunch as a durability integration | [Finding 0010](../findings/0010-direct-claude-activity-retry-duplicates-turns-and-effects.md) observed two sessions and effects in every faulted direct-Claude trial | External CLI unsafe control | Normative negative guidance at pinned version |
 | Reject transcript identity as turn authority | [Finding 0019](../findings/0019-claude-resume-preserves-session-identity-not-effect-safety.md) observed one resumed session UUID but two effects in every faulted trial | Resume-only unsafe control and distinct `turn_id`/generation | Normative negative guidance at pinned version |
 | Bound retry, admission, poison, and progress policy in application code | [Finding 0013](../findings/0013-application-policy-equalizes-safety-not-recovery-cost.md) admitted 540 matched pairs (1,080 executions): for each system, all 360 unfaulted/protected executions passed and all 180 unsafe executions distinguished, while attributing the policies to the application | Portable recovery-policy contract and cookbook | Normative; performance remains single-host and separate |

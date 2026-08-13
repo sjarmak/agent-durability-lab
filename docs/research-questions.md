@@ -39,8 +39,12 @@ not proof of an application-level guarantee.
    publisher, and explicit retry reset reconstructed one output. Closed-Workflow
    retention, reconnect, Continue-As-New composition, and external cursor durability
    remain open. See [Finding 0023](findings/0023-workflow-stream-retries-need-output-reconstruction.md).
-9. Large artifacts: write/reference/persist/acknowledge failure windows and orphan
-   reconciliation.
+9. **Observed on one pinned local-filesystem boundary:** large artifact blob,
+   reference, Activity-completion, acknowledgement, and SDK External Storage windows.
+   The protected application protocol converged in 18/18 runs; unsafe reference,
+   acknowledgement, and SDK-offload controls duplicated in 9/9 distinguishing runs.
+   Remote object stores, concurrent collection, multipart upload, retention, and
+   performance remain open. See [Finding 0024](findings/0024-large-artifacts-need-reference-and-acknowledgement-protocols.md).
 10. Workflows versus Standalone Activities and Nexus: when durable execution is
    enough and when durable orchestration adds a necessary state machine.
 11. Operator diagnosis: healthy progress, retry loops, surviving or wedged agents,

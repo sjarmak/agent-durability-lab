@@ -1,6 +1,6 @@
-.PHONY: build claude-direct-evidence-transport codex-direct test test-live check-postgres-service check-publication-v2-config check-topology-controlled-host publication-v2 coding-agent-conformance coverage-coding-agent-conformance coverage-codex-direct coverage-topology coverage-topology-timing topology-semantics-conformance topology-recovery-conformance topology-matrix-conformance topology-pilot test-system-adapters test-temporal-native coverage coverage-system-adapters evidence-temporal-native evidence-claude-direct package-claude-direct-evidence verify-claude-direct-evidence restore-claude-direct-evidence clean
+.PHONY: build claude-direct-evidence-transport codex-direct test test-live check-postgres-service check-publication-v2-config check-topology-controlled-host publication-v2 coding-agent-conformance coverage-coding-agent-conformance coverage-codex-direct coverage-large-artifact coverage-topology coverage-topology-timing topology-semantics-conformance topology-recovery-conformance topology-matrix-conformance topology-pilot test-system-adapters test-temporal-native coverage coverage-system-adapters evidence-temporal-native evidence-claude-direct package-claude-direct-evidence verify-claude-direct-evidence restore-claude-direct-evidence clean
 
-.NOTPARALLEL: coverage-codex-direct coverage-topology-timing
+.NOTPARALLEL: coverage-codex-direct coverage-large-artifact coverage-topology-timing
 
 PUBLICATION_DEADLINE ?= 2h
 TOPOLOGY_PILOT_DEADLINE ?= 8h
@@ -12,6 +12,8 @@ CODING_AGENT_CONFORMANCE_TEST_PACKAGES := ./benchmarks/agent-durability/conforma
 override CODEX_DIRECT_COVERPKG := ./experiments/durable-vendor-sessions/codex-direct/internal/lab
 override CODEX_DIRECT_COVER_IMPORT := github.com/sjarmak/temporal_projects/experiments/durable-vendor-sessions/codex-direct/internal/lab
 override CODEX_DIRECT_LIVE_MODES := unsafe-fresh explicit-thread-resume application-fenced
+override LARGE_ARTIFACT_COVERPKG := ./experiments/large-artifact-durability/...
+override LARGE_ARTIFACT_COVER_IMPORT := github.com/sjarmak/temporal_projects/experiments/large-artifact-durability/
 TOPOLOGY_COVERPKG := ./benchmarks/agent-durability/topology/agent,./benchmarks/agent-durability/topology/cmd/covermerge,./benchmarks/agent-durability/topology/evidence,./benchmarks/agent-durability/topology/internal/coverprofile,./benchmarks/agent-durability/topology/internal/sealedfs,./benchmarks/agent-durability/topology/matrix,./benchmarks/agent-durability/topology/oracle,./benchmarks/agent-durability/topology/protocol,./benchmarks/agent-durability/topology/runner,./benchmarks/agent-durability/topology/semantics
 TOPOLOGY_COVER_TEST_PACKAGES := ./benchmarks/agent-durability/topology/agent ./benchmarks/agent-durability/topology/cmd/covermerge ./benchmarks/agent-durability/topology/cmd/matrix-conformance ./benchmarks/agent-durability/topology/cmd/pilot ./benchmarks/agent-durability/topology/cmd/semantics-conformance ./benchmarks/agent-durability/topology/evidence ./benchmarks/agent-durability/topology/internal/coverprofile ./benchmarks/agent-durability/topology/internal/sealedfs ./benchmarks/agent-durability/topology/internal/testfixture ./benchmarks/agent-durability/topology/matrix ./benchmarks/agent-durability/topology/oracle ./benchmarks/agent-durability/topology/protocol ./benchmarks/agent-durability/topology/runner
 TOPOLOGY_COVER_INTEGRATIONS := TestTemporalExecutorRecoversJoinAcrossBothTopologyArms TestTemporalExecutorCoversFrozenSemanticsCasesAndBoundaries TestTemporalExecutorCoversFrozenRecoveryCasesAndBoundaries TestTemporalExecutorRecoveryScaleDoesNotDeadlockAdmission TestTemporalExecutorUnsafeQueuedChildScaleClosesHeldBarriers
@@ -216,7 +218,7 @@ coverage-coding-agent-conformance:
 	@conformance_coverage=$$(go tool cover -func=coverage.coding-agent-conformance.out | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
 	awk -v coverage="$$conformance_coverage" 'BEGIN { if (coverage + 0 < 80) { printf "coding-agent conformance coverage %.1f%% is below 80%%\n", coverage; exit 1 } }'
 
-coverage: coverage-coding-agent-conformance coverage-codex-direct coverage-topology
+coverage: coverage-coding-agent-conformance coverage-codex-direct coverage-large-artifact coverage-topology
 	go test -race -coverprofile=coverage.out ./internal/...
 	go tool cover -func=coverage.out
 	@core_coverage=$$(go tool cover -func=coverage.out | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
@@ -329,6 +331,50 @@ coverage-codex-direct:
 		mv "$$coverage_directory/coverage.codex-direct.out" coverage.codex-direct.out; \
 		mv "$$coverage_directory/coverage.codex-direct-transport.out" coverage.codex-direct-transport.out
 
+coverage-large-artifact:
+	@command -v temporal >/dev/null || { echo "Temporal CLI is required for large-artifact coverage"; exit 1; }
+	@set -eu; coverage_directory=$$(mktemp -d .coverage.large-artifact.XXXXXX); \
+		trap 'rm -rf "$$coverage_directory"' EXIT HUP INT TERM; \
+		coverage_directory=$$(cd "$$coverage_directory" && pwd -P); \
+		mkdir "$$coverage_directory/external-covdata"; \
+		LARGE_ARTIFACT_LIVE= LARGE_ARTIFACT_SINGLE_TRIAL= LARGE_ARTIFACT_CHILD_COVERAGE= LARGE_ARTIFACT_EVIDENCE_ROOT= \
+		go test -race -count=1 -covermode=atomic -coverpkg=$(LARGE_ARTIFACT_COVERPKG) \
+			-coverprofile="$$coverage_directory/base.out" ./experiments/large-artifact-durability/...; \
+		if ! LARGE_ARTIFACT_LIVE=1 LARGE_ARTIFACT_SINGLE_TRIAL=1 \
+			LARGE_ARTIFACT_CHILD_COVERAGE="$$coverage_directory/external-covdata" LARGE_ARTIFACT_EVIDENCE_ROOT= \
+			go test -race -count=1 -json -timeout 4m -covermode=atomic -coverpkg=$(LARGE_ARTIFACT_COVERPKG) \
+				-coverprofile="$$coverage_directory/live.out" \
+				./experiments/large-artifact-durability/internal/lab \
+				-run '^TestLiveLargeArtifactDurabilityMatrix$$' >"$$coverage_directory/live.jsonl"; then \
+			cat "$$coverage_directory/live.jsonl"; exit 1; \
+		fi; \
+		awk -v test='TestLiveLargeArtifactDurabilityMatrix' \
+			'index($$0, "\"Action\":\"skip\"") { skip = 1 } index($$0, "\"Action\":\"pass\"") && index($$0, "\"Test\":\"" test "\"") { pass = 1 } END { exit !(pass && !skip) }' \
+			"$$coverage_directory/live.jsonl" || { echo 'large-artifact live matrix did not execute and pass without skips'; exit 1; }; \
+		if ! LARGE_ARTIFACT_POPULATION_AUDIT_ROOT="$(CURDIR)/experiments/large-artifact-durability/evidence/large-artifact-20260812-v5" \
+			go test -race -count=1 -json -covermode=atomic -coverpkg=$(LARGE_ARTIFACT_COVERPKG) \
+				-coverprofile="$$coverage_directory/audit.out" \
+				./experiments/large-artifact-durability/internal/lab \
+				-run '^TestAuditAdmittedPopulationFromEnvironment$$' >"$$coverage_directory/audit.jsonl"; then \
+			cat "$$coverage_directory/audit.jsonl"; exit 1; \
+		fi; \
+		awk -v test='TestAuditAdmittedPopulationFromEnvironment' \
+			'index($$0, "\"Action\":\"skip\"") { skip = 1 } index($$0, "\"Action\":\"pass\"") && index($$0, "\"Test\":\"" test "\"") { pass = 1 } END { exit !(pass && !skip) }' \
+			"$$coverage_directory/audit.jsonl" || { echo 'large-artifact audit did not execute and pass without skips'; exit 1; }; \
+		go tool covdata textfmt -pkg=$(LARGE_ARTIFACT_COVER_IMPORT)... \
+			-i="$$coverage_directory/external-covdata" -o="$$coverage_directory/external.out"; \
+		test -s "$$coverage_directory/external.out" || { echo 'large-artifact child-process coverage is empty'; exit 1; }; \
+		awk -v package="$(LARGE_ARTIFACT_COVER_IMPORT)" \
+			'NR == 1 { if ($$0 != "mode: atomic") exit 1; next } index($$0, package) == 1 { blocks++; next } { exit 1 } END { exit blocks == 0 }' \
+			"$$coverage_directory/external.out" || { echo 'large-artifact child coverage has unexpected package blocks'; exit 1; }; \
+		go run ./benchmarks/agent-durability/topology/cmd/covermerge \
+			--output "$$coverage_directory/final.out" "$$coverage_directory/base.out" \
+			"$$coverage_directory/live.out" "$$coverage_directory/audit.out" "$$coverage_directory/external.out"; \
+		go tool cover -func="$$coverage_directory/final.out"; \
+		artifact_coverage=$$(go tool cover -func="$$coverage_directory/final.out" | awk '/^total:/ {gsub(/%/, "", $$3); print $$3}'); \
+		awk -v coverage="$$artifact_coverage" 'BEGIN { if (coverage + 0 < 80) { printf "large-artifact coverage %.1f%% is below 80%%\n", coverage; exit 1 } }'; \
+		mv "$$coverage_directory/final.out" coverage.large-artifact.out
+
 coverage-topology:
 	go test -race -count=1 -coverpkg=$(TOPOLOGY_COVERPKG) \
 		-coverprofile=coverage.topology.packages.out $(TOPOLOGY_COVER_TEST_PACKAGES)
@@ -390,4 +436,5 @@ coverage-system-adapters: check-postgres-service
 clean:
 	rm -rf bin
 	rm -rf .coverage.codex-direct.*
-	rm -f coverage.out coverage.completion.out coverage.external-effects.out coverage.cancellation.out coverage.agent-durability.out coverage.agent-durability-v2.out coverage.agent-durability-v2-system.out coverage.coding-agent-conformance.out coverage.claude-direct.base.out coverage.claude-direct.audit.out coverage.claude-direct.out coverage.claude-direct-transport.out coverage.codex-direct.out coverage.codex-direct-transport.out coverage.temporal-native-adapter.out coverage.topology.default.out $(TOPOLOGY_COVER_BASE_PROFILES) $(TOPOLOGY_TIMING_PROFILES) coverage.topology.v5.out coverage.topology.out coverage.topology.timing.out
+	rm -rf .coverage.large-artifact.*
+	rm -f coverage.out coverage.completion.out coverage.external-effects.out coverage.cancellation.out coverage.agent-durability.out coverage.agent-durability-v2.out coverage.agent-durability-v2-system.out coverage.coding-agent-conformance.out coverage.claude-direct.base.out coverage.claude-direct.audit.out coverage.claude-direct.out coverage.claude-direct-transport.out coverage.codex-direct.out coverage.codex-direct-transport.out coverage.large-artifact.out coverage.temporal-native-adapter.out coverage.topology.default.out $(TOPOLOGY_COVER_BASE_PROFILES) $(TOPOLOGY_TIMING_PROFILES) coverage.topology.v5.out coverage.topology.out coverage.topology.timing.out

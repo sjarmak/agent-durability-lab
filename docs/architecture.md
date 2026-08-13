@@ -105,8 +105,12 @@ a fictitious generic exactly-once interface.
 
 Reconciliation is weaker than atomic destination deduplication. The current
 non-idempotent API and Git conclusions require serialized same-ID callers. The
-artifact conclusion begins after both blob and reference exist; failure between
-those publications remains a separate experiment.
+large-artifact experiment now covers the gap between blob publication, pending
+reference creation, durable reference publication, Activity completion, and consumer
+acknowledgement. Its content-addressed protocol rejects conflicting references and
+explicitly removes unreachable blobs and pending records. This remains a single-host,
+sequential filesystem result; remote-store consistency and concurrent collection are
+separate boundaries.
 
 ## Deliberate limitations
 

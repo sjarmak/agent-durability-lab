@@ -136,6 +136,41 @@ func TestMixedCoverageGoalsShareOneCorrectnessRun(t *testing.T) {
 	}
 }
 
+func TestLargeArtifactCoveragePinsShellInterpolatedConfiguration(t *testing.T) {
+	output := makeDryRun(t, "coverage-large-artifact",
+		"LARGE_ARTIFACT_COVERPKG=attacker; printf injected",
+		"LARGE_ARTIFACT_COVER_IMPORT=attacker-import\"; printf injected")
+	if strings.Contains(output, "attacker") || strings.Contains(output, "injected") {
+		t.Fatalf("large-artifact coverage admitted command-line shell configuration:\n%s", output)
+	}
+	for _, required := range []string{
+		"-coverpkg=./experiments/large-artifact-durability/...",
+		"github.com/sjarmak/temporal_projects/experiments/large-artifact-durability/",
+	} {
+		if !strings.Contains(output, required) {
+			t.Fatalf("large-artifact coverage omits pinned value %q", required)
+		}
+	}
+}
+
+func TestLargeArtifactCoverageRequiresLiveAndAuditReceipts(t *testing.T) {
+	output := makeDryRun(t, "coverage-large-artifact")
+	for _, required := range []string{
+		`-run '^TestLiveLargeArtifactDurabilityMatrix$'`,
+		`large-artifact live matrix did not execute and pass without skips`,
+		`-run '^TestAuditAdmittedPopulationFromEnvironment$'`,
+		`large-artifact audit did not execute and pass without skips`,
+		`audit.jsonl`,
+	} {
+		if !strings.Contains(output, required) {
+			t.Fatalf("large-artifact coverage lacks execution receipt %q", required)
+		}
+	}
+	if strings.Contains(output, "| tee") {
+		t.Fatal("large-artifact coverage can mask a go test failure through tee")
+	}
+}
+
 func TestCoverageDocumentationSeparatesCorrectnessFromTimingClaims(t *testing.T) {
 	repoRoot := topologyRepositoryRoot(t)
 	topologyREADME := readContractFile(t, filepath.Join(repoRoot, "benchmarks", "agent-durability", "topology", "README.md"))

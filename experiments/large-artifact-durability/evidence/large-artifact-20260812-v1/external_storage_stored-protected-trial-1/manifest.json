@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "experiment": "large-artifact-durability",
+  "run_id": "external_storage_stored-protected-trial-1",
+  "boundary": "external_storage_stored",
+  "mode": "protected",
+  "workflow_id": "large-artifact/external_storage_stored-protected-trial-1",
+  "workflow_run_id": "019ff7e0-a692-7c89-9714-7477ff0445c7",
+  "artifact_id": "artifact-external_storage_stored-protected-trial-1",
+  "artifact_sha256": "48b06a6ae082eb22f99f82d7aa0d822c5ab4f1cbf0fd41b39b49e3b2611a725d",
+  "artifact_size": 393216,
+  "started_at": "2026-08-12T21:28:42.362955097Z",
+  "completed_at": "2026-08-12T21:28:56.837810062Z",
+  "failure_boundary": "Worker 1 SIGKILL after SDK StorageDriver bytes are durable but before its claim is returned",
+  "invariant": "protected redelivery converges to one verified blob, durable reference, compact history receipt, and consumer acknowledgement",
+  "falsifier": "loss, conflicting content, duplicate durable reference/acknowledgement, reachable-blob cleanup, inline artifact bytes, or replay failure",
+  "runtime": {
+    "captured_at": "2026-08-12T21:21:05.569252615Z",
+    "os": "linux",
+    "architecture": "amd64",
+    "go_version": "go1.25.12",
+    "sdk_version": "unknown",
+    "temporal_version": "temporal version 1.8.0 (Server 1.31.2, UI 2.50.1)",
+    "temporal_sha256": "fcbcc8c64aec1b8cc1d4268891bf2bd0ec15eaccfe110c055ad1950f48d43452",
+    "temporal_bytes": 137978018,
+    "worker_sha256": "3b861cf3bac7fe9285657eb601fea98a2e448a25540f89bad584f4618c60ca9b",
+    "worker_bytes": 38787632
+  },
+  "directories": [
+    "external-store",
+    "external-store/objects",
+    "workers"
+  ],
+  "files": {
+    "evidence.json": "4fe7ab7d36ff1e973e80c5cdd62b57ec110fdd556e575cffde9e9750f5806b93",
+    "external-store/objects/ce98f5ad8f11dc7d84de69bebbb222ac954e079a825907c8269b0c3068e137cc.payload": "ce98f5ad8f11dc7d84de69bebbb222ac954e079a825907c8269b0c3068e137cc",
+    "source-artifact.bin": "48b06a6ae082eb22f99f82d7aa0d822c5ab4f1cbf0fd41b39b49e3b2611a725d",
+    "temporal-history.json": "e0161596c108ce90e71a781ae5ee670c9551713238304770ee6154fed94ea80f",
+    "temporal-server.log": "92ac34731fb011967b8a05b4258f22da216d34ae6ba3cbba97cf5f492c73bd9b",
+    "verdict.json": "d8041d2f3cb5fc3ab3460d73b1e1af894be62a408a1731554827af452cab32bf",
+    "workers/worker-1.log": "7a8261baffcccdfcb0b5fa529377920f6e7785cdc422c150f092e1412fee6ae5",
+    "workers/worker-2.log": "16eb97cb7d31a77a1c0eac59bd883ebd03a71f300ef610a8a0a500a56e9dde1b"
+  }
+}
