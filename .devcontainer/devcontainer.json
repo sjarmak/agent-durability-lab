@@ -1,0 +1,43 @@
+{
+  "name": "Agent Durability Lab",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "remoteUser": "vscode",
+  "containerUser": "vscode",
+  "updateRemoteUserUID": true,
+  "init": true,
+  "shutdownAction": "stopContainer",
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "4gb",
+    "storage": "16gb"
+  },
+  "runArgs": [
+    "--cap-drop=ALL",
+    "--security-opt=no-new-privileges:true"
+  ],
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": {
+      "label": "Recovery evidence explorer",
+      "onAutoForward": "notify"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "customizations": {
+    "codespaces": {
+      "openFiles": [
+        "cookbooks/coding-agents/README.md",
+        "cookbooks/coding-agents/quickstart/README.md"
+      ]
+    },
+    "vscode": {
+      "extensions": [
+        "golang.Go",
+        "ms-python.python"
+      ]
+    }
+  }
+}

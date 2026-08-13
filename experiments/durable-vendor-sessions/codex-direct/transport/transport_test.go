@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -51,6 +52,49 @@ func TestBuildVerifyRestoreIsDeterministic(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(restored, "bundle-v1-audit.json")); err != nil {
 		t.Fatalf("bound audit was not restored: %v", err)
+	}
+}
+
+func TestRestorePreservesManifestModesUnderRestrictiveUmask(t *testing.T) {
+	const helperEnvironment = "CODEX_TRANSPORT_RESTRICTIVE_UMASK_HELPER"
+	if os.Getenv(helperEnvironment) == "1" {
+		if err := Restore(
+			context.Background(),
+			os.Getenv("CODEX_TRANSPORT_ROOT"),
+			os.Getenv("CODEX_TRANSPORT_DESTINATION"),
+		); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+
+	source, lineagePath := writeTransportFixture(t)
+	writableArtifact := filepath.Join(source, "bundle-v1", "run-1", "fixture", ".git", "HEAD")
+	if err := os.Chmod(writableArtifact, 0o664); err != nil {
+		t.Fatal(err)
+	}
+	transportRoot := filepath.Join(t.TempDir(), "transport")
+	if _, err := Build(context.Background(), BuildConfig{
+		SourceRoot: source, LineagePath: lineagePath, OutputRoot: transportRoot,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	restored := filepath.Join(t.TempDir(), "restored")
+	command := exec.Command("sh", "-c", `umask 0022; exec "$1" -test.run=^TestRestorePreservesManifestModesUnderRestrictiveUmask$`, "sh", os.Args[0])
+	command.Env = append(os.Environ(),
+		helperEnvironment+"=1",
+		"CODEX_TRANSPORT_ROOT="+transportRoot,
+		"CODEX_TRANSPORT_DESTINATION="+restored,
+	)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("restore with restrictive umask: %v\n%s", err, output)
+	}
+	info, err := os.Stat(filepath.Join(restored, "bundle-v1", "run-1", "fixture", ".git", "HEAD"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o664 {
+		t.Fatalf("restored mode = %04o, want 0664", info.Mode().Perm())
 	}
 }
 

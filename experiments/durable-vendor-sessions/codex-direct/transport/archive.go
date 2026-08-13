@@ -162,9 +162,10 @@ func extractArchive(ctx context.Context, archivePath, destination string, manife
 		}
 		hasher := newHashingWriter(file)
 		written, copyErr := io.Copy(hasher, archive)
+		chmodErr := file.Chmod(want.Mode.Perm())
 		closeErr := file.Close()
-		if copyErr != nil || closeErr != nil || written != want.Size || hasher.Sum() != want.SHA256 {
-			return fmt.Errorf("%w: extracted content differs for %s: %v", ErrInvalidTransport, want.Path, errors.Join(copyErr, closeErr))
+		if copyErr != nil || chmodErr != nil || closeErr != nil || written != want.Size || hasher.Sum() != want.SHA256 {
+			return fmt.Errorf("%w: extracted content differs for %s: %v", ErrInvalidTransport, want.Path, errors.Join(copyErr, chmodErr, closeErr))
 		}
 	}
 	if header, err := archive.Next(); err != io.EOF || header != nil {

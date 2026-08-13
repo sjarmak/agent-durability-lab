@@ -1,0 +1,64 @@
+name: Coding agent product surface
+
+on:
+  pull_request:
+    paths:
+      - '.devcontainer/**'
+      - '.github/workflows/coding-agent-product.yml'
+      - '.impeccable/**'
+      - 'DESIGN.md'
+      - 'LICENSE'
+      - 'PRODUCT.md'
+      - 'README.md'
+      - 'cookbooks/coding-agents/**'
+      - 'docs/assets/**'
+      - 'docs/product/**'
+      - 'experiments/durable-vendor-sessions/codex-direct/**'
+      - 'go.mod'
+      - 'go.sum'
+  push:
+    branches: [main]
+    paths:
+      - '.devcontainer/**'
+      - '.github/workflows/coding-agent-product.yml'
+      - '.impeccable/**'
+      - 'DESIGN.md'
+      - 'LICENSE'
+      - 'PRODUCT.md'
+      - 'README.md'
+      - 'cookbooks/coding-agents/**'
+      - 'docs/assets/**'
+      - 'docs/product/**'
+      - 'experiments/durable-vendor-sessions/codex-direct/**'
+      - 'go.mod'
+      - 'go.sum'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coding-agent-product-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  credential-free-product:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Install exact Go toolchain
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version: 1.25.12
+          cache: true
+      - name: Install exact Python line
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.12'
+      - name: Warm Go modules
+        run: go mod download
+      - name: Run credential-free product smoke
+        run: ./cookbooks/coding-agents/dev-smoke.sh
+      - name: Audit every cookbook package
+        run: ./cookbooks/coding-agents/run-all.sh check

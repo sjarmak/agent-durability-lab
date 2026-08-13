@@ -337,6 +337,8 @@ specs/coding-agent-durability/v1/fixtures/{valid,invalid}/
 contrib/codingagent/go/
 contrib/codingagent/python/pyproject.toml
 contrib/codingagent/python/src/temporal_coding_agent/
+docs/product/fault-tested-coding-agent-cookbooks.md
+cookbooks/coding-agents/presentation/
 cookbooks/coding-agents/01-native-agent-loop/
 cookbooks/coding-agents/02-effect-safe-tools/
 cookbooks/coding-agents/03-external-cli-ownership/
@@ -354,9 +356,11 @@ lineage.
 
 ## Anti-goals
 
-V1 does not build a general agent or model framework, hosted runtime, UI,
-deployment platform, generic sandbox provider, vendor authentication system, or
-transcript store. It does not hide semantic policy in deterministic heuristics,
+V1 does not build a general agent or model framework, hosted runtime, mutable
+agent control UI, deployment platform, generic sandbox provider, vendor
+authentication system, or transcript store. A read-only evidence explorer may
+render independently verified outcomes, but it cannot become an oracle or
+promote a claim. V1 does not hide semantic policy in deterministic heuristics,
 promise full Python/Go parity, rank durability systems or Temporal topology, or
 extract a one-off experiment mechanism before a second real use justifies the
 shared boundary.

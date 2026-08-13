@@ -17,6 +17,36 @@ successful Workflow demos. Its purpose is to identify failure boundaries,
 reproduce them under controlled faults, and establish the smallest mechanism
 that survives them.
 
+## Start with the product surface
+
+[Fault-Tested Durability Patterns for Coding Agents](cookbooks/coding-agents/README.md)
+is the applied path through the lab. It starts with the credential-free
+[`quickstart.sh`](cookbooks/coding-agents/quickstart.sh),
+then connects six implementation patterns to their exact unsafe controls,
+protected outcomes, native histories, and bounded findings. The product layer
+is read-only and does not replace the independent evidence oracles.
+
+A pinned Codespaces/Dev Containers workspace is available in
+[`.devcontainer/`](.devcontainer/README.md). Its CI-shaped, credential-free check is:
+
+```bash
+./cookbooks/coding-agents/dev-smoke.sh
+```
+
+Open the same verified unsafe-versus-protected triad as a read-only evidence walkthrough:
+
+```bash
+./cookbooks/coding-agents/explore.sh
+```
+
+![Recovery evidence explorer](docs/assets/recovery-evidence-explorer.png)
+
+The [failure-first tutorials](cookbooks/coding-agents/tutorials/README.md) explain how to read
+the triad, apply the universal identity/authority/effect pattern, and keep normalized
+presentation separate from native history and the independent oracle. A local
+[Temporal Code Exchange submission preview](docs/product/code-exchange-submission.md) records
+the current packaging fields; it has not been submitted.
+
 ## Research program
 
 The intended work is organized around five related questions:

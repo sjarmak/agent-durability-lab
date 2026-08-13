@@ -1,9 +1,65 @@
-# Durable coding-agent cookbooks
+# Fault-Tested Durability Patterns for Coding Agents
 
 These six recipes are the executable product surface for the
 [coding-agent durability v1 specification](../../docs/product/coding-agent-durability-v1.md).
 They turn admitted experiment outputs into patterns a backend/platform engineer
 can apply without treating a passing demo as a guarantee.
+
+The [product brief](../../docs/product/fault-tested-coding-agent-cookbooks.md)
+defines the user journey and claim boundary. The
+[presentation contract](presentation/README.md) defines the read-only view that
+future tutorials and the evidence explorer consume.
+
+## Start
+
+Run the first trustworthy recovery walkthrough. It needs Go, but no provider
+credentials:
+
+```bash
+./cookbooks/coding-agents/quickstart.sh
+```
+
+The command requires one unfaulted pass, the unsafe distinguishing failure, the
+matching protected pass, independent audits, and all 102 native history replays
+before it renders a summary. See the [quickstart contract](quickstart/README.md).
+
+Explore the same verified triad interactively, with normalized timeline navigation beside
+native history, raw evidence, authority, effects, provenance, and falsifier:
+
+```bash
+./cookbooks/coding-agents/explore.sh
+```
+
+See the [read-only explorer contract](explorer/README.md).
+
+For the short failure-first learning path, start with the
+[tutorials](tutorials/README.md).
+
+For a pinned Codespaces or VS Code Dev Containers workspace and its focused smoke gate,
+see the [development workspace](../../.devcontainer/README.md).
+
+The broader read-only fresh-checkout cookbook audit is:
+
+```bash
+./cookbooks/coding-agents/run-all.sh check
+```
+
+Run all focused critical paths, including history replay and mechanism tests:
+
+```bash
+./cookbooks/coding-agents/run-all.sh critical
+```
+
+Run both phases with:
+
+```bash
+./cookbooks/coding-agents/run-all.sh all
+```
+
+The audit reads admitted evidence in place. Live evidence generation remains in
+each underlying experiment and always requires a new append-only root.
+
+## Patterns
 
 The supporting contract is language-neutral:
 
@@ -12,7 +68,7 @@ The supporting contract is language-neutral:
 - [incubating Python binding](../../contrib/codingagent/python)
 - [deterministic apparatus conformance](../../benchmarks/agent-durability/conformance)
 
-## Cookbook map
+### Cookbook map
 
 | Recipe | Product decision it supports | Maturity |
 | --- | --- | --- |
@@ -23,7 +79,7 @@ The supporting contract is language-neutral:
 | [05-sandbox-lifecycle](05-sandbox-lifecycle/README.md) | Separate sandbox operation identity, resource ownership, agent session identity, and orphan reconciliation | Normative for the hermetic provider boundary |
 | [06-bounded-recovery](06-bounded-recovery/README.md) | Own retry budgets, admission, catch-up, backpressure, poison quarantine, and progress deadlines in Workflow/application state | Normative mechanism conformance; not a performance ranking |
 
-## Universal pattern
+### Universal pattern
 
 Temporal supplies durable procedure: Workflow state, timers, task redelivery,
 cancellation commands, and Event History. The application supplies stable
@@ -51,30 +107,32 @@ The portable sequence is:
 There is no exactly-once wrapper here: the rule is no exactly-once claim without
 a destination protocol and evidence that establishes effect cardinality.
 
-## Run
+## Scenarios
 
-The read-only fresh-checkout audit is:
+Every public scenario is an exact triad: an unfaulted valid-pass, an unsafe
+valid-fail negative control, and a protected valid-pass under the same declared
+fault. The scenario retains stable logical identity, delivery/process/provider
+observations, authority changes, destination effects, cancellation chronology,
+and the terminal outcome. The typed contract lives in
+[`presentation`](presentation/README.md).
 
-```bash
-./cookbooks/coding-agents/run-all.sh check
-```
+## Evidence
 
-Run all focused critical paths, including history replay and mechanism tests:
+The normalized trace is a navigation aid over independently verified evidence.
+Native Temporal history, raw destination or workspace observations, hashes,
+source/version pins, replay status, and correction lineage remain available.
+The presentation layer cannot choose a verdict or hide a failed or superseded
+population.
 
-```bash
-./cookbooks/coding-agents/run-all.sh critical
-```
+## Protocol
 
-Run both phases with:
+Portable identities, transitions, events, receipts, fixtures, and binding
+requirements live under
+[`specs/coding-agent-durability/v1`](../../specs/coding-agent-durability/v1/README.md).
+Go and Python bindings consume that contract; cookbook-specific mechanisms do
+not replace it.
 
-```bash
-./cookbooks/coding-agents/run-all.sh all
-```
-
-The audit reads admitted evidence in place. Live evidence generation remains in
-each underlying experiment and always requires a new append-only root.
-
-## Claim boundary
+## Research
 
 This package establishes evidence-backed design patterns and executable
 mechanism checks. The shared external-CLI ownership contract is normative at
@@ -83,3 +141,7 @@ general provider or version compatibility promise. Provider authentication
 lifecycle, cross-host supervisor failover, arbitrary real destinations,
 version migration, protocol-native APIs, and public performance or failure-rate
 claims remain outside v1.
+
+The [guarantee ledger](../../docs/guarantees.md) and
+[findings](../../docs/findings/) are the authoritative claim index. Product
+presentation remains downstream of those records.

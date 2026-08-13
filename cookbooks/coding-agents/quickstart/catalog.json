@@ -1,0 +1,154 @@
+{
+  "schema_version": "coding-agent-presentation-v1",
+  "product": {
+    "name": "Fault-Tested Durability Patterns for Coding Agents",
+    "positioning": "A read-only walkthrough of admitted recovery evidence, not a successful Workflow demo.",
+    "audience": "Backend and platform engineers accountable for long-running coding agents.",
+    "primary_outcome": "First trustworthy recovery from an exact declared fault.",
+    "anti_goals": [
+      "generic-runtime-parity",
+      "exactly-once",
+      "controlled-compute-performance",
+      "unadmitted-provider-compatibility"
+    ]
+  },
+  "sections": [
+    {"id": "start", "title": "Start", "purpose": "Run one trustworthy recovery.", "href": "cookbooks/coding-agents/quickstart/"},
+    {"id": "patterns", "title": "Patterns", "purpose": "Apply the six durability patterns.", "href": "cookbooks/coding-agents/"},
+    {"id": "scenarios", "title": "Scenarios", "purpose": "Compare unsafe and protected fault outcomes.", "href": "cookbooks/coding-agents/quickstart/catalog.json"},
+    {"id": "evidence", "title": "Evidence", "purpose": "Inspect verified observations and native histories.", "href": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/"},
+    {"id": "protocol", "title": "Protocol", "purpose": "Integrate stable identity and authority.", "href": "specs/coding-agent-durability/v1/"},
+    {"id": "research", "title": "Research", "purpose": "Review findings, limits, and falsifiers.", "href": "docs/findings/0021-codex-thread-resume-is-not-turn-authority.md"}
+  ],
+  "scenarios": [
+    {
+      "id": "effect-committed-before-completion",
+      "slug": "effect-committed-before-completion",
+      "title": "Tool effect commits before Activity completion",
+      "summary": "The unsafe relaunch duplicates the effect; application-fenced start-or-attach returns the original execution and one effect.",
+      "question": "Does recovery preserve effect cardinality after the Worker loses an Activity completion?",
+      "invariant": "One logical operation produces at most one committed destination effect.",
+      "failure_boundary": "The exact codex-tool-effect-committed barrier fires before Activity completion, then the Worker is replaced.",
+      "falsifier": "The unsafe arm stops distinguishing, the protected arm commits twice or starts a competitor, any selected history fails replay, or the presentation disagrees with the raw trial summary.",
+      "recipe_href": "cookbooks/coding-agents/03-external-cli-ownership/",
+      "claim": {
+        "statement": "Temporal redelivers procedure; application-owned start-or-attach authority and destination enforcement prevent the repeated delivery from becoming a competing effect at this recorded boundary.",
+        "scope": "Pinned hermetic Codex v12 transports on one Linux host; no provider, performance, cross-host, or exactly-once claim.",
+        "maturity": "normative",
+        "evidence": [
+          {
+            "path": "docs/findings/0021-codex-thread-resume-is-not-turn-authority.md",
+            "sha256": "sha256:6171ed74d63befbbfb9553e4d0b18512e5d00bf94ce78e697d45627bc4cf283a",
+            "media_type": "text/markdown",
+            "label": "bounded finding"
+          }
+        ]
+      },
+      "responsibility": {
+        "temporal": "Records the Workflow procedure and redelivers the incomplete Activity.",
+        "application": "Owns stable logical identity, generation/capability authority, and exact start-or-attach.",
+        "destination": "Accepts only the current authorized effect and preserves its receipt.",
+        "executor": "Supplies process and thread observations without becoming durable authority."
+      },
+      "episodes": [
+        {
+          "id": "codex-v12-unfaulted-1",
+          "variant": "unfaulted",
+          "verdict": "valid-pass",
+          "outcome": {"terminal_state": "succeeded", "summary": "The initial fenced executor completed normally with one effect.", "accepted_result_id": "EFFECT_COMPLETE", "physical_effect_count": 1},
+          "identities": {
+            "session_id": "codex-direct-fenced-start-or-attach-unfaulted-trial-1",
+            "turn_id": "turn-1",
+            "operation_id": "codex-direct-fenced-start-or-attach-unfaulted-trial-1/operation-1",
+            "effect_id": "effect-1",
+            "delivery": {"workflow_id": "codex-direct/codex-direct-fenced-start-or-attach-unfaulted-trial-1", "run_id": "019ff4bc-35e2-7102-9f52-e0c4bb708f78", "activity_id": "run-codex", "activity_attempt": 1, "worker_identity": "worker-one", "process_identity": "pid:3160849:start:29afdb6d-5fd3-4db9-803f-046a00f5cbec:49214626", "provider_identity": "170636bc-8b69-4ce7-9d3d-a3a07db15354"}
+          },
+          "authority": [{"sequence": 1, "generation": 1, "status": "current", "capability_digest": "sha256:f964417220ded7314b6f8faf2e523684e5cd7c1e6f55546f50a5e2984a0633f9", "actor": "codex-supervisor-g1", "occurred_at": "2026-08-12T06:50:03.389195048Z"}],
+          "effects": [{"effect_id": "effect-1", "disposition": "committed", "receipt_id": "supervisor-generation-1", "summary": "The authorized generation committed one controlled edit."}],
+          "events": [
+            {"sequence": 1, "occurred_at": "2026-08-12T06:50:03.389195048Z", "lane": "application", "event_type": "executor_launch_decided", "summary": "Generation 1 launched the supervisor-owned executor.", "references": ["supervisor-generation-1"]},
+            {"sequence": 2, "occurred_at": "2026-08-12T06:50:03.402697376Z", "lane": "destination", "event_type": "effect_accepted", "summary": "The destination accepted effect-1.", "references": ["effect-1"]},
+            {"sequence": 3, "occurred_at": "2026-08-12T06:50:03.418081386Z", "lane": "temporal", "event_type": "outcome_accepted", "summary": "The Workflow accepted EFFECT_COMPLETE.", "references": ["EFFECT_COMPLETE"]}
+          ],
+          "native_history": {"path": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/hermetic-fenced-20260812-v4/codex-direct-hermetic-fenced-20260812-v12.tar.gz", "archive_member": "codex-direct-fenced-start-or-attach-unfaulted-trial-1/workflow-history.json", "sha256": "sha256:7e167aa0274c0718e3a3a86a7a62a861bbddea4e41d2f2ecd2191dced8dfd4ca", "media_type": "application/gzip", "label": "sealed transport containing Temporal Event History"},
+          "raw_evidence": [{"path": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/hermetic-fenced-20260812-v4/codex-direct-hermetic-fenced-20260812-v12.tar.gz", "archive_member": "codex-direct-fenced-start-or-attach-unfaulted-trial-1/trial-summary.json", "sha256": "sha256:7e167aa0274c0718e3a3a86a7a62a861bbddea4e41d2f2ecd2191dced8dfd4ca", "media_type": "application/gzip", "label": "sealed raw trial summary"}],
+          "provenance": {
+            "evidence_root": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/hermetic-fenced-20260812-v4",
+            "manifest": {"path": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/hermetic-fenced-20260812-v4/codex-direct-hermetic-fenced-20260812-v12.manifest.json", "sha256": "sha256:c9952d48b047e6888fab1870bc69c9d2ca14a7da96c6d6bf6d20b1021bbff79a", "media_type": "application/json", "label": "transport manifest"},
+            "report": {"path": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/hermetic-fenced-20260812-v4/codex-direct-hermetic-fenced-20260812-v12-audit.json", "sha256": "sha256:904ffdad1bafb8b56721ccd1ef51470ff3a6f1c3f61b9fd47d32e0149c762fbf", "media_type": "application/json", "label": "independent audit"},
+            "source_revision": "codex-direct-hermetic-fenced-20260812-v12",
+            "audit_command": "./cookbooks/coding-agents/quickstart.sh",
+            "replay_status": "passed",
+            "correction_lineage": [{"path": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/hermetic-fenced-20260812-v4/transport-index.json", "sha256": "sha256:fc9f758d26c3cddbe4a2495cbf25f5f6cb25609d2cd9ace194f4c5456ae152a0", "media_type": "application/json", "label": "append-only correction lineage"}]
+          }
+        },
+        {
+          "id": "codex-v12-unsafe-effect-1",
+          "variant": "unsafe",
+          "verdict": "valid-fail",
+          "outcome": {"terminal_state": "succeeded", "summary": "Temporal completed while two fresh executors committed the same logical effect.", "accepted_result_id": "EFFECT_COMPLETE", "physical_effect_count": 2},
+          "identities": {
+            "session_id": "codex-direct-unsafe-fresh-tool-effect-before-activity-completion-trial-1",
+            "turn_id": "turn-1",
+            "operation_id": "codex-direct-unsafe-fresh-tool-effect-before-activity-completion-trial-1/operation-1",
+            "effect_id": "effect-1",
+            "delivery": {"workflow_id": "codex-direct/codex-direct-unsafe-fresh-tool-effect-before-activity-completion-trial-1", "run_id": "019ff4b5-289b-78c7-b5e9-90e7823b325e", "activity_id": "run-codex", "activity_attempt": 2, "worker_identity": "worker-two", "process_identity": "pid:2864219:start:29afdb6d-5fd3-4db9-803f-046a00f5cbec:49170566", "provider_identity": "778b6892-c580-4eac-aba4-6c195250d60f"}
+          },
+          "authority": [{"sequence": 1, "generation": 0, "status": "absent", "capability_digest": "", "actor": "unsafe-fresh-launch", "occurred_at": "2026-08-12T06:42:20.926224995Z"}],
+          "effects": [
+            {"effect_id": "effect-1", "disposition": "committed", "receipt_id": "a52a5dd64280f510-attempt-1", "summary": "The first physical attempt committed the edit before completion."},
+            {"effect_id": "effect-1", "disposition": "committed", "receipt_id": "a52a5dd64280f510-attempt-2", "summary": "The fresh retry committed the same logical edit again."}
+          ],
+          "events": [
+            {"sequence": 1, "occurred_at": "2026-08-12T06:42:21.214868346Z", "lane": "destination", "event_type": "effect_committed", "summary": "Attempt 1 committed effect-1.", "references": ["a52a5dd64280f510-attempt-1"]},
+            {"sequence": 2, "occurred_at": "2026-08-12T06:42:21.229316685Z", "lane": "executor", "event_type": "worker_replaced", "summary": "The first Worker was stopped at the exact barrier.", "references": ["worker-one"]},
+            {"sequence": 3, "occurred_at": "2026-08-12T06:42:42.804333472Z", "lane": "destination", "event_type": "duplicate_effect_committed", "summary": "Attempt 2 committed effect-1 again.", "references": ["a52a5dd64280f510-attempt-2"]}
+          ],
+          "native_history": {"path": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/hermetic-unsafe-20260812-v4/codex-direct-hermetic-unsafe-20260812-v12.tar.gz", "archive_member": "codex-direct-unsafe-fresh-tool-effect-before-activity-completion-trial-1/workflow-history.json", "sha256": "sha256:d3e5eabee375bb5f9b25bab46b25fda22ea01fc79fef0d471a46f4ff3cffa384", "media_type": "application/gzip", "label": "sealed transport containing Temporal Event History"},
+          "raw_evidence": [{"path": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/hermetic-unsafe-20260812-v4/codex-direct-hermetic-unsafe-20260812-v12.tar.gz", "archive_member": "codex-direct-unsafe-fresh-tool-effect-before-activity-completion-trial-1/trial-summary.json", "sha256": "sha256:d3e5eabee375bb5f9b25bab46b25fda22ea01fc79fef0d471a46f4ff3cffa384", "media_type": "application/gzip", "label": "sealed raw trial summary"}],
+          "provenance": {
+            "evidence_root": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/hermetic-unsafe-20260812-v4",
+            "manifest": {"path": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/hermetic-unsafe-20260812-v4/codex-direct-hermetic-unsafe-20260812-v12.manifest.json", "sha256": "sha256:4275fb2782e8ef9ff3da875771fe6ec2dfa86aeba8933f49f63b2a849773546f", "media_type": "application/json", "label": "transport manifest"},
+            "report": {"path": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/hermetic-unsafe-20260812-v4/codex-direct-hermetic-unsafe-20260812-v12-audit.json", "sha256": "sha256:3ccffbbb8521ac2906a7c11279b9952ad0ef36b2e4071f6c91f28f4a959cf759", "media_type": "application/json", "label": "independent audit"},
+            "source_revision": "codex-direct-hermetic-unsafe-20260812-v12",
+            "audit_command": "./cookbooks/coding-agents/quickstart.sh",
+            "replay_status": "passed",
+            "correction_lineage": [{"path": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/hermetic-unsafe-20260812-v4/transport-index.json", "sha256": "sha256:b5ef901e81762bc30160dc1ddbdd24bb007ea908c09a4b1578096673d12a80a1", "media_type": "application/json", "label": "append-only correction lineage"}]
+          }
+        },
+        {
+          "id": "codex-v12-protected-effect-1",
+          "variant": "protected",
+          "verdict": "valid-pass",
+          "outcome": {"terminal_state": "succeeded", "summary": "The retry attached to the current supervisor-owned executor and retained one effect.", "accepted_result_id": "EFFECT_COMPLETE", "physical_effect_count": 1},
+          "identities": {
+            "session_id": "codex-direct-fenced-start-or-attach-tool-effect-before-activity-completion-trial-1",
+            "turn_id": "turn-1",
+            "operation_id": "codex-direct-fenced-start-or-attach-tool-effect-before-activity-completion-trial-1/operation-1",
+            "effect_id": "effect-1",
+            "delivery": {"workflow_id": "codex-direct/codex-direct-fenced-start-or-attach-tool-effect-before-activity-completion-trial-1", "run_id": "019ff4bd-3933-7a90-b84a-d0c51bcb7bc3", "activity_id": "run-codex", "activity_attempt": 2, "worker_identity": "worker-two", "process_identity": "pid:3210044:start:29afdb6d-5fd3-4db9-803f-046a00f5cbec:49221245", "provider_identity": "79606d0e-02f8-4455-bbbc-3da52e41be76"}
+          },
+          "authority": [{"sequence": 1, "generation": 1, "status": "current", "capability_digest": "sha256:a4756b4cacc8481bdd4f4205aed975bf8d3343507101f70b38dfd1c92f12f3e9", "actor": "codex-supervisor-g1", "occurred_at": "2026-08-12T06:51:09.582605011Z"}],
+          "effects": [{"effect_id": "effect-1", "disposition": "committed", "receipt_id": "supervisor-generation-1", "summary": "The current authorized generation committed one controlled edit."}],
+          "events": [
+            {"sequence": 1, "occurred_at": "2026-08-12T06:51:09.595312243Z", "lane": "destination", "event_type": "effect_accepted", "summary": "Generation 1 committed effect-1.", "references": ["effect-1"]},
+            {"sequence": 2, "occurred_at": "2026-08-12T06:51:09.599963446Z", "lane": "executor", "event_type": "worker_replaced", "summary": "The Worker was replaced after the exact effect barrier.", "references": ["worker-one"]},
+            {"sequence": 3, "occurred_at": "2026-08-12T06:51:31.380643249Z", "lane": "application", "event_type": "activity_reattached", "summary": "Attempt 2 attached to the same supervisor execution.", "references": ["supervisor-generation-1"]},
+            {"sequence": 4, "occurred_at": "2026-08-12T06:51:31.385421794Z", "lane": "temporal", "event_type": "outcome_accepted", "summary": "The Workflow accepted the original execution result.", "references": ["EFFECT_COMPLETE"]}
+          ],
+          "native_history": {"path": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/hermetic-fenced-20260812-v4/codex-direct-hermetic-fenced-20260812-v12.tar.gz", "archive_member": "codex-direct-fenced-start-or-attach-tool-effect-before-activity-completion-trial-1/workflow-history.json", "sha256": "sha256:7e167aa0274c0718e3a3a86a7a62a861bbddea4e41d2f2ecd2191dced8dfd4ca", "media_type": "application/gzip", "label": "sealed transport containing Temporal Event History"},
+          "raw_evidence": [{"path": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/hermetic-fenced-20260812-v4/codex-direct-hermetic-fenced-20260812-v12.tar.gz", "archive_member": "codex-direct-fenced-start-or-attach-tool-effect-before-activity-completion-trial-1/trial-summary.json", "sha256": "sha256:7e167aa0274c0718e3a3a86a7a62a861bbddea4e41d2f2ecd2191dced8dfd4ca", "media_type": "application/gzip", "label": "sealed raw trial summary"}],
+          "provenance": {
+            "evidence_root": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/hermetic-fenced-20260812-v4",
+            "manifest": {"path": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/hermetic-fenced-20260812-v4/codex-direct-hermetic-fenced-20260812-v12.manifest.json", "sha256": "sha256:c9952d48b047e6888fab1870bc69c9d2ca14a7da96c6d6bf6d20b1021bbff79a", "media_type": "application/json", "label": "transport manifest"},
+            "report": {"path": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/hermetic-fenced-20260812-v4/codex-direct-hermetic-fenced-20260812-v12-audit.json", "sha256": "sha256:904ffdad1bafb8b56721ccd1ef51470ff3a6f1c3f61b9fd47d32e0149c762fbf", "media_type": "application/json", "label": "independent audit"},
+            "source_revision": "codex-direct-hermetic-fenced-20260812-v12",
+            "audit_command": "./cookbooks/coding-agents/quickstart.sh",
+            "replay_status": "passed",
+            "correction_lineage": [{"path": "experiments/durable-vendor-sessions/codex-direct/evidence-transport/hermetic-fenced-20260812-v4/transport-index.json", "sha256": "sha256:fc9f758d26c3cddbe4a2495cbf25f5f6cb25609d2cd9ace194f4c5456ae152a0", "media_type": "application/json", "label": "append-only correction lineage"}]
+          }
+        }
+      ]
+    }
+  ]
+}

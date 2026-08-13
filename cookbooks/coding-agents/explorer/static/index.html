@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>Recovery evidence explorer · Agent Durability Lab</title>
+    <link rel="stylesheet" href="/assets/styles.css">
+    <script type="module" src="/assets/app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#evidence">Skip to evidence</a>
+    <header class="masthead">
+      <a class="wordmark" href="/" aria-label="Agent Durability Lab home">
+        <span class="wordmark-mark" aria-hidden="true">ADL</span>
+        <span>Agent Durability Lab</span>
+      </a>
+      <nav aria-label="Product sections">
+        <a href="#scenario">Scenario</a>
+        <a href="#timeline">Timeline</a>
+        <a href="#evidence-files">Evidence</a>
+        <a href="#limits">Limits</a>
+      </nav>
+      <p class="replay-receipt"><span aria-hidden="true">✓</span> 102 histories replayed</p>
+    </header>
+
+    <main id="evidence" tabindex="-1">
+      <section class="opening" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">First trustworthy recovery</p>
+          <h1 id="page-title">Recovery evidence explorer</h1>
+          <p id="product-positioning" class="lede">Loading the verified presentation catalog.</p>
+        </div>
+        <p class="boundary-note">Read-only presentation. Verdicts come from the independent oracle.</p>
+      </section>
+
+      <p id="loading-status" class="loading-status" role="status" aria-live="polite">Loading verified evidence…</p>
+
+      <section id="scenario" class="scenario-intro" aria-labelledby="scenario-title" hidden>
+        <p class="eyebrow">Exact failure boundary</p>
+        <h2 id="scenario-title"></h2>
+        <p id="scenario-summary" class="scenario-summary"></p>
+        <dl class="question-grid">
+          <div><dt>Question</dt><dd id="scenario-question"></dd></div>
+          <div><dt>Invariant</dt><dd id="scenario-invariant"></dd></div>
+          <div class="fault-row"><dt>Fault</dt><dd id="scenario-fault"></dd></div>
+        </dl>
+      </section>
+
+      <section id="comparison" class="comparison" aria-labelledby="comparison-title" hidden>
+        <div class="section-heading">
+          <div><p class="eyebrow">Negative control stays visible</p><h2 id="comparison-title">Unsafe versus protected</h2></div>
+          <p>Same logical effect and exact fault. Different ownership policy.</p>
+        </div>
+        <div class="comparison-table-wrap" role="region" aria-label="Episode comparison table" tabindex="0">
+          <table>
+            <thead><tr><th scope="col">Variant</th><th scope="col">Oracle verdict</th><th scope="col">Physical effects</th><th scope="col">Authority</th><th scope="col">Observed result</th></tr></thead>
+            <tbody id="comparison-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="episode" class="episode" aria-labelledby="episode-title" hidden>
+        <div class="section-heading episode-heading">
+          <div><p class="eyebrow">Inspect one recorded episode</p><h2 id="episode-title">Episode detail</h2></div>
+          <div id="episode-tabs" class="episode-tabs" role="tablist" aria-label="Recovery episode"></div>
+        </div>
+
+        <div class="episode-summary">
+          <div><p class="field-label">Selected outcome</p><p id="episode-outcome" class="outcome-copy"></p></div>
+          <dl class="episode-facts">
+            <div><dt>Verdict</dt><dd id="episode-verdict"></dd></div>
+            <div><dt>Effects</dt><dd id="episode-effects"></dd></div>
+            <div><dt>Activity attempt</dt><dd id="episode-attempt"></dd></div>
+            <div><dt>Replay</dt><dd id="episode-replay"></dd></div>
+          </dl>
+        </div>
+
+        <div id="timeline" class="timeline-layout">
+          <section aria-labelledby="timeline-title">
+            <div class="timeline-header">
+              <div><p class="eyebrow">Normalized navigation</p><h3 id="timeline-title">Recovery timeline</h3></div>
+              <p id="timeline-progress" aria-live="polite"></p>
+            </div>
+            <ol id="event-list" class="event-list"></ol>
+          </section>
+          <aside class="event-inspector" aria-labelledby="event-title">
+            <p id="event-lane" class="lane-label"></p>
+            <h3 id="event-title">Select an event</h3>
+            <p id="event-summary">Use the timeline to inspect one recorded transition.</p>
+            <dl id="event-references" class="reference-list"></dl>
+          </aside>
+        </div>
+
+        <section class="identity-section" aria-labelledby="identity-title">
+          <div class="section-heading"><div><p class="eyebrow">Identity is not delivery</p><h3 id="identity-title">Logical and observed identities</h3></div><p>Stable application identity stays separate from retry and process observations.</p></div>
+          <div class="identity-table-wrap" role="region" aria-label="Logical and observed identity table" tabindex="0"><table><tbody id="identity-body"></tbody></table></div>
+        </section>
+
+        <div class="authority-effects">
+          <section aria-labelledby="authority-title"><p class="eyebrow">Application</p><h3 id="authority-title">Authority history</h3><ol id="authority-list" class="record-list"></ol></section>
+          <section aria-labelledby="effect-title"><p class="eyebrow">Destination</p><h3 id="effect-title">Effect receipts</h3><ol id="effect-list" class="record-list"></ol></section>
+        </div>
+      </section>
+
+      <section id="evidence-files" class="evidence-files" aria-labelledby="evidence-title" hidden>
+        <div class="section-heading"><div><p class="eyebrow">Presentation is not proof</p><h2 id="evidence-title">Inspect the record</h2></div><p>Normalized events explain. Native history and raw artifacts remain authoritative inputs to the independent audit.</p></div>
+        <div class="evidence-tabs" role="tablist" aria-label="Evidence view">
+          <button type="button" role="tab" data-evidence-view="normalized" aria-selected="true">Normalized trace</button>
+          <button type="button" role="tab" data-evidence-view="native" aria-selected="false">Native Temporal history</button>
+          <button type="button" role="tab" data-evidence-view="raw" aria-selected="false">Raw trial record</button>
+          <button type="button" role="tab" data-evidence-view="provenance" aria-selected="false">Provenance</button>
+        </div>
+        <div id="evidence-panel" class="evidence-panel" role="tabpanel" tabindex="0"></div>
+      </section>
+
+      <section class="responsibility" aria-labelledby="responsibility-title" hidden>
+        <div class="section-heading"><div><p class="eyebrow">Guarantee ownership</p><h2 id="responsibility-title">Responsibility split</h2></div></div>
+        <dl id="responsibility-list"></dl>
+      </section>
+
+      <section id="limits" class="limits" aria-labelledby="limits-title" hidden>
+        <p class="eyebrow">Observable claim boundary</p>
+        <h2 id="limits-title">Falsifier</h2>
+        <p id="falsifier"></p>
+        <p id="claim-scope" class="claim-scope"></p>
+      </section>
+    </main>
+  </body>
+</html>
