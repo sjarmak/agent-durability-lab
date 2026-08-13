@@ -1,0 +1,362 @@
+{
+  "events":  [
+    {
+      "event_id":  "1",
+      "event_time":  "2026-08-12T21:27:19.440900785Z",
+      "event_type":  "EVENT_TYPE_WORKFLOW_EXECUTION_STARTED",
+      "task_id":  "1048587",
+      "workflow_execution_started_event_attributes":  {
+        "workflow_type":  {
+          "name":  "LargeArtifactDurabilityWorkflow"
+        },
+        "task_queue":  {
+          "name":  "large-artifact-acknowledgement_published-protected-trial-1",
+          "kind":  "TASK_QUEUE_KIND_NORMAL"
+        },
+        "input":  {
+          "payloads":  [
+            {
+              "metadata":  {
+                "encoding":  "anNvbi9wbGFpbg=="
+              },
+              "data":  "eyJzdG9yZV9yb290IjoiL2hvbWUvZHMvcHJvamVjdHMvdGVtcG9yYWxfcHJvamVjdHMtdTkzL2V4cGVyaW1lbnRzL2xhcmdlLWFydGlmYWN0LWR1cmFiaWxpdHkvZXZpZGVuY2UvbGFyZ2UtYXJ0aWZhY3QtMjAyNjA4MTItdjEvYWNrbm93bGVkZ2VtZW50X3B1Ymxpc2hlZC1wcm90ZWN0ZWQtdHJpYWwtMS9hcnRpZmFjdC1zdG9yZSIsInNvdXJjZV9wYXRoIjoiL2hvbWUvZHMvcHJvamVjdHMvdGVtcG9yYWxfcHJvamVjdHMtdTkzL2V4cGVyaW1lbnRzL2xhcmdlLWFydGlmYWN0LWR1cmFiaWxpdHkvZXZpZGVuY2UvbGFyZ2UtYXJ0aWZhY3QtMjAyNjA4MTItdjEvYWNrbm93bGVkZ2VtZW50X3B1Ymxpc2hlZC1wcm90ZWN0ZWQtdHJpYWwtMS9zb3VyY2UtYXJ0aWZhY3QuYmluIiwibG9naWNhbF9pZCI6ImFydGlmYWN0LWFja25vd2xlZGdlbWVudF9wdWJsaXNoZWQtcHJvdGVjdGVkLXRyaWFsLTEiLCJjb25zdW1lcl9pZCI6ImNvbnN1bWVyLTEiLCJtb2RlIjoicHJvdGVjdGVkIiwiZmFpbHVyZV9ib3VuZGFyeSI6ImFja25vd2xlZGdlbWVudF9wdWJsaXNoZWQifQ=="
+            }
+          ]
+        },
+        "workflow_execution_timeout":  "80s",
+        "workflow_run_timeout":  "80s",
+        "workflow_task_timeout":  "10s",
+        "original_execution_run_id":  "019ff7df-6090-7dbc-9194-6cd2202a01e7",
+        "identity":  "3580710@ds-5090@",
+        "first_execution_run_id":  "019ff7df-6090-7dbc-9194-6cd2202a01e7",
+        "attempt":  1,
+        "workflow_execution_expiration_time":  "2026-08-12T21:28:39.441Z",
+        "first_workflow_task_backoff":  "0s",
+        "header":  {},
+        "workflow_id":  "large-artifact/acknowledgement_published-protected-trial-1"
+      }
+    },
+    {
+      "event_id":  "2",
+      "event_time":  "2026-08-12T21:27:19.440971959Z",
+      "event_type":  "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "task_id":  "1048588",
+      "workflow_task_scheduled_event_attributes":  {
+        "task_queue":  {
+          "name":  "large-artifact-acknowledgement_published-protected-trial-1",
+          "kind":  "TASK_QUEUE_KIND_NORMAL"
+        },
+        "start_to_close_timeout":  "10s",
+        "attempt":  1
+      }
+    },
+    {
+      "event_id":  "3",
+      "event_time":  "2026-08-12T21:27:19.506093930Z",
+      "event_type":  "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "task_id":  "1048594",
+      "workflow_task_started_event_attributes":  {
+        "scheduled_event_id":  "2",
+        "identity":  "worker-1",
+        "request_id":  "44e46ebb-a5f4-41b3-ae21-7aa0104c88b5",
+        "history_size_bytes":  "992",
+        "worker_version":  {
+          "build_id":  "72ed0db3278a9ef4786917e4023322d3"
+        }
+      }
+    },
+    {
+      "event_id":  "4",
+      "event_time":  "2026-08-12T21:27:19.529896966Z",
+      "event_type":  "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "task_id":  "1048598",
+      "workflow_task_completed_event_attributes":  {
+        "scheduled_event_id":  "2",
+        "started_event_id":  "3",
+        "identity":  "worker-1",
+        "worker_version":  {
+          "build_id":  "72ed0db3278a9ef4786917e4023322d3"
+        },
+        "sdk_metadata":  {
+          "lang_used_flags":  [
+            3
+          ],
+          "sdk_name":  "temporal-go",
+          "sdk_version":  "1.47.0"
+        },
+        "metering_metadata":  {}
+      }
+    },
+    {
+      "event_id":  "5",
+      "event_time":  "2026-08-12T21:27:19.529970645Z",
+      "event_type":  "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED",
+      "task_id":  "1048599",
+      "activity_task_scheduled_event_attributes":  {
+        "activity_id":  "produce-artifact",
+        "activity_type":  {
+          "name":  "ProduceLargeArtifact"
+        },
+        "task_queue":  {
+          "name":  "large-artifact-acknowledgement_published-protected-trial-1",
+          "kind":  "TASK_QUEUE_KIND_NORMAL"
+        },
+        "header":  {},
+        "input":  {
+          "payloads":  [
+            {
+              "metadata":  {
+                "encoding":  "anNvbi9wbGFpbg=="
+              },
+              "data":  "eyJzdG9yZV9yb290IjoiL2hvbWUvZHMvcHJvamVjdHMvdGVtcG9yYWxfcHJvamVjdHMtdTkzL2V4cGVyaW1lbnRzL2xhcmdlLWFydGlmYWN0LWR1cmFiaWxpdHkvZXZpZGVuY2UvbGFyZ2UtYXJ0aWZhY3QtMjAyNjA4MTItdjEvYWNrbm93bGVkZ2VtZW50X3B1Ymxpc2hlZC1wcm90ZWN0ZWQtdHJpYWwtMS9hcnRpZmFjdC1zdG9yZSIsInNvdXJjZV9wYXRoIjoiL2hvbWUvZHMvcHJvamVjdHMvdGVtcG9yYWxfcHJvamVjdHMtdTkzL2V4cGVyaW1lbnRzL2xhcmdlLWFydGlmYWN0LWR1cmFiaWxpdHkvZXZpZGVuY2UvbGFyZ2UtYXJ0aWZhY3QtMjAyNjA4MTItdjEvYWNrbm93bGVkZ2VtZW50X3B1Ymxpc2hlZC1wcm90ZWN0ZWQtdHJpYWwtMS9zb3VyY2UtYXJ0aWZhY3QuYmluIiwibG9naWNhbF9pZCI6ImFydGlmYWN0LWFja25vd2xlZGdlbWVudF9wdWJsaXNoZWQtcHJvdGVjdGVkLXRyaWFsLTEiLCJjb25zdW1lcl9pZCI6ImNvbnN1bWVyLTEiLCJtb2RlIjoicHJvdGVjdGVkIiwiZmFpbHVyZV9ib3VuZGFyeSI6ImFja25vd2xlZGdlbWVudF9wdWJsaXNoZWQifQ=="
+            }
+          ]
+        },
+        "schedule_to_close_timeout":  "30s",
+        "schedule_to_start_timeout":  "30s",
+        "start_to_close_timeout":  "10s",
+        "heartbeat_timeout":  "0s",
+        "workflow_task_completed_event_id":  "4",
+        "retry_policy":  {
+          "initial_interval":  "0.100s",
+          "backoff_coefficient":  1,
+          "maximum_interval":  "0.100s",
+          "maximum_attempts":  2
+        },
+        "use_workflow_build_id":  true
+      }
+    },
+    {
+      "event_id":  "6",
+      "event_time":  "2026-08-12T21:27:19.580349124Z",
+      "event_type":  "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "task_id":  "1048606",
+      "activity_task_started_event_attributes":  {
+        "scheduled_event_id":  "5",
+        "identity":  "worker-1",
+        "request_id":  "f4c700c2-53ff-4ada-b98d-97641ef7eb6a",
+        "attempt":  1,
+        "worker_version":  {
+          "build_id":  "72ed0db3278a9ef4786917e4023322d3"
+        }
+      }
+    },
+    {
+      "event_id":  "7",
+      "event_time":  "2026-08-12T21:27:19.608502633Z",
+      "event_type":  "EVENT_TYPE_ACTIVITY_TASK_COMPLETED",
+      "task_id":  "1048607",
+      "activity_task_completed_event_attributes":  {
+        "result":  {
+          "payloads":  [
+            {
+              "metadata":  {
+                "encoding":  "anNvbi9wbGFpbg=="
+              },
+              "data":  "eyJsb2dpY2FsX2lkIjoiYXJ0aWZhY3QtYWNrbm93bGVkZ2VtZW50X3B1Ymxpc2hlZC1wcm90ZWN0ZWQtdHJpYWwtMSIsImRpZ2VzdCI6IjQ4YjA2YTZhZTA4MmViMjJmOTlmODJkN2FhMGQ4MjJjNWFiNGYxY2JmMGZkNDFiMzliNDllM2IyNjExYTcyNWQiLCJibG9iX25hbWUiOiI0OGIwNmE2YWUwODJlYjIyZjk5ZjgyZDdhYTBkODIyYzVhYjRmMWNiZjBmZDQxYjM5YjQ5ZTNiMjYxMWE3MjVkLmJsb2IiLCJyZWZlcmVuY2VfbmFtZSI6ImFydGlmYWN0LWFja25vd2xlZGdlbWVudF9wdWJsaXNoZWQtcHJvdGVjdGVkLXRyaWFsLTEuanNvbiIsInNpemUiOjM5MzIxNn0="
+            }
+          ]
+        },
+        "scheduled_event_id":  "5",
+        "started_event_id":  "6",
+        "identity":  "worker-1"
+      }
+    },
+    {
+      "event_id":  "8",
+      "event_time":  "2026-08-12T21:27:19.608515668Z",
+      "event_type":  "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "task_id":  "1048608",
+      "workflow_task_scheduled_event_attributes":  {
+        "task_queue":  {
+          "name":  "ds-5090:c6dd40d5-da84-4aea-b3cf-20e1c43d96dc",
+          "kind":  "TASK_QUEUE_KIND_STICKY",
+          "normal_name":  "large-artifact-acknowledgement_published-protected-trial-1"
+        },
+        "start_to_close_timeout":  "10s",
+        "attempt":  1
+      }
+    },
+    {
+      "event_id":  "9",
+      "event_time":  "2026-08-12T21:27:19.717554378Z",
+      "event_type":  "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "task_id":  "1048612",
+      "workflow_task_started_event_attributes":  {
+        "scheduled_event_id":  "8",
+        "identity":  "worker-1",
+        "request_id":  "1691b015-aa24-4029-85a0-668b6d25a88a",
+        "history_size_bytes":  "2623",
+        "worker_version":  {
+          "build_id":  "72ed0db3278a9ef4786917e4023322d3"
+        }
+      }
+    },
+    {
+      "event_id":  "10",
+      "event_time":  "2026-08-12T21:27:19.774196952Z",
+      "event_type":  "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "task_id":  "1048616",
+      "workflow_task_completed_event_attributes":  {
+        "scheduled_event_id":  "8",
+        "started_event_id":  "9",
+        "identity":  "worker-1",
+        "worker_version":  {
+          "build_id":  "72ed0db3278a9ef4786917e4023322d3"
+        },
+        "sdk_metadata":  {},
+        "metering_metadata":  {}
+      }
+    },
+    {
+      "event_id":  "11",
+      "event_time":  "2026-08-12T21:27:19.774234964Z",
+      "event_type":  "EVENT_TYPE_ACTIVITY_TASK_SCHEDULED",
+      "task_id":  "1048617",
+      "activity_task_scheduled_event_attributes":  {
+        "activity_id":  "acknowledge-artifact",
+        "activity_type":  {
+          "name":  "AcknowledgeLargeArtifact"
+        },
+        "task_queue":  {
+          "name":  "large-artifact-acknowledgement_published-protected-trial-1",
+          "kind":  "TASK_QUEUE_KIND_NORMAL"
+        },
+        "header":  {},
+        "input":  {
+          "payloads":  [
+            {
+              "metadata":  {
+                "encoding":  "anNvbi9wbGFpbg=="
+              },
+              "data":  "eyJzdG9yZV9yb290IjoiL2hvbWUvZHMvcHJvamVjdHMvdGVtcG9yYWxfcHJvamVjdHMtdTkzL2V4cGVyaW1lbnRzL2xhcmdlLWFydGlmYWN0LWR1cmFiaWxpdHkvZXZpZGVuY2UvbGFyZ2UtYXJ0aWZhY3QtMjAyNjA4MTItdjEvYWNrbm93bGVkZ2VtZW50X3B1Ymxpc2hlZC1wcm90ZWN0ZWQtdHJpYWwtMS9hcnRpZmFjdC1zdG9yZSIsInJlZmVyZW5jZSI6eyJsb2dpY2FsX2lkIjoiYXJ0aWZhY3QtYWNrbm93bGVkZ2VtZW50X3B1Ymxpc2hlZC1wcm90ZWN0ZWQtdHJpYWwtMSIsImRpZ2VzdCI6IjQ4YjA2YTZhZTA4MmViMjJmOTlmODJkN2FhMGQ4MjJjNWFiNGYxY2JmMGZkNDFiMzliNDllM2IyNjExYTcyNWQiLCJibG9iX25hbWUiOiI0OGIwNmE2YWUwODJlYjIyZjk5ZjgyZDdhYTBkODIyYzVhYjRmMWNiZjBmZDQxYjM5YjQ5ZTNiMjYxMWE3MjVkLmJsb2IiLCJyZWZlcmVuY2VfbmFtZSI6ImFydGlmYWN0LWFja25vd2xlZGdlbWVudF9wdWJsaXNoZWQtcHJvdGVjdGVkLXRyaWFsLTEuanNvbiIsInNpemUiOjM5MzIxNn0sImNvbnN1bWVyX2lkIjoiY29uc3VtZXItMSIsIm1vZGUiOiJwcm90ZWN0ZWQiLCJmYWlsdXJlX2JvdW5kYXJ5IjoiYWNrbm93bGVkZ2VtZW50X3B1Ymxpc2hlZCJ9"
+            }
+          ]
+        },
+        "schedule_to_close_timeout":  "30s",
+        "schedule_to_start_timeout":  "30s",
+        "start_to_close_timeout":  "10s",
+        "heartbeat_timeout":  "0s",
+        "workflow_task_completed_event_id":  "10",
+        "retry_policy":  {
+          "initial_interval":  "0.100s",
+          "backoff_coefficient":  1,
+          "maximum_interval":  "0.100s",
+          "maximum_attempts":  2
+        },
+        "use_workflow_build_id":  true
+      }
+    },
+    {
+      "event_id":  "12",
+      "event_time":  "2026-08-12T21:27:30.509936695Z",
+      "event_type":  "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "task_id":  "1048627",
+      "activity_task_started_event_attributes":  {
+        "scheduled_event_id":  "11",
+        "identity":  "worker-2",
+        "request_id":  "37a499ed-5a57-4cd6-9bb9-d1023846f3d8",
+        "attempt":  2,
+        "last_failure":  {
+          "message":  "activity StartToClose timeout",
+          "source":  "Server",
+          "timeout_failure_info":  {
+            "timeout_type":  "TIMEOUT_TYPE_START_TO_CLOSE"
+          }
+        },
+        "worker_version":  {
+          "build_id":  "72ed0db3278a9ef4786917e4023322d3"
+        }
+      }
+    },
+    {
+      "event_id":  "13",
+      "event_time":  "2026-08-12T21:27:30.520644819Z",
+      "event_type":  "EVENT_TYPE_ACTIVITY_TASK_COMPLETED",
+      "task_id":  "1048628",
+      "activity_task_completed_event_attributes":  {
+        "result":  {
+          "payloads":  [
+            {
+              "metadata":  {
+                "encoding":  "anNvbi9wbGFpbg=="
+              },
+              "data":  "eyJsb2dpY2FsX2lkIjoiYXJ0aWZhY3QtYWNrbm93bGVkZ2VtZW50X3B1Ymxpc2hlZC1wcm90ZWN0ZWQtdHJpYWwtMSIsImRpZ2VzdCI6IjQ4YjA2YTZhZTA4MmViMjJmOTlmODJkN2FhMGQ4MjJjNWFiNGYxY2JmMGZkNDFiMzliNDllM2IyNjExYTcyNWQiLCJjb25zdW1lcl9pZCI6ImNvbnN1bWVyLTEiLCJyZWZlcmVuY2VfbmFtZSI6ImFydGlmYWN0LWFja25vd2xlZGdlbWVudF9wdWJsaXNoZWQtcHJvdGVjdGVkLXRyaWFsLTEuanNvbiJ9"
+            }
+          ]
+        },
+        "scheduled_event_id":  "11",
+        "started_event_id":  "12",
+        "identity":  "worker-2"
+      }
+    },
+    {
+      "event_id":  "14",
+      "event_time":  "2026-08-12T21:27:30.520651933Z",
+      "event_type":  "EVENT_TYPE_WORKFLOW_TASK_SCHEDULED",
+      "task_id":  "1048629",
+      "workflow_task_scheduled_event_attributes":  {
+        "task_queue":  {
+          "name":  "ds-5090:c6dd40d5-da84-4aea-b3cf-20e1c43d96dc",
+          "kind":  "TASK_QUEUE_KIND_STICKY",
+          "normal_name":  "large-artifact-acknowledgement_published-protected-trial-1"
+        },
+        "start_to_close_timeout":  "10s",
+        "attempt":  1
+      }
+    },
+    {
+      "event_id":  "15",
+      "event_time":  "2026-08-12T21:27:30.526772696Z",
+      "event_type":  "EVENT_TYPE_WORKFLOW_TASK_STARTED",
+      "task_id":  "1048633",
+      "workflow_task_started_event_attributes":  {
+        "scheduled_event_id":  "14",
+        "identity":  "worker-2",
+        "request_id":  "3bfbaaa9-b2ac-4f2b-970d-f08d637fd520",
+        "history_size_bytes":  "4285",
+        "worker_version":  {
+          "build_id":  "72ed0db3278a9ef4786917e4023322d3"
+        }
+      }
+    },
+    {
+      "event_id":  "16",
+      "event_time":  "2026-08-12T21:27:30.540292010Z",
+      "event_type":  "EVENT_TYPE_WORKFLOW_TASK_COMPLETED",
+      "task_id":  "1048637",
+      "workflow_task_completed_event_attributes":  {
+        "scheduled_event_id":  "14",
+        "started_event_id":  "15",
+        "identity":  "worker-2",
+        "worker_version":  {
+          "build_id":  "72ed0db3278a9ef4786917e4023322d3"
+        },
+        "sdk_metadata":  {
+          "sdk_name":  "temporal-go",
+          "sdk_version":  "1.47.0"
+        },
+        "metering_metadata":  {}
+      }
+    },
+    {
+      "event_id":  "17",
+      "event_time":  "2026-08-12T21:27:30.540331906Z",
+      "event_type":  "EVENT_TYPE_WORKFLOW_EXECUTION_COMPLETED",
+      "task_id":  "1048638",
+      "workflow_execution_completed_event_attributes":  {
+        "result":  {
+          "payloads":  [
+            {
+              "metadata":  {
+                "encoding":  "anNvbi9wbGFpbg=="
+              },
+              "data":  "eyJyZWZlcmVuY2UiOnsibG9naWNhbF9pZCI6ImFydGlmYWN0LWFja25vd2xlZGdlbWVudF9wdWJsaXNoZWQtcHJvdGVjdGVkLXRyaWFsLTEiLCJkaWdlc3QiOiI0OGIwNmE2YWUwODJlYjIyZjk5ZjgyZDdhYTBkODIyYzVhYjRmMWNiZjBmZDQxYjM5YjQ5ZTNiMjYxMWE3MjVkIiwiYmxvYl9uYW1lIjoiNDhiMDZhNmFlMDgyZWIyMmY5OWY4MmQ3YWEwZDgyMmM1YWI0ZjFjYmYwZmQ0MWIzOWI0OWUzYjI2MTFhNzI1ZC5ibG9iIiwicmVmZXJlbmNlX25hbWUiOiJhcnRpZmFjdC1hY2tub3dsZWRnZW1lbnRfcHVibGlzaGVkLXByb3RlY3RlZC10cmlhbC0xLmpzb24iLCJzaXplIjozOTMyMTZ9LCJhY2tub3dsZWRnZW1lbnQiOnsibG9naWNhbF9pZCI6ImFydGlmYWN0LWFja25vd2xlZGdlbWVudF9wdWJsaXNoZWQtcHJvdGVjdGVkLXRyaWFsLTEiLCJkaWdlc3QiOiI0OGIwNmE2YWUwODJlYjIyZjk5ZjgyZDdhYTBkODIyYzVhYjRmMWNiZjBmZDQxYjM5YjQ5ZTNiMjYxMWE3MjVkIiwiY29uc3VtZXJfaWQiOiJjb25zdW1lci0xIiwicmVmZXJlbmNlX25hbWUiOiJhcnRpZmFjdC1hY2tub3dsZWRnZW1lbnRfcHVibGlzaGVkLXByb3RlY3RlZC10cmlhbC0xLmpzb24ifX0="
+            }
+          ]
+        },
+        "workflow_task_completed_event_id":  "16"
+      }
+    }
+  ]
+}
