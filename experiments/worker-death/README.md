@@ -37,7 +37,7 @@ Two independent barriers must be observed before the kill:
 
 The controller then sends `SIGKILL` to Worker 1's exact PID and waits for the
 signaled process status. It rereads `/proc/<pid>/stat` and the Linux boot ID to
-prove that the registered child—not a reused PID—is still alive. Only Temporal's
+prove that the registered child (not a reused PID) is still alive. Only Temporal's
 heartbeat timeout causes attempt 2; the harness never invokes the Activity
 directly.
 
@@ -120,7 +120,7 @@ evidence/<run-id>/
 
 The local `application.db` and `temporal.db` are useful for forensic reruns but
 are ignored by Git; the portable JSON evidence and logs are the checked evidence.
-Owner credentials never enter JSONL—only SHA-256 token digests do.
+Owner credentials never enter JSONL; only SHA-256 token digests do.
 
 The verifier is independent of the orchestration sequence. Its hand-authored
 fixtures prove that it rejects an unsafe control that fails to duplicate, a

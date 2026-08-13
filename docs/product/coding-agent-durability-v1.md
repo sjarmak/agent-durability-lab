@@ -251,20 +251,20 @@ protected path, invalid-evidence fixtures, exact named fault barriers, an
 independent destination/workspace oracle, retained evidence, replay where
 applicable, and a responsibility split.
 
-1. **Temporal-native agent loop and replay** — model/tool Activities, approval,
+1. **Temporal-native agent loop and replay**: model/tool Activities, approval,
    typed output, stream state, Continue-As-New, replay, and ambiguous tool
    effects.
-2. **Effect-safe tools** — idempotent API, non-idempotent API reconciliation,
+2. **Effect-safe tools**: idempotent API, non-idempotent API reconciliation,
    transactional database, Git, message publication, and the observed large-artifact
    blob/reference/acknowledgement protocol.
-3. **External CLI ownership** — direct relaunch and resume-only controls
+3. **External CLI ownership**: direct relaunch and resume-only controls
    followed by start-or-attach and fenced completion; normative contract at the
    tested single-host boundaries, with provider compatibility bounded.
-4. **Cancellation and cleanup** — durable revocation, exact process targeting,
+4. **Cancellation and cleanup**: durable revocation, exact process targeting,
    stop delivery, acknowledgement, descendants, and terminal races.
-5. **Sandbox lifecycle** — provider operation receipts, attached-writer fencing,
+5. **Sandbox lifecycle**: provider operation receipts, attached-writer fencing,
    snapshot lineage, and orphan reconciliation.
-6. **Bounded recovery policy** — retry ownership, outage catch-up, admission,
+6. **Bounded recovery policy**: retry ownership, outage catch-up, admission,
    backpressure, poison quarantine, and progress deadlines.
 
 ## Conformance profile

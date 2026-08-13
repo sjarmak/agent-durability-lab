@@ -341,7 +341,7 @@ release the blocked operation. `time.Sleep` is not an admissible barrier.
 | Authority revoked / process exits | Freeze the vendor process during cancellation | Can stale work mutate after Temporal records cancellation? |
 | Parent closed / provider cleanup acknowledged | Close during initialization, a command, suspension, and normal idle state | Can cleanup identify every created provider instance and distinguish requested, delivered, acknowledged, and verified deletion? |
 | Graceful stop / Workflow cancel or terminate | Exercise each closure path with live child work and provider resources | Which paths run application revocation and cleanup, and which immediately end durable procedure without it? |
-| Host-local state lost / session resumed elsewhere | Stop the runner host and resume from shared session storage | Which transcript, process, and workspace state is actually portable? |
+| Host-local state lost / session resumed elsewhere | Stop the runner host and resume from shared session storage | Which transcript, process, and workspace state is portable? |
 | Snapshot created / snapshot reference recorded | Lose completion after provider snapshot creation | Is the snapshot leaked, duplicated, or recoverable by a stable operation identity? |
 | Snapshot prefix / restored execution | Restore and continue from a recorded snapshot | Which transcript events, commands, artifacts, credentials, and external effects are included or intentionally excluded? |
 | Version N / version N+1 | Change Worker, runner, or vendor CLI version between turns | Does attachment fail closed when protocol or session compatibility is unknown? |

@@ -15,7 +15,7 @@ The language-neutral JSON Schemas under
 record decoder rejects duplicate keys, unknown top-level fields, malformed UTC
 instants, and invalid protocol metadata; schema validation still precedes it at
 an external JSON boundary. Free-form identifiers must already be redacted by
-the producer—the binding does not guess whether a string is a credential.
+the producer. The binding does not guess whether a string is a credential.
 
 `attach` never treats a bare identity as discovery. If registration has not
 already recorded the executor, use `WithDiscoveredExecutor` only after an

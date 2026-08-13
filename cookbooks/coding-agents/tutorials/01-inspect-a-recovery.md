@@ -18,5 +18,5 @@ Then inspect four views in order:
 - authority and destination receipts show who may act and what committed;
 - native Temporal history and the raw trial record remain the oracle inputs.
 
-The lesson is not “Temporal retried safely.” Temporal durably redelivered the procedure. The
-application supplied identity and authority, and the destination supplied effect enforcement.
+Temporal durably redelivered the procedure. The application supplied identity and authority,
+and the destination supplied effect enforcement.
