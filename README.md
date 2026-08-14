@@ -31,7 +31,7 @@ Three questions, from
 2. Does the workflow wait for external events?
 3. Does it perform irreversible external effects?
 
-Three noes means you probably do not need durable execution. Use a timer and a
+If your answer to each of these is "no", that means you probably do not need durable execution. Use a timer and a
 lock, and read the source of record again on each run. One yes means some
 coordination fact cannot be reconstructed from the current source of record, and
 this repository is about which of those facts the engine will own and which stay
