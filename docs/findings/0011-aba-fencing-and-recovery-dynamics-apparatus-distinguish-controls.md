@@ -1,5 +1,10 @@
 # ABA fencing and recovery-dynamics apparatus distinguish unsafe controls
 
+The ABA and recovery-dynamics apparatus distinguished every unsafe control
+under contract `adl.cross-system.v2`. Fifty-four calibration runs were included
+and diagnosable. This is apparatus conformance, not a comparison between
+durable systems.
+
 **Status:** apparatus finding, not a durability-system comparison  
 **Contract:** `adl.cross-system.v2`  
 **Evidence:** [`calibration-v2-20260808-v1`](../../benchmarks/agent-durability/evidence/calibration-v2-20260808-v1), [`live-aba-v2-20260808-v1`](../../benchmarks/agent-durability/evidence/live-aba-v2-20260808-v1)
@@ -55,7 +60,7 @@ destination supplies atomic rejection at its accepting boundary. A durability
 system must still demonstrate procedure recovery and export its native record
 through the same contract.
 
-## Falsifier
+## What would change this conclusion
 
 This conclusion is false if an unsafe control passes, a protected probe accepts
 an obsolete action or exceeds its bound, a valid invariant violation is hidden

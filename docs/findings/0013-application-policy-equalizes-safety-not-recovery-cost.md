@@ -1,5 +1,10 @@
 # Application policy equalizes safety, not recovery cost
 
+Five hundred forty matched pairs ran the same agent procedure through Temporal
+and a PostgreSQL queue. Both fenced systems accepted zero obsolete actions.
+Both unsafe systems accepted four. Protected median recovery was 45.5 ms and 1
+ms.
+
 **Status:** supported for the pinned single-host publication population; no scalar winner  
 **Protocol:** `adl.publication.v2` / `adl.cross-system.v2`  
 **Preregistration:** [`publication-preregistration-v2.json`](../../benchmarks/agent-durability/publication-preregistration-v2.json)  
@@ -102,7 +107,7 @@ are the benchmark's common evidence plus native history/journal exports, not a
 measurement of production database storage. No episode required a recorded
 operator intervention.
 
-## Inference and limits
+## Inference and scope
 
 The population resolves the benchmark's safety and liveness question: both
 systems compose with the portable policies, and neither native substrate makes
@@ -129,7 +134,7 @@ and the full recovery-dynamics suite. That preregistration is prospective only;
 it supplies no implementation or evidence and does not change this finding's
 cross-system population or conclusion.
 
-## Analysis correction lineage and falsifier
+## Correction lineage and what would change this conclusion
 
 The first analysis file, [`analysis.json`](../../benchmarks/agent-durability/evidence/publication-v2-20260809-v1-analysis.json),
 incorrectly excluded ABA dependency requests whose accepted outcome string is

@@ -1,5 +1,10 @@
 # Finding 0021: Codex thread resume is not turn authority
 
+Codex `exec resume` preserved one logical thread and still duplicated six post-
+effect faults. The fenced supervisor arm passed twenty-seven runs across eight
+boundaries with twenty-one attachments, three replacements, and three
+cancellations.
+
 **Status:** observed in 51 source-pinned v12 hermetic and 51 matched
 authenticated Codex CLI trials; the current tree includes later authenticated-
 barrier hardening
@@ -130,7 +135,7 @@ replays. The transport index SHA-256 values are:
   enforce current generation/capability and stable effect identity where the
   mutation occurs.
 
-## Limits and falsifier
+## Scope and what would change this conclusion
 
 The evidence comes from one contended Linux workstation, local Temporal dev
 servers, BoltDB, and a loopback supervisor that survives the Worker. It does not

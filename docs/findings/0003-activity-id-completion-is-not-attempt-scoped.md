@@ -1,5 +1,9 @@
 # Finding 0003: Activity-ID completion is not attempt-scoped
 
+Attempt 1's task token was rejected in three trials. Completion by Workflow,
+Run, and Activity ID was accepted in three unsafe trials. The fenced arm
+rejected it. By-ID completion is addressing, not ownership.
+
 **Status:** observed in a final v2 set of three independent live trials per arm;
 v1 remains preserved as pre-review evidence
 
@@ -79,7 +83,7 @@ The Go SDK constructs the two request forms separately:
 Temporal's task-token protection applies when the caller retains and uses the
 task token. It does not transfer to a less-specific logical identifier.
 
-## What this does not establish
+## Scope — what this does not show
 
 - Behavior on Server, API, or SDK versions other than those recorded above.
 - Semantics when `runID` is omitted or when the Activity has not started; the
@@ -92,7 +96,7 @@ task token. It does not transfer to a less-specific logical identifier.
 - Whether authorization and a downstream effect can be made atomic at a remote
   destination. That is the next external-effect experiment.
 
-## Falsifier
+## What would change this conclusion
 
 This finding is narrowed or falsified if a repeated pinned-version run accepts
 attempt 1's task token after attempt 2 starts, rejects attempt 1's by-ID request

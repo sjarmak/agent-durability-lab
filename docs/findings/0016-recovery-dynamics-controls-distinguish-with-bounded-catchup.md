@@ -1,5 +1,10 @@
 # Finding 0016: Recovery dynamics controls distinguish with bounded catch-up
 
+Six recovery cases ran in both scheduling arms with real Workers, dependencies,
+and detached processes. Thirty-two protected runs passed and twenty unsafe runs
+distinguished under bounded catch-up. A later source change makes this run set
+historical.
+
 ## Observation
 
 The six frozen Temporal topology recovery cases now execute in both scheduling
@@ -126,7 +131,7 @@ The observed pass is therefore a composition result. It does not promote
 application admission, retry, fencing, or process-discovery policy into a
 native Temporal guarantee.
 
-## Falsifier
+## What would change this conclusion
 
 This finding is false if any stored v7 inventory fails verification or replay;
 if either topology receives different Work input/options, retry policy, Worker

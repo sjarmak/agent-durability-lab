@@ -1,5 +1,9 @@
 # Finding 0010: Direct Claude Activity retry duplicates turns and effects
 
+Nine faulted trials put `claude -p` in a retryable Activity. Each started a
+second Claude session with a new session ID and applied the effect twice.
+Temporal accepted one outcome. Three unfaulted trials applied once.
+
 **Status:** observed in 12 admitted authenticated Claude Code trials
 
 **Versions:** Claude Code `2.1.226`; Temporal Server `1.31.2`; Temporal CLI
@@ -76,7 +80,7 @@ Temporal Activity retry therefore must not be described as exactly-once tool
 execution. Vendor transcript resumption alone would not establish that
 property either.
 
-## Limits
+## Scope — what this does not show
 
 The trials used Claude Haiku through a Claude Max account, a local Git fixture,
 and a local BoltDB destination. They ran on one Linux host and killed the Worker,
@@ -93,7 +97,7 @@ credential value is recorded. This arm does not call `--session-id`,
 resume, cancellation, cross-host discovery, vendor transcript completeness,
 or protected ownership protocols.
 
-## Evidence and falsifier
+## Evidence and what would change this conclusion
 
 The admitted evidence is
 [`claude-direct-20260808-v5`](../../experiments/durable-vendor-sessions/claude-direct/transport/README.md#current-package).

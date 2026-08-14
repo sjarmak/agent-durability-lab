@@ -1,5 +1,10 @@
 # Finding 0024: Large artifacts need reference and acknowledgement protocols
 
+Content, logical reference, and consumer acknowledgement need separate durable
+identities. Eighteen protected runs converged on one artifact. Three unsafe
+reference runs, three acknowledgement runs, and three offload runs each
+duplicated.
+
 ## Status
 
 Observed and admitted for one pinned single-host filesystem boundary.
@@ -67,7 +72,7 @@ publication state, reference and acknowledgement protocols, and reconciliation. 
 destination supplies durable conditional writes, conflict detection, retention, and any
 atomicity between its own records.
 
-## Limits and falsifier
+## Scope and what would change this conclusion
 
 The evidence is limited to Go SDK `1.47.0`, CLI `1.8.0`, Server `1.31.2`, one Linux host,
 a local filesystem, one 393,216-byte artifact, sequential recovery, and one consumer. It

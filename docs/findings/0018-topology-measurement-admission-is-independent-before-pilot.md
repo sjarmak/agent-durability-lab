@@ -1,5 +1,9 @@
 # Finding 0018: Topology measurement admission is independent before pilot
 
+The corrected v7 apparatus reconstructs every registered metric from raw
+causal, dependency, destination, and native-history records. It balances pilot
+order globally across strata. It is preliminary and not ready to cite.
+
 ## Observation
 
 A full correctness, determinism, replay, race, evidence, and statistical review
@@ -86,7 +90,7 @@ requests and authoritative effects. The harness supplies frozen scheduling,
 exact barriers, negative controls, raw-evidence reconstruction, canonical
 history accounting, provenance binding, append-only storage, and disk audit.
 
-## Falsifier
+## What would change this conclusion
 
 This finding is false if any registered metric can be changed without a
 corresponding raw-evidence change and still be admitted; if a live run can use

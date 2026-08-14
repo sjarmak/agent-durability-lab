@@ -1,5 +1,9 @@
 # Finding 0005: `launch_pending` does not identify process reality
 
+One `launch_pending` record with no PID has two meanings. No child started, or
+a live child has not registered. Temporal history cannot separate them. Three
+attach trials and three fenced replacement trials show both policies.
+
 **Status:** observed in six valid final v3 live trials: three attach-control
 trials and three fenced-replacement trials; twelve earlier live trials remain as
 pre-review evidence and are excluded from the final claim
@@ -83,7 +87,7 @@ protocol label but did not preserve the standalone pre-kill store/process
 snapshot. They remain append-only evidence of the research sequence, but only
 v3 supports the complete boundary claim above.
 
-## What this does not establish
+## Scope — what this does not show
 
 - Cross-host discovery, routing, or termination of an unregistered child.
 - A general rule for when to attach versus replace, or a lease duration after
@@ -95,7 +99,7 @@ v3 supports the complete boundary claim above.
 - Behavior on non-Linux process identity implementations or different Temporal
   versions.
 
-## Falsifier
+## What would change this conclusion
 
 This finding is narrowed or falsified if a fresh pinned-version run lacks the
 child at the captured boundary, records a process in the store before the kill,

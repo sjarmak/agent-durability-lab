@@ -1,5 +1,10 @@
 # Finding 0006: Temporal cancellation does not revoke a detached agent
 
+Workflow cancellation did not revoke a detached agent. Six Temporal-only
+controls committed an effect after the Workflow closed as canceled. Eighteen
+application-revoked runs accepted nothing. Revocation must commit before any
+stop signal.
+
 **Status:** observed in 24 valid final live trials: three trials for four
 scenarios under both Activity `WaitForCancellation` policies
 
@@ -92,7 +97,7 @@ process-tree arm adds isolated process-group signaling and observes both exit.
   only its own boundary; copied Git, API, cloud, or message credentials remain
   outside this claim.
 
-## Limits
+## Scope — what this does not show
 
 Process-group signaling is not a kernel-atomic identity fence for every member.
 The controller validates recorded PID/start/group identities and uses a pidfd
@@ -106,7 +111,7 @@ The completion/cancellation orders and delayed stale stop are deterministic
 process/store tests, not additional Temporal live arms. No claim is made about
 Temporal selecting the application terminal winner.
 
-## Evidence and falsifier
+## Evidence and what would change this conclusion
 
 The executable evidence audit requires exactly three final histories and state
 snapshots per scenario/policy pair. Representative runs are under

@@ -1,5 +1,9 @@
 # Finding 0008: A Temporal-native agent loop recovers structure, not effects
 
+An OpenAI Agents loop inside a Temporal Workflow made model calls, tool calls,
+approvals, and stream state replayable. Replay restored completed results.
+Three unsafe tool trials still applied the same effect twice.
+
 **Status:** observed in six common-oracle live trials and exact-boundary
 integration tests
 
@@ -60,7 +64,7 @@ the unsafe runs `valid-fail / duplicate_physical_effect` and protected runs
 - Workflow cancellation permits cooperative cleanup; termination deliberately
   bypasses Workflow code and therefore cannot promise it.
 
-## Limits
+## Scope — what this does not show
 
 The model is deterministic and hermetic; no OpenAI network response or token
 stream is claimed. The controlled destination is local SQLite. The process
@@ -75,7 +79,7 @@ Only the ambiguous-effect matrix is admitted to the append-only common oracle.
 The other boundary observations are exact integration tests and should not be
 read as cross-system benchmark results.
 
-## Evidence and falsifier
+## Evidence and what would change this conclusion
 
 The evidence is
 [`temporal-native-20260807-v3`](../../experiments/durable-vendor-sessions/temporal-native/evidence/temporal-native-20260807-v3).

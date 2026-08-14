@@ -1,5 +1,9 @@
 # Finding 0017: The topology matrix is ready for pilot, not publication
 
+The v5 topology apparatus included 88 fixture pairs and 23 live sentinel pairs,
+distinguished every unsafe arm, and rejected four corrupted controls. Review
+later found it trusted several derived fields. Superseded by Finding 0018.
+
 This finding records the v5 apparatus result. It is superseded for
 current-source claims by [finding 0018](0018-topology-measurement-admission-is-independent-before-pilot.md),
 which preserves the review defects and binds the corrected v7 root.
@@ -119,7 +123,7 @@ the frozen schedule reconstruction, pair execution order, exact barriers,
 negative controls, append-only evidence, root confinement, provenance, and
 independent disk audit.
 
-## Falsifier
+## What would change this conclusion
 
 This finding is false if any v5 inventory entry, pair reconstruction, matched
 input, verdict, executable digest, or replay fails; if the stored schedule does

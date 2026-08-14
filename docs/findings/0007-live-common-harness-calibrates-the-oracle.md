@@ -1,5 +1,10 @@
 # Finding 0007: The live common harness distinguishes unsafe controls
 
+The cross-system harness drove four failure boundaries through real processes
+and named barriers. The oracle classified twelve unfaulted, twelve protected,
+and twelve unsafe trials correctly. This calibrates the instrument, not any
+durable system.
+
 **Status:** observed in 36 valid live apparatus trials: three trials for four
 cases under unfaulted, unsafe, and protected probes
 
@@ -50,7 +55,7 @@ verdict API. The calibration adapter and live adapter both consume this writer.
 - No durable execution system participates in this suite, so no recovery
   property is attributed to one.
 
-## Limits
+## Scope — what this does not show
 
 The apparatus is single-host and Linux-specific. Bolt is the calibration
 authority and effect journal, not a production destination. The protected
@@ -75,7 +80,7 @@ recorded the generic adapter version `v1` instead of an immutable source
 identity. Review added mandatory adapter provenance and regenerated v2; no v1
 file was rewritten or deleted.
 
-## Evidence and falsifier
+## Evidence and what would change this conclusion
 
 The corrected evidence is
 [`live-common-20260807-v2`](../../benchmarks/agent-durability/evidence/live-common-20260807-v2).

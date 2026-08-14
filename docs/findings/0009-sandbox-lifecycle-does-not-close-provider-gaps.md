@@ -1,5 +1,10 @@
 # Finding 0009: Durable sandbox lifecycle does not close provider gaps
 
+A durable sandbox lifecycle did not make provider calls idempotent. Twelve
+unsafe trials applied the inner operation twice. Twelve receipt-keyed trials
+applied it once. Attached references and unnamed resources needed separate
+fences.
+
 **Status:** observed in 36 admitted live trials against the pinned community
 Sandbox Orchestration Harness
 
@@ -80,7 +85,7 @@ prefix, not a vendor transcript or arbitrary external effects.
 - The vendor agent layer still owns transcript, turn, tool-effect, approval, and
   result durability. None follows from sandbox lifecycle durability.
 
-## Limits
+## Scope — what this does not show
 
 The provider is hermetic bbolt state, not E2B, Daytona, Modal, GKE, AgentCore,
 or another remote backend. The fault is an injected retryable error after a
@@ -94,7 +99,7 @@ explicit non-secret fixtures and appear in Temporal history; a production
 bearer capability would require an encrypted Payload Codec or an opaque trusted
 reference rather than plaintext Workflow input.
 
-## Evidence and falsifier
+## Evidence and what would change this conclusion
 
 The admitted evidence is
 [`sandbox-harness-20260808-v7`](../../experiments/durable-vendor-sessions/sandbox-harness/evidence/sandbox-harness-20260808-v7).

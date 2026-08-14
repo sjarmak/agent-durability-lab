@@ -1,5 +1,10 @@
 # Finding 0001: Temporal retry identity does not fence a surviving agent
 
+Temporal redelivered the Activity after Worker `SIGKILL`. The application
+protocol decided what happened next. The unsafe arm ran two agents. The
+reattach arm reused one. The fenced arm replaced generation 1 and rejected its
+late writes.
+
 **Status:** observed on one preserved run per arm plus two automated live trials
 per arm
 
@@ -53,7 +58,7 @@ Activity task token. That protects Temporal completion of an obsolete Activity
 task; it does not protect application mutations by a child that has no task token.
 The two fences must not be conflated.
 
-## What this does not establish
+## Scope — what this does not show
 
 - Fencing an arbitrary API, Git repository, or message destination that cannot
   validate the application token.
@@ -64,7 +69,7 @@ The two fences must not be conflated.
 - `CompleteActivityByID` attempt identity; source inspection suggests a different
   validation path and it needs a dedicated live experiment.
 
-## Falsifier
+## What would change this conclusion
 
 A repeated safe-arm run that launches a second child without explicit
 replacement, loses the original child with the Worker, accepts generation 1 after

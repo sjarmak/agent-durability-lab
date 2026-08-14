@@ -21,7 +21,21 @@ must appear in evidence.
 on which the expected result depends.
 
 **Falsifier.** An observable result that would make the conclusion false or
-narrower.
+narrower. Reader-facing pages say "what would change this conclusion" for the
+same thing.
+
+## Terms
+
+The findings use a small number of words precisely. They mean this:
+
+| Term | Meaning |
+| --- | --- |
+| population, run set | The complete set of trials a claim rests on, fixed before the runs start. |
+| admitted | The run passed the admission gate: identities, barriers, evidence, and replay all checked out. A rejected run is preserved, not deleted, and supports no claim. |
+| distinguishing control | The unsafe arm failed, as it was designed to. If it passes, the experiment shows nothing. |
+| falsifier | What would change this conclusion. |
+| publication-excluded, supports pilot readiness only | Preliminary. Not ready to cite. |
+| valid-pass, valid-fail, invalid | Oracle verdicts. `invalid` means the harness failed to establish the boundary, so the trial says nothing either way. |
 
 ## Execution
 

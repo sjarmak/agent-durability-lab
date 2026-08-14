@@ -1,5 +1,9 @@
 # Finding 0023: Workflow Stream retries need output reconstruction
 
+A retried Activity publisher created a fresh publisher identity and re-emitted
+its logical prefix. Naive concatenation produced `ABABC` on every post-flush
+retry. Resetting at the retry marker reconstructed `ABC` in nine trials.
+
 ## Status
 
 Observed and admitted for the pinned Python Public Preview surface on one Linux host.
@@ -94,7 +98,7 @@ identity, reset semantics, exact completion acknowledgement, and any external de
 cursor. A UI, broker, or other external destination supplies its own retention and
 deduplication guarantees.
 
-## Limits and falsifier
+## Scope and what would change this conclusion
 
 The result is limited to Python SDK `1.31.0`, CLI `1.8.0`, Server `1.31.2`, one host,
 fixed `ABC` chunks, two exact kill boundaries, and a consumer active before Workflow

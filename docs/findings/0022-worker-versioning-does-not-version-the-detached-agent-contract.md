@@ -1,5 +1,10 @@
 # Finding 0022: Worker Versioning does not version the detached-agent contract
 
+Worker Deployment Versioning routed tasks between builds and recorded
+deployment versions. It did not decide agent compatibility. Six compatible
+trials attached the original `agent-v1` session. Three incompatible trials
+rejected it without mutating the registry.
+
 **Status:** observed in nine admitted real-service trials
 
 **Versions:** Temporal CLI `1.8.0`; Server `1.31.2`; Go SDK `1.47.0`;
@@ -57,7 +62,7 @@ those gaps. None of the older roots is counted in the admitted result.
 - The durable application registry binds stable session identity to the agent
   build and atomically rejects incompatible attachment.
 
-## Limits and falsifier
+## Scope and what would change this conclusion
 
 This is a single-host local-service mechanism experiment with a simulated
 detached agent and BoltDB. It does not establish provider compatibility,

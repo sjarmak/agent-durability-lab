@@ -1,5 +1,10 @@
 # Finding 0015: Topology semantics controls distinguish with replay
 
+Twenty-two topology semantics cases ran through a real Temporal service in both
+scheduling arms. Twenty-six unfaulted and protected runs passed. Eighteen
+unsafe runs distinguished. All 44 histories replayed. This is mechanism
+conformance.
+
 ## Observation
 
 The first four frozen Temporal topology cases now run through a real Temporal
@@ -78,7 +83,7 @@ The observed pass is therefore a composition result. It does not promote an
 application fence, destination receipt, or process controller into a native
 Temporal guarantee.
 
-## Falsifier
+## What would change this conclusion
 
 This finding is false if any stored run fails inventory verification or replay;
 if either arm receives different Work input or Activity options; if a protected

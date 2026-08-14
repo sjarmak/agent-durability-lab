@@ -11,7 +11,16 @@ Workflow" demos.
 - State the invariant, failure boundary, success/failure oracle, and falsifier
   before implementing an experiment.
 - Before calling work complete, run `go test -race ./...`, preserve the evidence,
-  update `docs/guarantees.md` and the relevant finding, and close its bead.
+  update the guarantee page under `docs/guarantees/` plus the one-line verdict in
+  `docs/guarantees.md`, update the finding and its line in `FINDINGS.md`, and
+  close its bead.
+- New findings follow `docs/findings/TEMPLATE.md`: abstract under forty words,
+  counts before method, one `## Scope — what this does not show` block, and one
+  statement of what would change the conclusion. Caveats live in that block, not
+  scattered through the prose.
+- `docs/decisions/0004-protect-the-unattributed-column.md` binds external-facing
+  prose: keep the "No" cells unattributed, keep unfavorable measurements at full
+  precision, and show the unsafe control before the protected one.
 - Do not commit, push, or publish external artifacts without explicit approval.
 
 ## Evidence rules

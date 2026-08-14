@@ -1,5 +1,10 @@
 # Finding 0020: An application-fenced Claude supervisor survives Worker loss
 
+A supervisor outside the Worker owned generation and capability. Fifteen
+protected runs passed at four exact boundaries with one process, effect, and
+workspace outcome each. Matched resume-only controls duplicated all nine
+faulted effects.
+
 **Status:** observed in 27 admitted source-pinned hermetic trials and 27
 source-matched authenticated Claude Code trials
 
@@ -151,7 +156,7 @@ admitted. The earlier authenticated Git-safe packages remain preserved.
   supplies the provider-compatibility observation for the tested fixed account
   wrapper and headless invocation.
 
-## Limits and falsifier
+## Scope and what would change this conclusion
 
 The trials used one contended Linux host, a supervisor that remained alive
 outside the killed Worker, local BoltDB, and either the hermetic process or

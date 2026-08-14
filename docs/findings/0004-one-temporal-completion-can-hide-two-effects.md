@@ -1,5 +1,9 @@
 # Finding 0004: One Temporal completion can hide two external effects
 
+Temporal recorded one Activity completion while the application wrote the
+effect twice. Eighteen unsafe trials left two effects. Eighteen protected
+trials left one. Six destination classes needed six different protocols.
+
 **Status:** observed in 36 valid live trials: three trials for each unsafe and
 protected arm across six destination classes; two invalid harness runs remain
 preserved and are excluded
@@ -103,7 +107,7 @@ V2 resolves the caller path before invoking Git and supplies the 18 final
 Git/message/artifact trials. Neither harness failure changes an external-effect
 claim, and neither is counted among the 36 valid runs.
 
-## What this does not establish
+## Scope — what this does not show
 
 - Behavior on Temporal or Go SDK versions other than those recorded above.
 - Safety when attempt 1 and attempt 2 execute concurrently; this run kills and
@@ -119,7 +123,7 @@ claim, and neither is counted among the 36 valid runs.
 - Atomicity between application reconciliation state and a separate remote
   destination.
 
-## Falsifier
+## What would change this conclusion
 
 The broad finding is falsified if a valid unsafe run records one physical effect
 despite two applied attempts, or if Temporal records two Activity completions for

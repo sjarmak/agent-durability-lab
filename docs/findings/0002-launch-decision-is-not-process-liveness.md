@@ -1,5 +1,9 @@
 # Finding 0002: A durable launch decision is not process liveness
 
+A Worker died between the durable launch decision and process start. Attempt 2
+attached to a phantom with no PID. Fenced conditional replacement completed
+instead. A recorded launch is not a running process.
+
 **Status:** observed in a final v3 preserved pair plus two automated final-protocol
 live trials per arm; two earlier preserved pairs remain as pre-review evidence
 
@@ -64,7 +68,7 @@ effects, or initial completion while the active executor is not `running`.
 
 Temporal procedure durability did not imply external-process liveness.
 
-## What this does not establish
+## Scope — what this does not show
 
 - This finding alone does not cover a child that started immediately before
   Worker death but failed to register; [finding 0005](0005-launch-pending-does-not-identify-process-reality.md)
@@ -86,7 +90,7 @@ overall deadline without that exact observation, so the check was removed from
 this experiment rather than being reported as evidence. Heartbeat visibility and
 attempt compaction need a dedicated reproduction.
 
-## Falsifier
+## What would change this conclusion
 
 This finding is narrowed or falsified if a repeated control run starts a child
 before the recorded boundary, if a control is classified as correct despite the

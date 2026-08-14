@@ -1,5 +1,9 @@
 # Finding 0019: Claude resume preserves session identity, not effect safety
 
+Nine faulted trials selected one Claude session UUID on attempt 1 and resumed
+it on attempt 2. Both provider streams reported that UUID. Both deliveries
+applied the effect. Session identity is not turn authority.
+
 **Status:** observed in 12 admitted authenticated Claude Code trials
 
 **Versions:** Claude Code `2.1.226`; Temporal Server `1.31.2`; Temporal CLI
@@ -110,7 +114,7 @@ No root was deleted or rewritten.
   A production destination must still deduplicate, fence, or reconcile its own
   mutation protocol.
 
-## Limits and falsifier
+## Scope and what would change this conclusion
 
 The trials used Claude Haiku through one authenticated account, a local Git
 fixture, and local BoltDB on one contended Linux host. They killed the Worker,

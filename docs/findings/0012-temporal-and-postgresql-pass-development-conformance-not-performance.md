@@ -1,5 +1,10 @@
 # Temporal and PostgreSQL pass development conformance, not a performance comparison
 
+Temporal and PostgreSQL each executed the same durable procedure and composed
+with the common authority, destination, failure, workload, and oracle
+protocols. Both produced clean development conformance. No performance
+comparison is supported.
+
 **Status:** historical development checkpoint; publication completed in [finding 0013](0013-application-policy-equalizes-safety-not-recovery-cost.md)  
 **Contracts:** `adl.cross-system.v1`, `adl.cross-system.v2`  
 **Temporal evidence:** [`v1`](../../benchmarks/agent-durability/evidence/temporal-v1-20260808-v1), [`v2`](../../benchmarks/agent-durability/evidence/temporal-v2-20260808-v3)  
@@ -62,7 +67,7 @@ behavior. Three development trials also do not satisfy the preregistered 30-run
 publication population. Therefore no system winner, confidence interval, or
 performance claim is reported.
 
-## Falsifier and unresolved publication work
+## What would change this conclusion, and open work
 
 The conformance conclusion is false if history replay fails, a Temporal faulted
 run lacks the retry failure, a PostgreSQL journal lacks lease reacquisition, an

@@ -1,5 +1,10 @@
 # Finding 0014: The topology foundation fails closed before pilot
 
+The frozen topology foundation derives all 88 strata, writes append-only
+inventories, reconstructs lineage independently, and runs a real process
+through an exact barrier. Adversarial tests reject contaminated input. No
+topology result yet.
+
 ## Observation
 
 The frozen Temporal topology protocol now has an executable shared foundation.
@@ -46,7 +51,7 @@ history, replay, and recovery semantics only in the dependent case work. The
 application and destination still own fixed membership, authority, retry
 budgets, idempotency/version checks, and effect receipts.
 
-## Falsifier
+## What would change this conclusion
 
 This finding is false if a listed corruption is admitted, the two arms can run
 different work or policy without invalidating the pair, a first-arm outcome can
