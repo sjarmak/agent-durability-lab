@@ -1,7 +1,16 @@
 # Agent Durability Lab
 
-Temporal recovers your Workflow. This repository tests whether your agent
-application is still correct afterwards, and records where it is not.
+Durable execution systems can recover orchestration state after failures. This
+repository tests whether the agent application built around that orchestration
+is still correct afterwards, and records where it is not.
+
+The lab currently holds live evidence from Temporal, a PostgreSQL queue/lease/
+outbox implementation, Claude Code, Codex, and simulated destinations. Findings
+stay scoped to the systems actually tested; Temporal is the most extensively
+instrumented implementation here, not the subject of the repository. See
+[the cross-system benchmark](benchmarks/agent-durability/README.md) for what is
+compared and [who supplies each property](docs/guarantees.md) for the
+architectural roles behind any one implementation.
 
 Every result below comes from a run set with an unsafe negative control, an
 exact fault barrier, preserved raw evidence, and an independent oracle. The
@@ -152,6 +161,10 @@ mistakes and superseded runs stay visible. Full protocol:
 [experiment methodology](docs/experiment-methodology.md).
 
 ## Architectural boundary
+
+The lab's evidence spans two durable-coordinator implementations (Temporal,
+PostgreSQL) and two external agent runtimes (Claude Code, Codex), but the
+boundary below is implementation-neutral:
 
 - The durable execution system records and recovers procedure: ordering,
   retries, waits, cancellation requests, and accepted completion.

@@ -2,8 +2,11 @@
 
 This directory is the language-neutral contract shared by SDK bindings,
 cookbooks, and fault-conformance profiles. It describes the application
-protocol needed around Temporal; it does not claim that Activity retries make
-external effects exactly once.
+protocol needed around a durable-execution coordinator; it does not claim that
+any coordinator's delivery retries make external effects exactly once. The
+identities and lifecycle below are coordinator-neutral. Temporal is the
+coordinator this protocol has been bound to and evidenced against so far; see
+[Temporal binding](#temporal-binding).
 
 The controlling product scope and evidence matrix live in
 [`docs/product/coding-agent-durability-v1.md`](../../../docs/product/coding-agent-durability-v1.md).
@@ -19,7 +22,7 @@ Four logical identities remain distinct:
   delivery attempts.
 - `effect_id` identifies one destination mutation across delivery attempts.
 
-Temporal Workflow, run, Activity, attempt, Worker, and process identifiers are
+A coordinator's own execution, work-item, delivery, and attempt identifiers are
 delivery observations. They never replace a logical identity. An owner is the
 pair `(turn_id, generation)` and proves authority with an opaque capability;
 protocol records contain only its SHA-256 digest.
@@ -80,7 +83,9 @@ Bindings and conformance implementations must additionally enforce:
   `effect_id` when present; a mismatch is conformance-invalid even though both
   records are structurally valid in isolation;
 - sequence values are monotonic within their declared stream;
-- Temporal Activity attempts are compared only within one stable Activity ID;
+- a coordinator's delivery attempts are compared only within one stable
+  work-item identity (see [Temporal binding](#temporal-binding) for what that
+  identity is under Temporal);
 - timestamps parse as real UTC instants, not merely timestamp-shaped strings;
 - duplicate JSON object keys are rejected before schema validation; and
 - every artifact and history path is confined before archive/extraction, IDs
@@ -128,10 +133,25 @@ go test .
 fixed inventory and emits sorted JSON keys. A clean regeneration must leave
 `schema/schema-manifest.json` byte-for-byte unchanged.
 
+## Temporal binding
+
+This protocol's coordinator-neutral vocabulary maps onto Temporal as follows.
+No other coordinator binding has been evidenced yet; a PostgreSQL, Restate, or
+DBOS binding would supply its own mapping to the same identities and lifecycle
+table above.
+
+| Protocol concept | Temporal binding |
+| --- | --- |
+| coordinator execution | Workflow ID + Run ID |
+| work item | Activity ID |
+| delivery attempt | Activity attempt |
+| executor identity | Worker/process identity |
+
 ## Responsibility split
 
-Temporal recovers the Workflow and redelivers Activity procedures. Application
-code owns stable identity, fencing, receipts, cancellation state, and bounded
-recovery. The destination owns whatever conditional-write or idempotency
-protocol makes a committed effect safe to retry. A provider session ID can help
-resume context, but is not turn authority or an effect receipt.
+The durable-execution coordinator recovers the orchestration procedure and
+redelivers work items. Application code owns stable identity, fencing,
+receipts, cancellation state, and bounded recovery. The destination owns
+whatever conditional-write or idempotency protocol makes a committed effect
+safe to retry. A provider session ID can help resume context, but is not turn
+authority or an effect receipt.

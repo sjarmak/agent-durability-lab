@@ -2,6 +2,74 @@
 
 The initial architecture is a hypothesis to test, not a universal prescription.
 
+## Generic shape
+
+Every implementation in this lab fits the same three-role boundary:
+
+```text
+Durable coordinator
+       │
+       │ delivery / retry / wait
+       ▼
+Agent executor ──────────────► external system
+       │
+       ▼
+authority / evidence store
+```
+
+- **Durable coordinator** — records and recovers procedure: ordering, retries,
+  waits, cancellation requests, and accepted completion.
+- **Agent executor** — the process (or simulator) that performs the work and
+  attempts the external effect.
+- **Authority / evidence store** — owns logical identity, current ownership
+  generation, and the append-only record a later attempt must consult.
+
+Implementations tested so far:
+
+| Role | Implementations tested |
+| --- | --- |
+| Durable coordinator | Temporal, PostgreSQL queue/lease/outbox |
+| Agent executor | Claude Code, Codex, simulator |
+| External system | Git, API, database, broker, artifact store |
+
+Restate and DBOS are follow-up coordinator adapters, not yet run.
+
+Temporal is currently the lab's most extensively instrumented durable-execution
+implementation: native history replay, Activity retry boundaries, cancellation
+behavior, Worker deployment versioning, and the topology experiments all live
+there. Product-specific observations are labeled as such throughout this repo;
+a cross-system claim requires evidence from the portable benchmark, not from
+Temporal alone.
+
+## Coordinator adapter contract
+
+The [cross-system benchmark](../benchmarks/agent-durability/README.md) holds
+workload, failure schedule, evidence, and oracle fixed while letting each
+coordinator implement the following contract idiomatically:
+
+```go
+type DurabilityAdapter interface {
+    Start(ctx context.Context, op Operation) (Execution, error)
+    AwaitDelivery(ctx context.Context, id LogicalWorkID) (Delivery, error)
+    RecordCompletion(ctx context.Context, d Delivery, result Result) error
+    Cancel(ctx context.Context, id LogicalWorkID) error
+    Inspect(ctx context.Context, id LogicalWorkID) (ExecutionState, error)
+}
+```
+
+The benchmark contract cares about stable logical identity, redelivery,
+authority, cancellation, externally visible effects, and recovery cost/
+liveness — not about forcing every coordinator into a Workflow/Activity shape.
+Temporal and the PostgreSQL queue/lease/outbox adapter both satisfy this
+contract today; see [`benchmarks/agent-durability/`](../benchmarks/agent-durability/)
+for the concrete adapters and [`contract-v1.json`](../benchmarks/agent-durability/contract-v1.json)
+for the machine-checked case list.
+
+## Temporal implementation
+
+The rest of this document, and most of the evidence in the lab, describes the
+Temporal binding of the generic shape above:
+
 ```text
 Experiment controller ── starts/kills ──> Temporal Worker
         │                                      │
@@ -15,6 +83,14 @@ Temporal Service <── history/task state   agent simulator ──> external e
                                                ▼
                                   application work/evidence store
 ```
+
+Under this binding, the durable coordinator role is Temporal (Worker plus
+Service), the agent executor role is the agent process launcher and simulator,
+and the authority/evidence store role is the application work/evidence store.
+The PostgreSQL adapter binds the same roles to a queue table claimed with
+`FOR UPDATE SKIP LOCKED`, a lease/generation column, and the same application
+authority store; see
+[finding 0012](findings/0012-temporal-and-postgresql-pass-development-conformance-not-performance.md).
 
 ## Responsibility boundaries
 

@@ -7,18 +7,20 @@ product
 ## Users
 
 Backend and platform engineers who own long-running coding agents and need to decide whether
-the whole application remains correct after Temporal recovery. They use this surface while
-designing failure handling, reviewing an architecture, or investigating a concrete recovery
-boundary. Their primary task is to compare an unsafe control with the smallest protected
-mechanism, then inspect the exact evidence behind the verdict.
+the whole application remains correct when orchestration, workers, agent processes, or
+external systems fail and recover. They use this surface while designing failure handling,
+reviewing an architecture, or investigating a concrete recovery boundary. Their primary task
+is to compare an unsafe control with the smallest protected mechanism, then inspect the exact
+evidence behind the verdict.
 
 ## Product Purpose
 
 Make the Agent Durability Lab's admitted evidence usable without weakening it. A user should
 reach one trustworthy recovery quickly, understand stable identity, authority, effect, and
-cancellation boundaries, replay the native history, and attribute each guarantee to Temporal,
-the application, or the destination. Presentation succeeds only when it remains downstream of
-the independent oracle and makes claim limits and falsifiers easier to see.
+cancellation boundaries, replay the native history, and attribute each guarantee to the
+orchestration system, application protocol, agent runtime, or destination. Presentation
+succeeds only when it remains downstream of the independent oracle and makes claim limits and
+falsifiers easier to see.
 
 ## Brand Personality
 
