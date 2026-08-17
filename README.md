@@ -5,9 +5,7 @@ repository tests whether the agent application built around that orchestration
 is still correct afterwards, and records where it is not.
 
 The lab currently holds live evidence from Temporal, a PostgreSQL queue/lease/
-outbox implementation, Claude Code, Codex, and simulated destinations. Findings
-stay scoped to the systems actually tested; Temporal is the most extensively
-instrumented implementation here, not the subject of the repository. See
+outbox implementation, Claude Code, Codex, and simulated destinations. See
 [the cross-system benchmark](benchmarks/agent-durability/README.md) for what is
 compared and [who supplies each property](docs/guarantees.md) for the
 architectural roles behind any one implementation.

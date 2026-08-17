@@ -7,9 +7,7 @@ evidence links, and scope limits live on each finding page.
 Two rules hold everywhere in this list. A coordinator's delivery attempt is
 not agent identity. One recorded coordinator completion is not one external
 effect. Findings are grouped by mechanism first; the **Evidence** column names
-which implementation(s) actually produced the numbers, since a mechanism
-finding from one coordinator is not yet a claim about durable execution in
-general.
+which implementation(s) produced the numbers.
 
 ## Identity and ownership
 
@@ -30,12 +28,6 @@ general.
 | [0020](docs/findings/0020-application-fenced-claude-supervisor-survives-worker-loss.md) | A supervisor outside the Worker that owns generation and capability passed 15/15 protected runs at four boundaries with one process, effect, and workspace outcome each, while the matched resume-only controls duplicated 9/9. | Put start-or-attach and the fence in a supervisor the Worker does not own. | Claude Code, Temporal-hosted |
 | [0021](docs/findings/0021-codex-thread-resume-is-not-turn-authority.md) | `codex exec resume` preserved one logical thread and still reproduced 6/6 post-effect duplicates; the fenced arm passed 27/27 across eight boundaries. | Same shape as Claude: thread identity is not turn authority. | Codex, Temporal-hosted |
 | [0022](docs/findings/0022-worker-versioning-does-not-version-the-detached-agent-contract.md) | Worker Deployment Versioning routed tasks correctly, but the decision to attach a new build to an old detached agent stayed in application code: 6 compatible trials attached, 3 incompatible trials rejected without touching the registry. | Declare compatible agent builds in the Activity and reject atomically. | Claude Code, Temporal-hosted |
-
-This mechanism, session/thread continuity is not execution authority, is a
-generic claim about long-lived external agent processes with provider-owned
-resume semantics. It is currently evidenced with two agent runtimes (Claude
-Code, Codex), both hosted under Temporal; no other coordinator has run these
-cases yet.
 
 ## External effects
 
